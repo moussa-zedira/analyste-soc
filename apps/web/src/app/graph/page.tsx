@@ -21,7 +21,7 @@ export default function GraphPage() {
   const [rawData, setRawData] = useState<GraphData>({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [injecting, setInjecting] = useState(false);
+
 
   // Filters
   const [visibleTypes, setVisibleTypes] = useState<Set<string>>(
@@ -85,19 +85,6 @@ export default function GraphPage() {
 
     return { nodes: filtered, edges };
   }, [rawData, visibleTypes, maxNodes]);
-
-  const handleInjectDemo = async () => {
-    setInjecting(true);
-    try {
-      const { injectDemoData } = await import("@/lib/apiClient");
-      await injectDemoData();
-      await loadGraph();
-    } catch {
-      setError("Erreur lors de l'injection des donnees");
-    } finally {
-      setInjecting(false);
-    }
-  };
 
   const toggleType = (type: string) => {
     setVisibleTypes((prev) => {
@@ -233,26 +220,10 @@ export default function GraphPage() {
               <div className="text-center space-y-2">
                 <p className="text-sm text-gray-400">Aucune donnee pour le graphe</p>
                 <p className="text-[10px] text-gray-600 max-w-xs">
-                  Le graphe de relations necessite des evenements avec des adresses IP et des noms d&apos;utilisateur pour creer des connexions.
+                  Le graphe se construit a partir des evenements reels detectes par le SIEM.
+                  Utilisez le scanner ou attendez des evenements reseau.
                 </p>
               </div>
-              <button
-                onClick={handleInjectDemo}
-                disabled={injecting}
-                className="flex items-center gap-2 rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-5 py-2.5 text-[11px] font-bold tracking-widest text-cyan-glow transition-all hover:bg-cyan-glow/20 hover:shadow-cyan-md active:scale-95 disabled:opacity-40"
-              >
-                {injecting ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    INJECTION EN COURS...
-                  </>
-                ) : (
-                  "GENERER DES DONNEES DE DEMO"
-                )}
-              </button>
             </div>
           ) : filteredData.nodes.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3">

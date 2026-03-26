@@ -320,65 +320,6 @@ def relationship_graph(
     return {"nodes": list(nodes.values()), "edges": edges}
 
 
-# ---------------------------------------------------------------------------
-# Demo data injection
-# ---------------------------------------------------------------------------
-
-import random
-import uuid
-
-
-@router.post("/demo-data")
-def inject_demo_data(db: Session = Depends(get_db)) -> dict:
-    """Injecte des événements de démonstration pour alimenter le graphe et le dashboard."""
-    ips = [
-        "192.168.1.100", "10.0.0.42", "172.16.5.8", "203.0.113.50",
-        "198.51.100.23", "185.220.101.34", "91.134.10.11", "45.33.32.156",
-    ]
-    users = ["admin", "root", "j.dupont", "m.martin", "svc-backup", "db-admin", "a.bernard"]
-    sources = ["firewall", "sshd", "ids", "waf", "proxy", "endpoint"]
-    event_types = [
-        "auth.fail", "auth.success", "intrusion.attempt", "scan.port",
-        "malware.detected", "data.exfiltration", "privilege.escalation",
-    ]
-    severities = ["low", "medium", "high", "critical"]
-    messages = [
-        "Failed password for {user} from {ip}",
-        "Port scan detected from {ip}",
-        "Brute force attempt on {user} from {ip}",
-        "Suspicious outbound connection from {ip}",
-        "Malware signature detected from {ip}",
-        "Privilege escalation attempt by {user}",
-        "Unauthorized access to admin panel by {user} from {ip}",
-        "SQL injection attempt from {ip}",
-    ]
-
-    now = datetime.now(timezone.utc)
-    created = 0
-
-    for i in range(80):
-        ip = random.choice(ips)
-        user = random.choice(users)
-        msg_template = random.choice(messages)
-        msg = msg_template.format(user=user, ip=ip)
-        ts = now - timedelta(minutes=random.randint(1, 1440))
-
-        ev = Event(
-            id=str(uuid.uuid4()),
-            ts=ts,
-            source=random.choice(sources),
-            event_type=random.choice(event_types),
-            severity=random.choice(severities),
-            src_ip=ip,
-            dst_ip=f"10.0.0.{random.randint(1, 20)}" if random.random() > 0.3 else None,
-            username=user if random.random() > 0.2 else None,
-            message=msg,
-        )
-        db.add(ev)
-        created += 1
-
-    db.commit()
-    return {"events_created": created, "message": "Données de démonstration injectées"}
 
 
 # ---------------------------------------------------------------------------

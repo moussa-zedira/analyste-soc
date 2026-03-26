@@ -117,17 +117,19 @@ services:
       api:
         condition: service_healthy
 
-  # ── Agent (event simulator) ─────────────────────────────
-  agent:
-    build:
-      context: .
-      dockerfile: apps/agent/Dockerfile
-    environment:
-      API_BASE_URL: http://api:8000
-      API_KEY: elite-secret-key
-    depends_on:
-      api:
-        condition: service_healthy
+  # ── Agent ───────────────────────────────────────────────
+  # Simulateur desactive. Pour reactiver:
+  # docker compose up agent -d
+  # agent:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/agent/Dockerfile
+  #   environment:
+  #     API_BASE_URL: http://api:8000
+  #     API_KEY: elite-secret-key
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
 
 volumes:
   pgdata:
