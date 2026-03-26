@@ -1,18 +1,23 @@
-"""Analyse de domaines/IPs — scanner réseau complet avec scan de ports."""
+"""Analyse de domaines/IPs — scanner réseau complet avec scan de ports, CVE et réputation."""
 
 from __future__ import annotations
 
+import json
 import re
 import socket
 import ssl
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
+from apps.api.db.session import get_db
+from apps.api.models.scan_history import ScanHistory
 from apps.api.security import require_api_key
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -77,11 +82,48 @@ class PortResult(BaseModel):
     banner: str | None = None
 
 
+class CveResult(BaseModel):
+    """Vulnérabilité CVE trouvée pour un service."""
+
+    id: str
+    severity: str
+    score: float | None = None
+    description: str
+    service: str
+
+
+class ReputationResult(BaseModel):
+    """Résultat de vérification de réputation d'une IP."""
+
+    abuse_score: int = 0
+    is_tor: bool = False
+    is_proxy: bool = False
+    is_vpn: bool = False
+    is_bot: bool = False
+    total_reports: int = 0
+    last_reported: str | None = None
+    source: str = ""
+
+
+class ScanHistoryOut(BaseModel):
+    """Entrée d'historique de scan pour l'API."""
+
+    id: str
+    target: str
+    target_type: str
+    resolved_ip: str | None
+    security_score: int
+    open_ports_count: int
+    scan_duration_ms: int
+    created_at: str
+
+
 class ScannerResult(BaseModel):
     """Résultat complet de l'analyse réseau."""
 
+    id: str | None = None
     target: str
-    target_type: str = "domain"  # "domain" ou "ip"
+    target_type: str = "domain"
     resolved_ip: str | None = None
     geo: dict | None = None
     dns: dict | None = None
@@ -91,6 +133,8 @@ class ScannerResult(BaseModel):
     whois_info: dict | None = None
     open_ports: list[PortResult] = []
     ports_scanned: int = 0
+    cves: list[CveResult] = []
+    reputation: ReputationResult | None = None
     security_score: int = 0
     score_details: list[dict] = []
     scan_duration_ms: int = 0
@@ -418,6 +462,147 @@ def _get_whois_info(domain: str) -> tuple[dict | None, list[str]]:
         return None, errors
 
 
+def _lookup_cves(open_ports: list[PortResult]) -> tuple[list[CveResult], list[str]]:
+    """Recherche des CVE connues pour les services détectés via cve.circl.lu."""
+    cves: list[CveResult] = []
+    errors: list[str] = []
+
+    # Mapping service -> mots-clés de recherche CPE
+    service_keywords: dict[str, str] = {
+        "SSH": "openssh",
+        "HTTP": "apache OR nginx",
+        "HTTPS": "apache OR nginx",
+        "FTP": "vsftpd OR proftpd",
+        "SMTP": "postfix OR exim",
+        "MySQL": "mysql",
+        "PostgreSQL": "postgresql",
+        "Redis": "redis",
+        "MongoDB": "mongodb",
+        "SMB": "samba",
+        "RDP": "remote desktop",
+    }
+
+    seen_services: set[str] = set()
+    for port in open_ports:
+        if port.state != "open":
+            continue
+        service = port.service
+        if service in seen_services or service not in service_keywords:
+            continue
+        seen_services.add(service)
+
+        # Utiliser la bannière si disponible, sinon le mot-clé par défaut
+        search_term = service_keywords[service]
+        if port.banner:
+            # Extraire le nom de logiciel de la bannière
+            banner_clean = port.banner.split("\n")[0][:50]
+            search_term = banner_clean
+
+        try:
+            resp = httpx.get(
+                f"https://cve.circl.lu/api/search/{search_term}",
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                # Prendre les 3 CVE les plus récentes/critiques
+                items = data if isinstance(data, list) else data.get("results", [])
+                for item in items[:3]:
+                    cvss = item.get("cvss") or item.get("cvss3", {})
+                    score_val = None
+                    severity = "unknown"
+                    if isinstance(cvss, (int, float)):
+                        score_val = float(cvss)
+                    elif isinstance(cvss, dict):
+                        score_val = cvss.get("score")
+
+                    if score_val is not None:
+                        if score_val >= 9.0:
+                            severity = "critical"
+                        elif score_val >= 7.0:
+                            severity = "high"
+                        elif score_val >= 4.0:
+                            severity = "medium"
+                        else:
+                            severity = "low"
+
+                    cves.append(CveResult(
+                        id=item.get("id", item.get("cve", "CVE-UNKNOWN")),
+                        severity=severity,
+                        score=score_val,
+                        description=(item.get("summary") or item.get("description", ""))[:200],
+                        service=service,
+                    ))
+        except Exception as exc:
+            errors.append(f"CVE lookup ({service}): {exc}")
+
+    return cves, errors
+
+
+def _check_ip_reputation(ip: str) -> tuple[ReputationResult | None, list[str]]:
+    """Vérifie la réputation d'une IP via des APIs publiques."""
+    errors: list[str] = []
+
+    try:
+        # Utiliser ip-api.com pour les flags proxy/hosting (déjà gratuit)
+        resp = httpx.get(
+            f"http://ip-api.com/json/{ip}",
+            params={"fields": "status,proxy,hosting,mobile,query"},
+            timeout=5.0,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("status") == "success":
+                result = ReputationResult(
+                    is_proxy=data.get("proxy", False),
+                    source="ip-api.com",
+                )
+
+                # Enrichir avec ipapi.is (gratuit, pas de clé)
+                try:
+                    resp2 = httpx.get(
+                        f"https://api.ipapi.is/?q={ip}",
+                        timeout=5.0,
+                    )
+                    if resp2.status_code == 200:
+                        data2 = resp2.json()
+                        rir = data2.get("rir", {})
+                        company = data2.get("company", {})
+                        is_abuser = data2.get("is_abuser", False)
+                        is_tor_node = data2.get("is_tor", False)
+                        is_proxy_2 = data2.get("is_proxy", False)
+                        is_vpn = data2.get("is_vpn", False)
+                        is_datacenter = data2.get("is_datacenter", False)
+                        is_bot = data2.get("is_bot", False)
+
+                        abuse_score = 0
+                        if is_abuser:
+                            abuse_score += 40
+                        if is_tor_node:
+                            abuse_score += 20
+                        if is_proxy_2:
+                            abuse_score += 15
+                        if is_vpn:
+                            abuse_score += 10
+                        if is_bot:
+                            abuse_score += 25
+
+                        result.abuse_score = min(100, abuse_score)
+                        result.is_tor = is_tor_node
+                        result.is_proxy = is_proxy_2 or data.get("proxy", False)
+                        result.is_vpn = is_vpn
+                        result.is_bot = is_bot
+                        result.source = "ipapi.is + ip-api.com"
+                except Exception:
+                    pass
+
+                return result, errors
+    except Exception as exc:
+        errors.append(f"Reputation: {exc}")
+
+    return None, errors
+
+
 def _calculate_score(
     ssl_cert: dict | None,
     security_headers: dict | None,
@@ -526,8 +711,11 @@ def _calculate_score(
 
 
 @router.post("/analyze", response_model=ScannerResult)
-def analyze_target(payload: ScannerRequest) -> ScannerResult:
-    """Analyse complète d'une cible : ports, DNS, SSL, en-têtes HTTP, WHOIS, GeoIP et score."""
+def analyze_target(
+    payload: ScannerRequest,
+    db: Session = Depends(get_db),
+) -> ScannerResult:
+    """Analyse complète d'une cible : ports, DNS, SSL, en-têtes HTTP, WHOIS, GeoIP, CVE, réputation."""
     start = time.monotonic()
     errors: list[str] = []
 
@@ -546,7 +734,8 @@ def analyze_target(payload: ScannerRequest) -> ScannerResult:
                 detail=f"Adresse IP invalide : {target}",
             )
 
-    result = ScannerResult(target=target, target_type=target_type)
+    scan_id = str(uuid.uuid4())
+    result = ScannerResult(id=scan_id, target=target, target_type=target_type)
 
     # 1. Résolution IP (si domaine) ou DNS inverse (si IP)
     if target_type == "domain":
@@ -597,7 +786,19 @@ def analyze_target(payload: ScannerRequest) -> ScannerResult:
         result.whois_info = whois_info
         errors.extend(whois_errors)
 
-    # 8. Score de sécurité
+    # 8. Recherche CVE sur les services détectés
+    if result.open_ports:
+        cves, cve_errors = _lookup_cves(result.open_ports)
+        result.cves = cves
+        errors.extend(cve_errors)
+
+    # 9. Réputation IP
+    if result.resolved_ip:
+        reputation, rep_errors = _check_ip_reputation(result.resolved_ip)
+        result.reputation = reputation
+        errors.extend(rep_errors)
+
+    # 10. Score de sécurité
     score, score_details = _calculate_score(
         result.ssl_cert, result.security_headers, result.http_headers, result.open_ports,
     )
@@ -607,4 +808,66 @@ def analyze_target(payload: ScannerRequest) -> ScannerResult:
     result.errors = errors
     result.scan_duration_ms = int((time.monotonic() - start) * 1000)
 
+    # 11. Sauvegarder dans l'historique
+    try:
+        history_entry = ScanHistory(
+            id=scan_id,
+            target=target,
+            target_type=target_type,
+            resolved_ip=result.resolved_ip,
+            result_json=result.model_dump_json(),
+            security_score=result.security_score,
+            open_ports_count=len(result.open_ports),
+            scan_duration_ms=result.scan_duration_ms,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(history_entry)
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return result
+
+
+# ---------------------------------------------------------------------------
+# Endpoints — Historique des scans
+# ---------------------------------------------------------------------------
+
+
+@router.get("/history", response_model=list[ScanHistoryOut])
+def list_scan_history(
+    db: Session = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    target: str | None = None,
+) -> list[ScanHistoryOut]:
+    """Retourne l'historique des scans, triés par date décroissante."""
+    query = db.query(ScanHistory).order_by(ScanHistory.created_at.desc())
+    if target:
+        query = query.filter(ScanHistory.target.ilike(f"%{target}%"))
+    scans = query.offset(offset).limit(limit).all()
+    return [
+        ScanHistoryOut(
+            id=s.id,
+            target=s.target,
+            target_type=s.target_type,
+            resolved_ip=s.resolved_ip,
+            security_score=s.security_score,
+            open_ports_count=s.open_ports_count,
+            scan_duration_ms=s.scan_duration_ms,
+            created_at=s.created_at.isoformat() if s.created_at else "",
+        )
+        for s in scans
+    ]
+
+
+@router.get("/history/{scan_id}", response_model=ScannerResult)
+def get_scan_detail(
+    scan_id: str,
+    db: Session = Depends(get_db),
+) -> ScannerResult:
+    """Retourne le détail complet d'un scan passé."""
+    scan = db.get(ScanHistory, scan_id)
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan non trouvé")
+    return ScannerResult(**json.loads(scan.result_json))

@@ -207,7 +207,38 @@ export interface PortResult {
   banner: string | null;
 }
 
+export interface CveResult {
+  id: string;
+  severity: string;
+  score: number | null;
+  description: string;
+  service: string;
+}
+
+export interface ReputationResult {
+  abuse_score: number;
+  is_tor: boolean;
+  is_proxy: boolean;
+  is_vpn: boolean;
+  is_bot: boolean;
+  total_reports: number;
+  last_reported: string | null;
+  source: string;
+}
+
+export interface ScanHistoryEntry {
+  id: string;
+  target: string;
+  target_type: string;
+  resolved_ip: string | null;
+  security_score: number;
+  open_ports_count: number;
+  scan_duration_ms: number;
+  created_at: string;
+}
+
 export interface ScannerResult {
+  id: string | null;
   target: string;
   target_type: "domain" | "ip";
   resolved_ip: string | null;
@@ -219,8 +250,32 @@ export interface ScannerResult {
   whois_info: Record<string, unknown> | null;
   open_ports: PortResult[];
   ports_scanned: number;
+  cves: CveResult[];
+  reputation: ReputationResult | null;
   security_score: number;
   score_details: Array<{ check: string; passed: boolean; points: number; max?: number }>;
   scan_duration_ms: number;
   errors: string[];
+}
+
+// --- Admin types ---
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  user_id: string | null;
+  username: string | null;
+  action: string;
+  target: string | null;
+  details: string;
+  ip_address: string | null;
+  created_at: string;
 }

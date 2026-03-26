@@ -22,11 +22,13 @@ from apps.api.db.session import engine, SessionLocal
 from apps.api.logging_config import setup_logging, generate_request_id
 from apps.api.middleware.rate_limit import limiter
 from apps.api.routes import (
+    admin,
     alerts,
     anomaly,
     auth,
     chat,
     events,
+    export,
     incidents,
     ml,
     rules,
@@ -194,6 +196,8 @@ def create_app() -> FastAPI:
     app.include_router(triage.router, prefix="/triage", tags=["triage"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
     app.include_router(scanner.router, prefix="/scanner", tags=["scanner"])
+    app.include_router(admin.router, prefix="/admin", tags=["admin"])
+    app.include_router(export.router, prefix="/export", tags=["export"])
     app.include_router(ws.router, tags=["websocket"])
 
     return app

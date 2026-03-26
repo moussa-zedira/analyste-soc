@@ -1,6 +1,8 @@
 import type {
+  AdminUser,
   AnomalyBaselineStat,
   AnomalyRunResponse,
+  AuditLogEntry,
   Event,
   EventListParams,
   EventsPerMinuteBucket,
@@ -19,6 +21,7 @@ import type {
   MLModelInfo,
   MitreStatsResponse,
   RulesRunResponse,
+  ScanHistoryEntry,
   ScannerResult,
   ThreatScoreComputeResponse,
   ThreatScoreEntry,
@@ -357,6 +360,83 @@ export function scanTarget(
   return request<ScannerResult>(
     "/scanner/analyze",
     { method: "POST", body: JSON.stringify({ target }) },
-    { ...opts, timeout: 30_000 },
+    { ...opts, timeout: 60_000 },
+  );
+}
+
+/** Retourne l'historique des scans. */
+export function fetchScanHistory(
+  params: { limit?: number; offset?: number; target?: string } = {},
+  opts?: RequestOptions,
+): Promise<ScanHistoryEntry[]> {
+  return request<ScanHistoryEntry[]>(
+    `/scanner/history${buildQuery(params)}`,
+    undefined,
+    opts,
+  );
+}
+
+/** Retourne le detail complet d'un scan passe. */
+export function fetchScanDetail(
+  scanId: string,
+  opts?: RequestOptions,
+): Promise<ScannerResult> {
+  return request<ScannerResult>(`/scanner/history/${scanId}`, undefined, opts);
+}
+
+/** URL de telechargement PDF d'un scan. */
+export function getScanPdfUrl(scanId: string): string {
+  return `${BASE_URL}/export/scan/${scanId}/pdf`;
+}
+
+/** URL de telechargement PDF d'un incident. */
+export function getIncidentPdfUrl(incidentId: string): string {
+  return `${BASE_URL}/export/incident/${incidentId}/pdf`;
+}
+
+// --- Admin ---
+
+/** Liste les utilisateurs (admin). */
+export function fetchUsers(
+  params: { limit?: number; offset?: number } = {},
+  opts?: RequestOptions,
+): Promise<AdminUser[]> {
+  return request<AdminUser[]>(`/admin/users${buildQuery(params)}`, undefined, opts);
+}
+
+/** Modifie un utilisateur (admin). */
+export function updateUser(
+  userId: string,
+  body: { role?: string; is_active?: boolean },
+  opts?: RequestOptions,
+): Promise<AdminUser> {
+  return request<AdminUser>(
+    `/admin/users/${userId}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+    opts,
+  );
+}
+
+/** Supprime un utilisateur (admin). */
+export function deleteUser(
+  userId: string,
+  opts?: RequestOptions,
+): Promise<void> {
+  return request<void>(
+    `/admin/users/${userId}`,
+    { method: "DELETE" },
+    opts,
+  );
+}
+
+/** Journal d'audit (admin). */
+export function fetchAuditLog(
+  params: { limit?: number; offset?: number; action?: string } = {},
+  opts?: RequestOptions,
+): Promise<AuditLogEntry[]> {
+  return request<AuditLogEntry[]>(
+    `/admin/audit-log${buildQuery(params)}`,
+    undefined,
+    opts,
   );
 }
