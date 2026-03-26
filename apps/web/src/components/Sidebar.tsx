@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" },
@@ -18,6 +18,15 @@ const NAV_ITEMS = [
 /** Barre laterale de navigation principale avec logo et liens. */
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("user_id");
+    router.replace("/login");
+  };
 
   return (
     <aside className="relative z-20 flex h-screen w-56 flex-col border-r border-cyan-glow/10 bg-space-dark/80 backdrop-blur-xl">
@@ -127,6 +136,15 @@ export function Sidebar() {
             SYSTEM ONLINE
           </span>
         </div>
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[10px] font-bold tracking-widest text-red-400/70 transition-all hover:bg-red-500/10 hover:text-red-400"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3-3h-9m9 0l-3-3m3 3l-3 3" />
+          </svg>
+          DECONNEXION
+        </button>
         <p className="px-3 text-[9px] tracking-wider text-cyan-glow/20">
           CYBERDEF v0.1 // SPATIAL UI
         </p>
