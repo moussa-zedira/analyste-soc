@@ -30,6 +30,7 @@ from apps.api.routes import (
     incidents,
     ml,
     rules,
+    scanner,
     stats,
     threat_scores,
     triage,
@@ -192,6 +193,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(triage.router, prefix="/triage", tags=["triage"])
     app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
+    app.include_router(scanner.router, prefix="/scanner", tags=["scanner"])
     app.include_router(ws.router, tags=["websocket"])
 
     return app

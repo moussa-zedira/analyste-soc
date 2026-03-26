@@ -19,6 +19,7 @@ import type {
   MLModelInfo,
   MitreStatsResponse,
   RulesRunResponse,
+  ScannerResult,
   ThreatScoreComputeResponse,
   ThreatScoreEntry,
 } from "./types";
@@ -343,5 +344,19 @@ export function getAnomalyBaselines(
     `/anomaly/baselines${buildQuery(params)}`,
     undefined,
     opts,
+  );
+}
+
+// --- Scanner ---
+
+/** Analyse un domaine ou une URL via le scanner de securite. */
+export function scanTarget(
+  target: string,
+  opts?: RequestOptions,
+): Promise<ScannerResult> {
+  return request<ScannerResult>(
+    "/scanner/analyze",
+    { method: "POST", body: JSON.stringify({ target }) },
+    { ...opts, timeout: 30_000 },
   );
 }

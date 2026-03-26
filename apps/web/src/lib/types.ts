@@ -197,3 +197,20 @@ export interface AnomalyBaselineStat {
   stddev: number;
   last_value: number;
 }
+
+// --- Scanner types ---
+
+export interface ScannerResult {
+  target: string;
+  resolved_ip: string | null;
+  geo: Record<string, unknown> | null;
+  dns: Record<string, unknown> | null;
+  ssl_cert: Record<string, unknown> | null;
+  http_headers: Record<string, unknown> | null;
+  security_headers: Record<string, unknown> | null;
+  whois_info: Record<string, unknown> | null;
+  security_score: number;
+  score_details: Array<{ check: string; passed: boolean; points: number }>;
+  scan_duration_ms: number;
+  errors: string[];
+}

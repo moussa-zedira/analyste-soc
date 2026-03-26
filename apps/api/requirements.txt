@@ -21,6 +21,9 @@ redis>=5.0
 celery[redis]>=5.3
 geoip2>=4.8
 
+# Phase 2b: Domain/URL Scanner
+dnspython>=2.4
+
 # Phase 3: Logging + Metrics + Alerting
 structlog>=24.0
 prometheus-client>=0.20
