@@ -31,26 +31,41 @@ export default function GraphPage() {
   );
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Graphe de Relations</h1>
-      <p className="text-sm text-gray-400">
-        Connexions entre IPs, utilisateurs et incidents
-      </p>
+    <div className="space-y-4 animate-hud-reveal">
+      <div>
+        <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
+          Relationship Graph
+        </h1>
+        <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
+          IP // USER // INCIDENT CONNECTIONS
+        </p>
+      </div>
+
+      <div className="cyan-line" />
 
       {error && (
-        <div className="rounded border border-red-800 bg-red-950/30 px-4 py-2 text-sm text-red-400">
+        <div className="animate-slide-up glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400">
+          <span className="mr-2 text-red-500">&#x25B2;</span>
           {error}
         </div>
       )}
 
       <div
         ref={containerRef}
-        className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+        className="glass-panel glass-panel-animated overflow-hidden"
         style={{ height: "calc(100vh - 200px)" }}
       >
         {loading ? (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-gray-500">Chargement du graphe...</p>
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            <svg
+              className="h-8 w-8 animate-spin text-cyan-glow/50"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <p className="hud-label animate-pulse">LOADING GRAPH...</p>
           </div>
         ) : (
           <DynamicRelationshipGraph
