@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
@@ -70,38 +71,44 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         <p className="hud-label mb-3 px-3">Navigation</p>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.map((item, index) => {
           const active =
             item.href === "/"
               ? pathname === "/"
               : pathname.startsWith(item.href);
           return (
-            <Link
+            <motion.div
               key={item.href}
-              href={item.href}
-              className={`group flex items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 ${
-                active
-                  ? "border border-cyan-glow/20 bg-cyan-glow/10 text-cyan-glow shadow-cyan-sm"
-                  : "border border-transparent text-gray-500 hover:border-cyan-glow/10 hover:bg-cyan-glow/5 hover:text-cyan-dim"
-              }`}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 + index * 0.05, duration: 0.3, ease: "easeOut" }}
             >
-              <svg
-                className={`h-4 w-4 flex-shrink-0 transition-colors ${
-                  active ? "text-cyan-glow" : "text-gray-600 group-hover:text-cyan-dim"
+              <Link
+                href={item.href}
+                className={`group flex items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium transition-all duration-200 ${
+                  active
+                    ? "border border-cyan-glow/20 bg-cyan-glow/10 text-cyan-glow shadow-cyan-sm"
+                    : "border border-transparent text-gray-500 hover:border-cyan-glow/10 hover:bg-cyan-glow/5 hover:text-cyan-dim"
                 }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d={item.icon}
-                />
-              </svg>
-              {item.label}
-            </Link>
+                <svg
+                  className={`h-4 w-4 flex-shrink-0 transition-colors ${
+                    active ? "text-cyan-glow" : "text-gray-600 group-hover:text-cyan-dim"
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d={item.icon}
+                  />
+                </svg>
+                {item.label}
+              </Link>
+            </motion.div>
           );
         })}
       </nav>

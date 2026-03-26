@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import * as d3 from "d3";
+/**
+ * Carte de chaleur des attaques par jour de semaine et heure.
+ * Rendu SVG pur avec cellules React, transitions CSS et tooltip React-driven.
+ */
+
+import { useMemo, useState, useCallback } from "react";
 import type { HeatmapCell } from "@/lib/types";
 
 const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -9,177 +13,269 @@ const HOURS = Array.from({ length: 24 }, (_, i) =>
   `${String(i).padStart(2, "0")}:00`,
 );
 
+const CYAN = "#00E5FF";
 const LABEL_COLOR = "#4A7A8A";
 const CELL_EMPTY = "#081A2B";
+const GRID_STROKE = "#0F2A40";
 
 interface Props {
+  /** Donnees : tableau de cellules jour/heure/count */
   data: HeatmapCell[];
+  /** Largeur optionnelle (pourcentage par defaut) */
   width?: number;
+  /** Hauteur optionnelle */
   height?: number;
 }
 
-export function AttackHeatmap({ data, width = 800, height = 280 }: Props) {
-  const svgRef = useRef<SVGSVGElement>(null);
+/**
+ * Interpole lineairement entre deux couleurs RGB.
+ */
+function lerpColor(
+  [r1, g1, b1]: [number, number, number],
+  [r2, g2, b2]: [number, number, number],
+  t: number,
+): string {
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  return `rgb(${r},${g},${b})`;
+}
 
-  useEffect(() => {
-    if (!svgRef.current || data.length === 0) return;
+/**
+ * Echelle de couleurs cyan -> orange -> rouge.
+ * Renvoie une couleur CSS pour une valeur normalisee [0, 1].
+ */
+function colorScale(t: number): string {
+  // 5 etapes : #003845 -> #00B8D4 -> #00E5FF -> #F97316 -> #EF4444
+  const stops: Array<[number, [number, number, number]]> = [
+    [0, [0, 56, 69]],
+    [0.25, [0, 184, 212]],
+    [0.5, [0, 229, 255]],
+    [0.75, [249, 115, 22]],
+    [1, [239, 68, 68]],
+  ];
 
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
+  if (t <= 0) return lerpColor(stops[0][1], stops[0][1], 0);
+  if (t >= 1) return lerpColor(stops[4][1], stops[4][1], 0);
 
-    const margin = { top: 20, right: 80, bottom: 30, left: 50 };
-    const w = width - margin.left - margin.right;
-    const h = height - margin.top - margin.bottom;
-
-    const g = svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const cellW = w / 24;
-    const cellH = h / 7;
-
-    const maxCount = d3.max(data, (d) => d.count) || 1;
-
-    // Custom cyan -> orange -> red scale
-    const color = d3
-      .scaleSequential(
-        d3.interpolateRgbBasis(["#003845", "#00B8D4", "#00E5FF", "#F97316", "#EF4444"]),
-      )
-      .domain([0, maxCount]);
-
-    // Tooltip
-    const tooltip = d3
-      .select(svgRef.current.parentElement!)
-      .append("div")
-      .attr(
-        "class",
-        "pointer-events-none absolute z-50 rounded-md border border-cyan-500/20 bg-space-dark/95 px-3 py-2 text-xs text-cyan-300 shadow-xl backdrop-blur-sm opacity-0 transition-opacity duration-150",
-      )
-      .style("position", "absolute");
-
-    // Cells
-    g.selectAll("rect")
-      .data(data)
-      .join("rect")
-      .attr("x", (d) => d.hour * cellW)
-      .attr("y", (d) => d.day_of_week * cellH)
-      .attr("width", cellW - 2)
-      .attr("height", cellH - 2)
-      .attr("rx", 2)
-      .attr("fill", (d) => (d.count === 0 ? CELL_EMPTY : color(d.count)))
-      .style("opacity", 0)
-      .style("cursor", "pointer")
-      .on("mouseenter", function (event: MouseEvent, d) {
-        d3.select(this)
-          .attr("stroke", "#00E5FF")
-          .attr("stroke-width", 1.5)
-          .attr("stroke-opacity", 0.6);
-        const [mx, my] = d3.pointer(event, svgRef.current!);
-        tooltip
-          .html(
-            `<div class="font-semibold" style="color:#00E5FF">${d.count} events</div><div style="color:#4A7A8A">${DAYS[d.day_of_week]} ${HOURS[d.hour]}</div>`,
-          )
-          .style("opacity", "1")
-          .style("left", `${mx + 14}px`)
-          .style("top", `${my - 10}px`);
-      })
-      .on("mouseleave", function () {
-        d3.select(this).attr("stroke", "none");
-        tooltip.style("opacity", "0");
-      })
-      .transition()
-      .duration(400)
-      .delay((_, i) => i * 2)
-      .style("opacity", 1);
-
-    // Day labels
-    g.selectAll(".day-label")
-      .data(DAYS)
-      .join("text")
-      .attr("x", -8)
-      .attr("y", (_, i) => i * cellH + cellH / 2)
-      .attr("text-anchor", "end")
-      .attr("dominant-baseline", "middle")
-      .attr("fill", LABEL_COLOR)
-      .attr("font-size", "10px")
-      .attr("font-family", "JetBrains Mono, monospace")
-      .text((d) => d);
-
-    // Hour labels (every 3h)
-    g.selectAll(".hour-label")
-      .data(HOURS.filter((_, i) => i % 3 === 0))
-      .join("text")
-      .attr("x", (_, i) => i * 3 * cellW + cellW / 2)
-      .attr("y", h + 16)
-      .attr("text-anchor", "middle")
-      .attr("fill", LABEL_COLOR)
-      .attr("font-size", "9px")
-      .attr("font-family", "JetBrains Mono, monospace")
-      .text((d) => d);
-
-    // Legend
-    const legendWidth = 12;
-    const legendHeight = h;
-    const legendX = w + 20;
-
-    const legendScale = d3
-      .scaleLinear()
-      .domain([0, maxCount])
-      .range([legendHeight, 0]);
-
-    const legendAxis = d3.axisRight(legendScale).ticks(4).tickSize(0);
-
-    // Legend gradient
-    const defs = svg.append("defs");
-    const lgGrad = defs
-      .append("linearGradient")
-      .attr("id", "heatmap-legend-space")
-      .attr("x1", "0%")
-      .attr("y1", "100%")
-      .attr("x2", "0%")
-      .attr("y2", "0%");
-
-    const steps = 10;
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      lgGrad
-        .append("stop")
-        .attr("offset", `${t * 100}%`)
-        .attr("stop-color", color(t * maxCount));
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [t0, c0] = stops[i];
+    const [t1, c1] = stops[i + 1];
+    if (t >= t0 && t <= t1) {
+      return lerpColor(c0, c1, (t - t0) / (t1 - t0));
     }
+  }
+  return lerpColor(stops[4][1], stops[4][1], 0);
+}
 
-    g.append("rect")
-      .attr("x", legendX)
-      .attr("y", 0)
-      .attr("width", legendWidth)
-      .attr("height", legendHeight)
-      .attr("rx", 3)
-      .attr("fill", "url(#heatmap-legend-space)");
+/** Composant principal : heatmap des attaques */
+export function AttackHeatmap({ data, width = 800, height = 280 }: Props) {
+  const [hovered, setHovered] = useState<{
+    cell: HeatmapCell;
+    x: number;
+    y: number;
+  } | null>(null);
 
-    g.append("g")
-      .attr("transform", `translate(${legendX + legendWidth + 2}, 0)`)
-      .call(legendAxis)
-      .selectAll("text")
-      .attr("fill", LABEL_COLOR)
-      .attr("font-size", "9px")
-      .attr("font-family", "JetBrains Mono, monospace");
+  const maxCount = useMemo(
+    () => Math.max(1, ...data.map((d) => d.count)),
+    [data],
+  );
 
-    g.select(".domain").remove();
+  /** Genere les stops SVG du degrade de legende */
+  const legendStops = useMemo(() => {
+    const n = 10;
+    return Array.from({ length: n + 1 }, (_, i) => {
+      const t = i / n;
+      return { offset: `${t * 100}%`, color: colorScale(t) };
+    });
+  }, []);
 
-    return () => {
-      tooltip.remove();
-    };
-  }, [data, width, height]);
+  const margin = { top: 20, right: 80, bottom: 30, left: 50 };
+  const w = width - margin.left - margin.right;
+  const h = height - margin.top - margin.bottom;
+  const cellW = w / 24;
+  const cellH = h / 7;
+  const legendWidth = 12;
+
+  const handleMouseEnter = useCallback(
+    (cell: HeatmapCell, e: React.MouseEvent<SVGRectElement>) => {
+      const svg = e.currentTarget.closest("svg");
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      setHovered({
+        cell,
+        x: e.clientX - rect.left + 14,
+        y: e.clientY - rect.top - 10,
+      });
+    },
+    [],
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    setHovered(null);
+  }, []);
+
+  if (data.length === 0) return null;
 
   return (
-    <div className="relative">
+    <div className="relative" style={{ width: "100%" }}>
       <svg
-        ref={svgRef}
         width={width}
         height={height}
-        className="w-full"
         viewBox={`0 0 ${width} ${height}`}
-      />
+        className="w-full"
+        style={{ fontFamily: "JetBrains Mono, monospace" }}
+      >
+        <defs>
+          {/* Degrade vertical pour la legende */}
+          <linearGradient
+            id="heatmap-legend-gradient"
+            x1="0%"
+            y1="100%"
+            x2="0%"
+            y2="0%"
+          >
+            {legendStops.map((s, i) => (
+              <stop key={i} offset={s.offset} stopColor={s.color} />
+            ))}
+          </linearGradient>
+
+          {/* Filtre de lueur pour les cellules survolees */}
+          <filter id="cell-glow">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <g transform={`translate(${margin.left},${margin.top})`}>
+          {/* Cellules de la heatmap */}
+          {data.map((cell, i) => {
+            const x = cell.hour * cellW;
+            const y = cell.day_of_week * cellH;
+            const fill =
+              cell.count === 0
+                ? CELL_EMPTY
+                : colorScale(cell.count / maxCount);
+            const isHovered =
+              hovered?.cell.day_of_week === cell.day_of_week &&
+              hovered?.cell.hour === cell.hour;
+
+            return (
+              <rect
+                key={`${cell.day_of_week}-${cell.hour}`}
+                x={x}
+                y={y}
+                width={cellW - 2}
+                height={cellH - 2}
+                rx={2}
+                fill={fill}
+                stroke={isHovered ? CYAN : "none"}
+                strokeWidth={isHovered ? 1.5 : 0}
+                strokeOpacity={isHovered ? 0.6 : 0}
+                filter={isHovered ? "url(#cell-glow)" : undefined}
+                cursor="pointer"
+                style={{
+                  opacity: 1,
+                  transform: isHovered ? "scale(1.05)" : "scale(1)",
+                  transformOrigin: `${x + (cellW - 2) / 2}px ${y + (cellH - 2) / 2}px`,
+                  transition: `opacity 0.4s ease ${i * 2}ms, transform 0.15s ease`,
+                  animation: `heatmapFadeIn 0.4s ease ${i * 2}ms both`,
+                }}
+                onMouseEnter={(e) => handleMouseEnter(cell, e)}
+                onMouseLeave={handleMouseLeave}
+              />
+            );
+          })}
+
+          {/* Labels des jours (axe Y) */}
+          {DAYS.map((day, i) => (
+            <text
+              key={day}
+              x={-8}
+              y={i * cellH + cellH / 2}
+              textAnchor="end"
+              dominantBaseline="middle"
+              fill={LABEL_COLOR}
+              fontSize={10}
+            >
+              {day}
+            </text>
+          ))}
+
+          {/* Labels des heures (axe X, toutes les 3h) */}
+          {HOURS.filter((_, i) => i % 3 === 0).map((hour, i) => (
+            <text
+              key={hour}
+              x={i * 3 * cellW + cellW / 2}
+              y={h + 16}
+              textAnchor="middle"
+              fill={LABEL_COLOR}
+              fontSize={9}
+            >
+              {hour}
+            </text>
+          ))}
+
+          {/* Barre de legende */}
+          <rect
+            x={w + 20}
+            y={0}
+            width={legendWidth}
+            height={h}
+            rx={3}
+            fill="url(#heatmap-legend-gradient)"
+          />
+
+          {/* Ticks de legende */}
+          {[0, 0.25, 0.5, 0.75, 1].map((t) => {
+            const val = Math.round(t * maxCount);
+            const ly = h - t * h;
+            return (
+              <text
+                key={t}
+                x={w + 20 + legendWidth + 6}
+                y={ly}
+                dominantBaseline="middle"
+                fill={LABEL_COLOR}
+                fontSize={9}
+              >
+                {val}
+              </text>
+            );
+          })}
+        </g>
+      </svg>
+
+      {/* Infobulle React-driven */}
+      {hovered && (
+        <div
+          className="pointer-events-none absolute z-50 rounded-md border border-cyan-500/20 bg-space-dark/95 px-3 py-2 shadow-xl backdrop-blur-sm"
+          style={{
+            left: hovered.x,
+            top: hovered.y,
+            fontFamily: "JetBrains Mono, monospace",
+            transition: "opacity 0.15s ease",
+          }}
+        >
+          <div className="text-xs font-semibold" style={{ color: CYAN }}>
+            {hovered.cell.count} events
+          </div>
+          <div className="text-xs" style={{ color: LABEL_COLOR }}>
+            {DAYS[hovered.cell.day_of_week]} {HOURS[hovered.cell.hour]}
+          </div>
+        </div>
+      )}
+
+      {/* Animation CSS pour le fade-in echelonne */}
+      <style>{`
+        @keyframes heatmapFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

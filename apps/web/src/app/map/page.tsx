@@ -1,16 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { DynamicThreatMap } from "@/components/map/DynamicThreatMap";
+import { DynamicGlobe } from "@/components/map/DynamicGlobe";
 import { getGeoEvents } from "@/lib/apiClient";
 import { useFetchData } from "@/lib/hooks";
 import { useWebSocket, type WsMessage } from "@/lib/useWebSocket";
 import type { GeoEvent } from "@/lib/types";
 
+type ViewMode = "GLOBE" | "MAP";
+
 /** Page de la carte mondiale des menaces geolocalises en temps reel. */
 export default function MapPage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>("GLOBE");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
 
   const { data, loading, error } = useFetchData<GeoEvent[]>(
     (signal) => getGeoEvents({ limit: 200 }, { signal }),
@@ -35,6 +42,21 @@ export default function MapPage() {
     };
   }, []);
 
+  // Measure the map container size for the globe
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setContainerSize({ width: Math.floor(width), height: Math.floor(height) });
+        }
+      }
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   const { connected } = useWebSocket({ onMessage: handleWsMessage });
 
   const totalEvents = data.reduce((sum, g) => sum + g.event_count, 0);
@@ -56,6 +78,39 @@ export default function MapPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* View mode toggle */}
+          <div className="flex overflow-hidden rounded-md border border-cyan-glow/20">
+            {(["GLOBE", "MAP"] as ViewMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`px-3 py-1.5 text-[10px] font-bold tracking-wider transition-all ${
+                  viewMode === mode
+                    ? "bg-cyan-glow/20 text-cyan-glow shadow-[inset_0_0_12px_rgba(0,229,255,0.15)]"
+                    : "bg-transparent text-gray-500 hover:bg-cyan-glow/5 hover:text-cyan-glow/60"
+                }`}
+              >
+                {mode === "GLOBE" ? (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    </svg>
+                    GLOBE
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M3 9h18M9 3v18" />
+                    </svg>
+                    MAP
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
           {/* Stats badges */}
           <div className="hidden md:flex items-center gap-3">
             <div className="glass-panel px-3 py-1.5 text-center">
@@ -129,8 +184,9 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Map container */}
+      {/* Map / Globe container */}
       <div
+        ref={containerRef}
         className="glass-panel glass-panel-animated overflow-hidden p-1"
         style={{ height: "calc(100vh - 220px)" }}
       >
@@ -158,7 +214,35 @@ export default function MapPage() {
             <p className="hud-label animate-pulse">LOADING GEO DATA...</p>
           </div>
         ) : (
-          <DynamicThreatMap data={data} />
+          <AnimatePresence mode="wait">
+            {viewMode === "GLOBE" ? (
+              <motion.div
+                key="globe"
+                className="h-full w-full flex items-center justify-center"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+              >
+                <DynamicGlobe
+                  data={data}
+                  width={containerSize.width - 8}
+                  height={containerSize.height - 8}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="map"
+                className="h-full w-full"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+              >
+                <DynamicThreatMap data={data} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
       </div>
 

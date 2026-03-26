@@ -10,6 +10,7 @@ import { SeverityBadge, StatusBadge } from "@/components/Badge";
 import { SuggestedSeverityBadge } from "@/components/SuggestedSeverityBadge";
 import { DataTable } from "@/components/DataTable";
 import { IncidentTimeline } from "@/components/IncidentTimeline";
+import { PageTransition, StaggerItem } from "@/components/PageTransition";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -129,155 +130,161 @@ export default function IncidentDetailPage() {
   if (!incident) return null;
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <PageTransition className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.push("/incidents")}
-          className="rounded-md border border-cyan-glow/20 bg-space-mid/50 px-2.5 py-1.5 text-gray-400 transition-all hover:border-cyan-glow/40 hover:bg-cyan-glow/10 hover:text-cyan-glow active:scale-95"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-          </svg>
-        </button>
-        <h1 className="hud-heading text-lg font-bold tracking-wider text-cyan-glow">
-          {incident.title}
-        </h1>
-        <div className="ml-auto flex gap-2">
-          {incident.status === "open" && (
-            <>
-              <ActionButton onClick={() => handleStatusChange("ack")} disabled={updating} variant="yellow" icon="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-                ACKNOWLEDGE
-              </ActionButton>
-              <ActionButton onClick={() => handleStatusChange("closed")} disabled={updating} variant="green" icon="M4.5 12.75l6 6 9-13.5">
-                CLOSE
-              </ActionButton>
-            </>
-          )}
-          {incident.status === "ack" && (
-            <>
-              <ActionButton onClick={() => handleStatusChange("closed")} disabled={updating} variant="green" icon="M4.5 12.75l6 6 9-13.5">
-                CLOSE
-              </ActionButton>
+      <StaggerItem>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/incidents")}
+            className="rounded-md border border-cyan-glow/20 bg-space-mid/50 px-2.5 py-1.5 text-gray-400 transition-all hover:border-cyan-glow/40 hover:bg-cyan-glow/10 hover:text-cyan-glow active:scale-95"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <h1 className="hud-heading text-lg font-bold tracking-wider text-cyan-glow">
+            {incident.title}
+          </h1>
+          <div className="ml-auto flex gap-2">
+            {incident.status === "open" && (
+              <>
+                <ActionButton onClick={() => handleStatusChange("ack")} disabled={updating} variant="yellow" icon="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                  ACKNOWLEDGE
+                </ActionButton>
+                <ActionButton onClick={() => handleStatusChange("closed")} disabled={updating} variant="green" icon="M4.5 12.75l6 6 9-13.5">
+                  CLOSE
+                </ActionButton>
+              </>
+            )}
+            {incident.status === "ack" && (
+              <>
+                <ActionButton onClick={() => handleStatusChange("closed")} disabled={updating} variant="green" icon="M4.5 12.75l6 6 9-13.5">
+                  CLOSE
+                </ActionButton>
+                <ActionButton onClick={() => handleStatusChange("open")} disabled={updating} variant="gray" icon="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99">
+                  REOPEN
+                </ActionButton>
+              </>
+            )}
+            {incident.status === "closed" && (
               <ActionButton onClick={() => handleStatusChange("open")} disabled={updating} variant="gray" icon="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99">
                 REOPEN
               </ActionButton>
-            </>
-          )}
-          {incident.status === "closed" && (
-            <ActionButton onClick={() => handleStatusChange("open")} disabled={updating} variant="gray" icon="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99">
-              REOPEN
-            </ActionButton>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </StaggerItem>
 
-      <div className="cyan-line" />
+      <StaggerItem><div className="cyan-line" /></StaggerItem>
 
       {/* Detail card */}
-      <div className="glass-panel glass-panel-animated p-6">
-        <dl className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
-          <Field label="Status">
-            <StatusBadge value={incident.status} />
-          </Field>
-          <Field label="Severity">
-            <div className="flex items-center gap-2">
-              <SeverityBadge value={incident.severity} />
-              <SuggestedSeverityBadge
-                actual={incident.severity}
-                suggested={incident.suggested_severity}
-              />
+      <StaggerItem>
+        <div className="glass-panel glass-panel-animated p-6">
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
+            <Field label="Status">
+              <StatusBadge value={incident.status} />
+            </Field>
+            <Field label="Severity">
+              <div className="flex items-center gap-2">
+                <SeverityBadge value={incident.severity} />
+                <SuggestedSeverityBadge
+                  actual={incident.severity}
+                  suggested={incident.suggested_severity}
+                />
+              </div>
+            </Field>
+            <Field label="Rule">
+              <span className="rounded-md border border-cyan-glow/15 bg-space-mid/50 px-1.5 py-0.5 font-mono text-xs text-cyan-dim">
+                {incident.rule_id}
+              </span>
+            </Field>
+            <Field label="Entity">
+              <span className="rounded-md border border-cyan-glow/15 bg-space-mid/50 px-1.5 py-0.5 font-mono text-xs text-cyan-glow/60">
+                {incident.entity_key}
+              </span>
+            </Field>
+            <Field label="Created">
+              <span className="font-mono text-xs text-cyan-glow/60">
+                {new Date(incident.created_at).toLocaleString()}
+              </span>
+            </Field>
+            <Field label="Window start">
+              <span className="font-mono text-xs text-cyan-glow/60">
+                {new Date(incident.start_ts).toLocaleString()}
+              </span>
+            </Field>
+            <Field label="Window end">
+              <span className="font-mono text-xs text-cyan-glow/60">
+                {new Date(incident.end_ts).toLocaleString()}
+              </span>
+            </Field>
+            <Field label="Dedup hash">
+              <span className="font-mono text-xs text-gray-500">
+                {incident.dedup_hash.slice(0, 16)}...
+              </span>
+            </Field>
+          </dl>
+          {incident.description && (
+            <div className="mt-5 border-t border-cyan-glow/10 pt-5">
+              <p className="hud-label mb-1.5">Description</p>
+              <p className="text-sm leading-relaxed text-gray-300">
+                {incident.description}
+              </p>
             </div>
-          </Field>
-          <Field label="Rule">
-            <span className="rounded-md border border-cyan-glow/15 bg-space-mid/50 px-1.5 py-0.5 font-mono text-xs text-cyan-dim">
-              {incident.rule_id}
-            </span>
-          </Field>
-          <Field label="Entity">
-            <span className="rounded-md border border-cyan-glow/15 bg-space-mid/50 px-1.5 py-0.5 font-mono text-xs text-cyan-glow/60">
-              {incident.entity_key}
-            </span>
-          </Field>
-          <Field label="Created">
-            <span className="font-mono text-xs text-cyan-glow/60">
-              {new Date(incident.created_at).toLocaleString()}
-            </span>
-          </Field>
-          <Field label="Window start">
-            <span className="font-mono text-xs text-cyan-glow/60">
-              {new Date(incident.start_ts).toLocaleString()}
-            </span>
-          </Field>
-          <Field label="Window end">
-            <span className="font-mono text-xs text-cyan-glow/60">
-              {new Date(incident.end_ts).toLocaleString()}
-            </span>
-          </Field>
-          <Field label="Dedup hash">
-            <span className="font-mono text-xs text-gray-500">
-              {incident.dedup_hash.slice(0, 16)}...
-            </span>
-          </Field>
-        </dl>
-        {incident.description && (
-          <div className="mt-5 border-t border-cyan-glow/10 pt-5">
-            <p className="hud-label mb-1.5">Description</p>
-            <p className="text-sm leading-relaxed text-gray-300">
-              {incident.description}
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </StaggerItem>
 
       {/* Events */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="hud-heading text-base font-bold tracking-wider text-cyan-glow">
-            Related Events
-            <span className="ml-2 rounded-full border border-cyan-glow/20 bg-cyan-glow/10 px-2 py-0.5 text-[10px] font-normal tracking-wider text-cyan-glow">
-              {incident.events?.length ?? 0}
-            </span>
-          </h2>
-          <div className="flex overflow-hidden rounded-md border border-cyan-glow/20 text-[10px] font-bold tracking-wider">
-            <button
-              onClick={() => setEventsView("timeline")}
-              className={`px-3.5 py-1.5 transition-all duration-150 ${
-                eventsView === "timeline"
-                  ? "bg-cyan-glow/15 text-cyan-glow"
-                  : "bg-space-mid/50 text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              TIMELINE
-            </button>
-            <button
-              onClick={() => setEventsView("table")}
-              className={`px-3.5 py-1.5 transition-all duration-150 ${
-                eventsView === "table"
-                  ? "bg-cyan-glow/15 text-cyan-glow"
-                  : "bg-space-mid/50 text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              TABLE
-            </button>
+      <StaggerItem>
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="hud-heading text-base font-bold tracking-wider text-cyan-glow">
+              Related Events
+              <span className="ml-2 rounded-full border border-cyan-glow/20 bg-cyan-glow/10 px-2 py-0.5 text-[10px] font-normal tracking-wider text-cyan-glow">
+                {incident.events?.length ?? 0}
+              </span>
+            </h2>
+            <div className="flex overflow-hidden rounded-md border border-cyan-glow/20 text-[10px] font-bold tracking-wider">
+              <button
+                onClick={() => setEventsView("timeline")}
+                className={`px-3.5 py-1.5 transition-all duration-150 ${
+                  eventsView === "timeline"
+                    ? "bg-cyan-glow/15 text-cyan-glow"
+                    : "bg-space-mid/50 text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                TIMELINE
+              </button>
+              <button
+                onClick={() => setEventsView("table")}
+                className={`px-3.5 py-1.5 transition-all duration-150 ${
+                  eventsView === "table"
+                    ? "bg-cyan-glow/15 text-cyan-glow"
+                    : "bg-space-mid/50 text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                TABLE
+              </button>
+            </div>
           </div>
-        </div>
 
-        {eventsView === "timeline" ? (
-          <div className="glass-panel p-5">
-            <IncidentTimeline events={incident.events ?? []} />
-          </div>
-        ) : (
-          <div className="glass-panel overflow-hidden">
-            <DataTable
-              columns={eventColumns}
-              data={incident.events ?? []}
-              loading={false}
-              error={null}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+          {eventsView === "timeline" ? (
+            <div className="glass-panel p-5">
+              <IncidentTimeline events={incident.events ?? []} />
+            </div>
+          ) : (
+            <div className="glass-panel overflow-hidden">
+              <DataTable
+                columns={eventColumns}
+                data={incident.events ?? []}
+                loading={false}
+                error={null}
+              />
+            </div>
+          )}
+        </div>
+      </StaggerItem>
+    </PageTransition>
   );
 }

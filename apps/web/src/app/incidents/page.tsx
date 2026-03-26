@@ -10,6 +10,7 @@ import type { Incident } from "@/lib/types";
 import { SeverityBadge, StatusBadge } from "@/components/Badge";
 import { DataTable, type Column } from "@/components/DataTable";
 import { FilterBar, FilterSelect } from "@/components/FilterBar";
+import { PageTransition, StaggerItem } from "@/components/PageTransition";
 import { Pagination } from "@/components/Pagination";
 
 const columns: Column<Incident>[] = [
@@ -87,88 +88,96 @@ function IncidentsContent() {
   );
 
   return (
-    <div className="space-y-4 animate-hud-reveal">
+    <PageTransition className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
-            Incidents
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            SECURITY INCIDENTS // THREAT MANAGEMENT
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="glass-panel flex items-center gap-2 px-3 py-1.5">
-            <span className="relative flex h-2 w-2">
-              <span
-                className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  connected ? "animate-ping bg-cyan-glow" : "bg-red-500"
-                }`}
-              />
-              <span
-                className={`relative inline-flex h-2 w-2 rounded-full ${
-                  connected ? "bg-cyan-glow" : "bg-red-500"
-                }`}
-              />
-            </span>
-            <span className="text-[10px] tracking-wider text-gray-500">
-              {connected ? "LIVE" : "OFFLINE"}
-            </span>
+      <StaggerItem>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
+              Incidents
+            </h1>
+            <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
+              SECURITY INCIDENTS // THREAT MANAGEMENT
+            </p>
           </div>
-          <button
-            onClick={() => setRefreshKey((k) => k + 1)}
-            className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/20 hover:shadow-cyan-md active:scale-95"
-          >
-            REFRESH
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="glass-panel flex items-center gap-2 px-3 py-1.5">
+              <span className="relative flex h-2 w-2">
+                <span
+                  className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    connected ? "animate-ping bg-cyan-glow" : "bg-red-500"
+                  }`}
+                />
+                <span
+                  className={`relative inline-flex h-2 w-2 rounded-full ${
+                    connected ? "bg-cyan-glow" : "bg-red-500"
+                  }`}
+                />
+              </span>
+              <span className="text-[10px] tracking-wider text-gray-500">
+                {connected ? "LIVE" : "OFFLINE"}
+              </span>
+            </div>
+            <button
+              onClick={() => setRefreshKey((k) => k + 1)}
+              className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/20 hover:shadow-cyan-md active:scale-95"
+            >
+              REFRESH
+            </button>
+          </div>
         </div>
-      </div>
+      </StaggerItem>
 
-      <div className="cyan-line" />
+      <StaggerItem><div className="cyan-line" /></StaggerItem>
 
-      <FilterBar onReset={() => router.push("/incidents")}>
-        <FilterSelect
-          label="Severity"
-          value={severity}
-          options={SEVERITY_OPTIONS}
-          onChange={(v) => pushParams({ severity: v, offset: 0 })}
-        />
-        <FilterSelect
-          label="Status"
-          value={statusFilter}
-          options={STATUS_OPTIONS}
-          onChange={(v) => pushParams({ status_filter: v, offset: 0 })}
-        />
-      </FilterBar>
+      <StaggerItem>
+        <FilterBar onReset={() => router.push("/incidents")}>
+          <FilterSelect
+            label="Severity"
+            value={severity}
+            options={SEVERITY_OPTIONS}
+            onChange={(v) => pushParams({ severity: v, offset: 0 })}
+          />
+          <FilterSelect
+            label="Status"
+            value={statusFilter}
+            options={STATUS_OPTIONS}
+            onChange={(v) => pushParams({ status_filter: v, offset: 0 })}
+          />
+        </FilterBar>
+      </StaggerItem>
 
       {error && (
-        <div className="animate-slide-up glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400">
-          <span className="mr-2 text-red-500">&#x25B2;</span>
-          {error}
-        </div>
+        <StaggerItem>
+          <div className="animate-slide-up glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400">
+            <span className="mr-2 text-red-500">&#x25B2;</span>
+            {error}
+          </div>
+        </StaggerItem>
       )}
 
-      <div className="glass-panel glass-panel-animated overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={data}
-          loading={loading}
-          error={error}
-          onRowClick={(row) => router.push(`/incidents/${row.id}`)}
-        />
-        {!loading && !error && (
-          <div className="px-3 pb-3">
-            <Pagination
-              offset={offset}
-              limit={limit}
-              count={data.length}
-              onChange={(o) => pushParams({ offset: o })}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+      <StaggerItem>
+        <div className="glass-panel glass-panel-animated overflow-hidden">
+          <DataTable
+            columns={columns}
+            data={data}
+            loading={loading}
+            error={error}
+            onRowClick={(row) => router.push(`/incidents/${row.id}`)}
+          />
+          {!loading && !error && (
+            <div className="px-3 pb-3">
+              <Pagination
+                offset={offset}
+                limit={limit}
+                count={data.length}
+                onChange={(o) => pushParams({ offset: o })}
+              />
+            </div>
+          )}
+        </div>
+      </StaggerItem>
+    </PageTransition>
   );
 }
 
