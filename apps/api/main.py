@@ -93,7 +93,7 @@ def _seed_default_admin() -> None:
             id=str(uuid.uuid4()),
             username="admin",
             email="admin@cyberdef.local",
-            hashed_password=hash_password("CyberDef2024!"),
+            hashed_password=hash_password("admin"),
             role="admin",
             is_active=True,
             created_at=datetime.now(timezone.utc),
