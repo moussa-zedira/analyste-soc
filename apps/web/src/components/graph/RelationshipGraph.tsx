@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import ForceGraph2D from "react-force-graph-2d";
+import { useEffect, useRef, useState } from "react";
+import * as d3 from "d3";
 import type { GraphData, GraphNode } from "@/lib/types";
 
 const NODE_COLORS: Record<string, string> = {
@@ -16,80 +16,147 @@ interface Props {
   height: number;
 }
 
-/** Graphe interactif 2D des relations entre IP, utilisateurs et incidents. */
+interface SimNode extends d3.SimulationNodeDatum {
+  id: string;
+  type: string;
+  label: string;
+  severity: string | null;
+  event_count: number | null;
+}
+
+interface SimLink extends d3.SimulationLinkDatum<SimNode> {
+  weight: number;
+}
+
+/** Graphe interactif SVG des relations entre IP, utilisateurs et incidents. */
 export function RelationshipGraph({ data, width, height }: Props) {
+  const svgRef = useRef<SVGSVGElement>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fgRef = useRef<any>(null);
 
-  const graphData = {
-    nodes: data.nodes.map((n) => ({ ...n })),
-    links: data.edges.map((e) => ({
-      source: e.source,
-      target: e.target,
-      weight: e.weight,
-    })),
-  };
+  useEffect(() => {
+    if (!svgRef.current || data.nodes.length === 0) return;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleNodeClick = useCallback((node: any) => {
-    setSelectedNode(node as GraphNode);
-    if (fgRef.current) {
-      fgRef.current.centerAt(node.x, node.y, 500);
-      fgRef.current.zoom(3, 500);
-    }
-  }, []);
+    const svg = d3.select(svgRef.current);
+    svg.selectAll("*").remove();
 
-  const nodeCanvasObject = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-      const label = node.label || node.id;
-      const fontSize = 12 / globalScale;
-      const size = node.type === "incident" ? 6 : 4;
+    const nodes: SimNode[] = data.nodes.map((n) => ({ ...n }));
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    const links: SimLink[] = data.edges
+      .filter((e) => nodeMap.has(e.source) && nodeMap.has(e.target))
+      .map((e) => ({ source: e.source, target: e.target, weight: e.weight }));
 
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
-      ctx.fillStyle = NODE_COLORS[node.type] || "#6B7280";
-      ctx.fill();
+    const g = svg.append("g");
 
-      if (selectedNode?.id === node.id) {
-        ctx.strokeStyle = "#FFFFFF";
-        ctx.lineWidth = 2 / globalScale;
-        ctx.stroke();
-      }
+    // Zoom
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.3, 5])
+      .on("zoom", (event) => g.attr("transform", event.transform));
+    svg.call(zoom);
 
-      if (globalScale > 1.5) {
-        ctx.font = `${fontSize}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillStyle = "#D1D5DB";
-        ctx.fillText(label, node.x, node.y + size + 2);
-      }
-    },
-    [selectedNode],
-  );
+    // Simulation
+    const simulation = d3.forceSimulation<SimNode>(nodes)
+      .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).distance(80))
+      .force("charge", d3.forceManyBody().strength(-120))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(20));
+
+    // Links
+    const link = g.append("g")
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("stroke", "#4B5563")
+      .attr("stroke-opacity", 0.5)
+      .attr("stroke-width", (d) => Math.min(1 + d.weight * 0.5, 4));
+
+    // Node groups
+    const node = g.append("g")
+      .selectAll<SVGGElement, SimNode>("g")
+      .data(nodes)
+      .join("g")
+      .style("cursor", "pointer")
+      .call(
+        d3.drag<SVGGElement, SimNode>()
+          .on("start", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+          })
+          .on("drag", (event, d) => {
+            d.fx = event.x;
+            d.fy = event.y;
+          })
+          .on("end", (event, d) => {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+          })
+      );
+
+    // Glow filter
+    const defs = svg.append("defs");
+    const filter = defs.append("filter").attr("id", "glow");
+    filter.append("feGaussianBlur").attr("stdDeviation", "3").attr("result", "coloredBlur");
+    const feMerge = filter.append("feMerge");
+    feMerge.append("feMergeNode").attr("in", "coloredBlur");
+    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+    // Node circles
+    node.append("circle")
+      .attr("r", (d) => d.type === "incident" ? 8 : 6)
+      .attr("fill", (d) => NODE_COLORS[d.type] || "#6B7280")
+      .attr("stroke", (d) => NODE_COLORS[d.type] || "#6B7280")
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.3)
+      .style("filter", "url(#glow)");
+
+    // Labels
+    node.append("text")
+      .text((d) => d.label.length > 18 ? d.label.slice(0, 16) + "..." : d.label)
+      .attr("dy", 18)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#9CA3AF")
+      .attr("font-size", "9px")
+      .attr("font-family", "monospace");
+
+    // Click handler
+    node.on("click", (_, d) => {
+      setSelectedNode({
+        id: d.id,
+        type: d.type as "ip" | "user" | "incident",
+        label: d.label,
+        severity: d.severity,
+        event_count: d.event_count,
+      });
+    });
+
+    // Tick
+    simulation.on("tick", () => {
+      link
+        .attr("x1", (d) => (d.source as SimNode).x!)
+        .attr("y1", (d) => (d.source as SimNode).y!)
+        .attr("x2", (d) => (d.target as SimNode).x!)
+        .attr("y2", (d) => (d.target as SimNode).y!);
+      node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+    });
+
+    return () => { simulation.stop(); };
+  }, [data, width, height]);
 
   return (
-    <div className="relative">
-      <ForceGraph2D
-        ref={fgRef}
-        graphData={graphData}
+    <div className="relative h-full w-full">
+      <svg
+        ref={svgRef}
         width={width}
         height={height}
-        backgroundColor="#111827"
-        nodeCanvasObject={nodeCanvasObject}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        linkColor={() => "#4B5563"}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        linkWidth={(link: any) => Math.min(1 + link.weight * 0.5, 5)}
-        onNodeClick={handleNodeClick}
+        className="bg-[#0a0f1a] rounded"
       />
 
       {selectedNode && (
-        <div className="absolute right-4 top-4 w-64 rounded-lg border border-gray-700 bg-gray-900 p-4 shadow-xl">
+        <div className="absolute right-4 top-4 w-64 rounded-lg border border-cyan-glow/20 bg-gray-900/95 p-4 shadow-xl backdrop-blur">
           <div className="mb-2 flex items-center justify-between">
             <span
-              className="rounded px-2 py-0.5 text-xs font-medium"
+              className="rounded px-2 py-0.5 text-[10px] font-bold tracking-wider"
               style={{
                 backgroundColor: NODE_COLORS[selectedNode.type] + "33",
                 color: NODE_COLORS[selectedNode.type],
@@ -99,38 +166,30 @@ export function RelationshipGraph({ data, width, height }: Props) {
             </span>
             <button
               onClick={() => setSelectedNode(null)}
-              className="text-gray-500 hover:text-gray-300"
+              className="text-gray-500 hover:text-gray-300 text-xs"
             >
               ✕
             </button>
           </div>
-          <p className="text-sm font-semibold text-white">
+          <p className="text-sm font-semibold text-white font-mono break-all">
             {selectedNode.label}
           </p>
           {selectedNode.severity && (
-            <p className="text-xs text-gray-400">
-              Severity: {selectedNode.severity}
+            <p className="mt-1 text-[10px] text-gray-400">
+              Severity: <span className={
+                selectedNode.severity === "critical" ? "text-red-400" :
+                selectedNode.severity === "high" ? "text-orange-400" :
+                selectedNode.severity === "medium" ? "text-yellow-400" : "text-cyan-glow"
+              }>{selectedNode.severity}</span>
             </p>
           )}
           {selectedNode.event_count != null && (
-            <p className="text-xs text-gray-400">
-              Events: {selectedNode.event_count}
+            <p className="text-[10px] text-gray-400">
+              Events: <span className="text-cyan-glow">{selectedNode.event_count}</span>
             </p>
           )}
         </div>
       )}
-
-      <div className="absolute bottom-4 left-4 flex gap-4 rounded bg-gray-900/80 px-3 py-2">
-        {Object.entries(NODE_COLORS).map(([type, color]) => (
-          <div key={type} className="flex items-center gap-1.5">
-            <span
-              className="inline-block h-3 w-3 rounded-full"
-              style={{ backgroundColor: color }}
-            />
-            <span className="text-xs capitalize text-gray-400">{type}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

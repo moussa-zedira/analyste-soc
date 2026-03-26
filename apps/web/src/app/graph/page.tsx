@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import { DynamicRelationshipGraph } from "@/components/graph/DynamicRelationshipGraph";
 import { getRelationshipGraph } from "@/lib/apiClient";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
@@ -50,17 +49,8 @@ export default function GraphPage() {
   const handleInjectDemo = async () => {
     setInjecting(true);
     try {
-      const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-      const prefix = typeof window !== "undefined" && !BASE ? "/api/proxy" : BASE;
-      const apiKey = typeof window !== "undefined" ? localStorage.getItem("api_key") || "" : "";
-      await fetch(`${prefix}/stats/demo-data`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(apiKey ? { "X-API-Key": apiKey } : {}),
-        },
-      });
-      // Recharger le graphe
+      const { injectDemoData } = await import("@/lib/apiClient");
+      await injectDemoData();
       await loadGraph();
     } catch {
       setError("Erreur lors de l'injection des donnees");

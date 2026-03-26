@@ -232,6 +232,15 @@ export function getRelationshipGraph(
   );
 }
 
+/** Injecte des donnees de demo pour le graphe et le dashboard. */
+export function injectDemoData(opts?: RequestOptions): Promise<{ events_created: number }> {
+  return request<{ events_created: number }>(
+    "/stats/demo-data",
+    { method: "POST" },
+    opts,
+  );
+}
+
 // --- MITRE ATT&CK ---
 
 /** Recupere les statistiques de couverture MITRE ATT&CK. */
