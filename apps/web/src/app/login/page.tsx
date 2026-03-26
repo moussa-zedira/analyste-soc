@@ -19,7 +19,7 @@ export default function LoginPage() {
     typeof window !== "undefined"
       ? "/api/proxy"
       : (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000");
-  const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "dev-insecure-key";
+  const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "elite-secret-key";
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {

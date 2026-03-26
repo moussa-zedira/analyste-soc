@@ -72,7 +72,40 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         Base.metadata.create_all(bind=engine)
         logger.info("database_initialised", method="create_all")
 
+    # Create default admin account if no users exist
+    _seed_default_admin()
+
     yield
+
+
+def _seed_default_admin() -> None:
+    """Cree un compte admin par defaut si la table users est vide."""
+    import uuid
+    from datetime import datetime, timezone
+    from apps.api.auth import hash_password
+    from apps.api.models.user import User
+
+    db = SessionLocal()
+    try:
+        if db.query(User).first() is not None:
+            return  # Users already exist, skip seeding
+        admin = User(
+            id=str(uuid.uuid4()),
+            username="admin",
+            email="admin@cyberdef.local",
+            hashed_password=hash_password("CyberDef2024!"),
+            role="admin",
+            is_active=True,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(admin)
+        db.commit()
+        logger.info("default_admin_created", username="admin")
+    except Exception as exc:
+        db.rollback()
+        logger.warning("seed_admin_failed", error=str(exc))
+    finally:
+        db.close()
 
 
 def create_app() -> FastAPI:
