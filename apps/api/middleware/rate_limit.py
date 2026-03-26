@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
+from apps.api.config import get_settings
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+_settings = get_settings()
 
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["60/minute"],
-    storage_uri=None,  # Set to Redis URL in setup_rate_limiter()
+    storage_uri=_settings.REDIS_URL,
 )
-
-
-def setup_rate_limiter(redis_url: str | None = None) -> None:
-    """Reconfigure limiter to use Redis storage if available."""
-    if redis_url:
-        limiter._storage_uri = redis_url

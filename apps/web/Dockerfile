@@ -8,7 +8,8 @@ RUN npm ci
 COPY apps/web/ .
 
 # Next.js bakes NEXT_PUBLIC_* at build time — provide defaults
-ARG NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+# In Docker, the Next.js server proxies to the api container via Docker network
+ARG NEXT_PUBLIC_API_BASE_URL=http://api:8000
 ARG NEXT_PUBLIC_API_KEY=elite-secret-key
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_KEY=$NEXT_PUBLIC_API_KEY

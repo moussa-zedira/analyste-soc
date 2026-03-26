@@ -37,7 +37,11 @@ def dispatch_alert(incident_data: dict) -> None:
             if incident_rank < min_rank:
                 continue
 
-            config = json.loads(channel.config_json)
+            try:
+                config = json.loads(channel.config_json)
+            except (json.JSONDecodeError, TypeError):
+                logger.warning("Invalid config_json for channel '%s', skipping", channel.name)
+                continue
             try:
                 if channel.channel_type == "slack":
                     _send_slack(config, incident_data)

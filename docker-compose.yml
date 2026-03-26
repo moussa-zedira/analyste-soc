@@ -105,10 +105,13 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://api:8000
+        NEXT_PUBLIC_API_KEY: elite-secret-key
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+      NEXT_PUBLIC_API_BASE_URL: http://api:8000
       NEXT_PUBLIC_API_KEY: elite-secret-key
     depends_on:
       api:

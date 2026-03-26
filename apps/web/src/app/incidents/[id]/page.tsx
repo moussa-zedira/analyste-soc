@@ -14,8 +14,8 @@ import { IncidentTimeline } from "@/components/IncidentTimeline";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-gray-500">{label}</dt>
-      <dd className="mt-1 text-sm text-gray-700 dark:text-gray-200">{children}</dd>
+      <dt className="hud-label">{label}</dt>
+      <dd className="mt-1 text-sm text-gray-300">{children}</dd>
     </div>
   );
 }
@@ -34,15 +34,15 @@ function ActionButton({
   children: React.ReactNode;
 }) {
   const colors = {
-    yellow: "bg-yellow-600 hover:bg-yellow-500 shadow-yellow-600/20",
-    green: "bg-green-600 hover:bg-green-500 shadow-green-600/20",
-    gray: "bg-gray-600 hover:bg-gray-500 shadow-gray-600/20",
+    yellow: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20",
+    green: "border-cyan-glow/30 bg-cyan-glow/10 text-cyan-glow hover:bg-cyan-glow/20",
+    gray: "border-gray-600 bg-space-mid/50 text-gray-400 hover:bg-space-mid hover:text-gray-200",
   };
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium text-white shadow-lg transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:shadow-none ${colors[variant]}`}
+      className={`flex items-center gap-1.5 rounded-md border px-3.5 py-2 text-[10px] font-bold tracking-wider transition-all duration-150 active:scale-95 disabled:opacity-50 ${colors[variant]}`}
     >
       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
@@ -59,7 +59,7 @@ function DetailSkeleton() {
         <div className="skeleton h-8 w-16 rounded-lg" />
         <div className="skeleton h-7 w-72" />
       </div>
-      <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+      <div className="glass-panel p-5">
         <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i}>
@@ -68,13 +68,13 @@ function DetailSkeleton() {
             </div>
           ))}
         </div>
-        <div className="mt-4 border-t border-gray-800 pt-4">
+        <div className="mt-4 border-t border-cyan-glow/10 pt-4">
           <div className="skeleton mb-2 h-3 w-20" />
           <div className="skeleton h-4 w-full" />
           <div className="skeleton mt-1 h-4 w-3/4" />
         </div>
       </div>
-      <div className="rounded-xl border border-gray-800 bg-gray-900 p-5">
+      <div className="glass-panel p-5">
         <div className="skeleton h-5 w-40" />
       </div>
     </div>
@@ -111,12 +111,13 @@ export default function IncidentDetailPage() {
   if (error) {
     return (
       <div className="animate-fade-in space-y-4">
-        <div className="rounded-xl border border-red-800 bg-red-950/30 px-4 py-3 text-sm text-red-400">
+        <div className="glass-panel border-red-500/30 px-4 py-3 text-sm text-red-400">
+          <span className="mr-2">&#x25B2;</span>
           {error}
         </div>
         <button
           onClick={() => router.push("/incidents")}
-          className="text-sm text-blue-400 underline"
+          className="text-sm text-cyan-glow underline"
         >
           Back to incidents
         </button>
@@ -132,46 +133,48 @@ export default function IncidentDetailPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push("/incidents")}
-          className="rounded-lg border border-gray-300 bg-gray-100 px-2.5 py-1.5 text-sm text-gray-400 transition-all duration-150 hover:bg-gray-700 hover:text-white active:scale-95 dark:border-gray-700 dark:bg-gray-800"
+          className="rounded-md border border-cyan-glow/20 bg-space-mid/50 px-2.5 py-1.5 text-gray-400 transition-all hover:border-cyan-glow/40 hover:bg-cyan-glow/10 hover:text-cyan-glow active:scale-95"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="hud-heading text-lg font-bold tracking-wider text-cyan-glow">
           {incident.title}
         </h1>
         <div className="ml-auto flex gap-2">
           {incident.status === "open" && (
             <>
               <ActionButton onClick={() => handleStatusChange("ack")} disabled={updating} variant="yellow" icon="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-                Acknowledge
+                ACKNOWLEDGE
               </ActionButton>
               <ActionButton onClick={() => handleStatusChange("closed")} disabled={updating} variant="green" icon="M4.5 12.75l6 6 9-13.5">
-                Close
+                CLOSE
               </ActionButton>
             </>
           )}
           {incident.status === "ack" && (
             <>
               <ActionButton onClick={() => handleStatusChange("closed")} disabled={updating} variant="green" icon="M4.5 12.75l6 6 9-13.5">
-                Close
+                CLOSE
               </ActionButton>
               <ActionButton onClick={() => handleStatusChange("open")} disabled={updating} variant="gray" icon="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99">
-                Reopen
+                REOPEN
               </ActionButton>
             </>
           )}
           {incident.status === "closed" && (
             <ActionButton onClick={() => handleStatusChange("open")} disabled={updating} variant="gray" icon="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99">
-              Reopen
+              REOPEN
             </ActionButton>
           )}
         </div>
       </div>
 
+      <div className="cyan-line" />
+
       {/* Detail card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+      <div className="glass-panel glass-panel-animated p-6">
         <dl className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
           <Field label="Status">
             <StatusBadge value={incident.status} />
@@ -186,34 +189,40 @@ export default function IncidentDetailPage() {
             </div>
           </Field>
           <Field label="Rule">
-            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-gray-800">
+            <span className="rounded-md border border-cyan-glow/15 bg-space-mid/50 px-1.5 py-0.5 font-mono text-xs text-cyan-dim">
               {incident.rule_id}
             </span>
           </Field>
           <Field label="Entity">
-            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-gray-800">
+            <span className="rounded-md border border-cyan-glow/15 bg-space-mid/50 px-1.5 py-0.5 font-mono text-xs text-cyan-glow/60">
               {incident.entity_key}
             </span>
           </Field>
           <Field label="Created">
-            {new Date(incident.created_at).toLocaleString()}
+            <span className="font-mono text-xs text-cyan-glow/60">
+              {new Date(incident.created_at).toLocaleString()}
+            </span>
           </Field>
           <Field label="Window start">
-            {new Date(incident.start_ts).toLocaleString()}
+            <span className="font-mono text-xs text-cyan-glow/60">
+              {new Date(incident.start_ts).toLocaleString()}
+            </span>
           </Field>
           <Field label="Window end">
-            {new Date(incident.end_ts).toLocaleString()}
+            <span className="font-mono text-xs text-cyan-glow/60">
+              {new Date(incident.end_ts).toLocaleString()}
+            </span>
           </Field>
           <Field label="Dedup hash">
-            <span className="font-mono text-xs text-gray-400">
+            <span className="font-mono text-xs text-gray-500">
               {incident.dedup_hash.slice(0, 16)}...
             </span>
           </Field>
         </dl>
         {incident.description && (
-          <div className="mt-5 border-t border-gray-200 pt-5 dark:border-gray-800">
-            <p className="text-xs font-medium text-gray-500">Description</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-gray-300">
+          <div className="mt-5 border-t border-cyan-glow/10 pt-5">
+            <p className="hud-label mb-1.5">Description</p>
+            <p className="text-sm leading-relaxed text-gray-300">
               {incident.description}
             </p>
           </div>
@@ -223,42 +232,42 @@ export default function IncidentDetailPage() {
       {/* Events */}
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="hud-heading text-base font-bold tracking-wider text-cyan-glow">
             Related Events
-            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+            <span className="ml-2 rounded-full border border-cyan-glow/20 bg-cyan-glow/10 px-2 py-0.5 text-[10px] font-normal tracking-wider text-cyan-glow">
               {incident.events?.length ?? 0}
             </span>
           </h2>
-          <div className="flex overflow-hidden rounded-lg border border-gray-300 text-xs dark:border-gray-700">
+          <div className="flex overflow-hidden rounded-md border border-cyan-glow/20 text-[10px] font-bold tracking-wider">
             <button
               onClick={() => setEventsView("timeline")}
               className={`px-3.5 py-1.5 transition-all duration-150 ${
                 eventsView === "timeline"
-                  ? "bg-blue-600 text-white shadow-inner"
-                  : "bg-gray-100 text-gray-500 hover:text-gray-300 dark:bg-gray-800 dark:text-gray-400"
+                  ? "bg-cyan-glow/15 text-cyan-glow"
+                  : "bg-space-mid/50 text-gray-500 hover:text-gray-300"
               }`}
             >
-              Timeline
+              TIMELINE
             </button>
             <button
               onClick={() => setEventsView("table")}
               className={`px-3.5 py-1.5 transition-all duration-150 ${
                 eventsView === "table"
-                  ? "bg-blue-600 text-white shadow-inner"
-                  : "bg-gray-100 text-gray-500 hover:text-gray-300 dark:bg-gray-800 dark:text-gray-400"
+                  ? "bg-cyan-glow/15 text-cyan-glow"
+                  : "bg-space-mid/50 text-gray-500 hover:text-gray-300"
               }`}
             >
-              Table
+              TABLE
             </button>
           </div>
         </div>
 
         {eventsView === "timeline" ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+          <div className="glass-panel p-5">
             <IncidentTimeline events={incident.events ?? []} />
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+          <div className="glass-panel overflow-hidden">
             <DataTable
               columns={eventColumns}
               data={incident.events ?? []}

@@ -85,6 +85,11 @@ def compute_scores(
     lookback_hours: int = 24,
     db: Session = Depends(get_db),
 ) -> dict:
+    if lookback_hours < 1 or lookback_hours > 720:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="lookback_hours must be between 1 and 720 (30 days)",
+        )
     """Recompute threat scores for all active IPs."""
     try:
         count = compute_threat_scores(db, lookback_hours=lookback_hours)

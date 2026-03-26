@@ -71,7 +71,7 @@ def task_run_anomaly() -> dict:
 @celery.task(name="apps.api.tasks.task_run_ml_detect")
 def task_run_ml_detect() -> dict:
     """Train Isolation Forest and detect anomalies in background."""
-    from apps.api.detection.ml_anomaly import run_ml_detection
+    from apps.api.detection.ml_anomaly import train_and_detect as run_ml_detection
 
     db = SessionLocal()
     try:

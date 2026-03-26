@@ -1,18 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DynamicThreatMap } from "@/components/map/DynamicThreatMap";
 import { getGeoEvents } from "@/lib/apiClient";
 import { useFetchData } from "@/lib/hooks";
+import { useWebSocket, type WsMessage } from "@/lib/useWebSocket";
 import type { GeoEvent } from "@/lib/types";
 
 export default function MapPage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { data, loading, error } = useFetchData<GeoEvent[]>(
     (signal) => getGeoEvents({ limit: 200 }, { signal }),
     [],
     [refreshKey],
   );
+
+  // Real-time: debounced auto-refresh when new events arrive via WebSocket
+  const handleWsMessage = useCallback((msg: WsMessage) => {
+    if (msg.type === "new_event" || msg.type === "new_incident") {
+      // Debounce to avoid excessive re-fetches when many events arrive at once
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        setRefreshKey((k) => k + 1);
+      }, 1000);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const { connected } = useWebSocket({ onMessage: handleWsMessage });
 
   const totalEvents = data.reduce((sum, g) => sum + g.event_count, 0);
   const uniqueCountries = new Set(data.map((g) => g.country)).size;
@@ -36,22 +58,58 @@ export default function MapPage() {
           {/* Stats badges */}
           <div className="hidden md:flex items-center gap-3">
             <div className="glass-panel px-3 py-1.5 text-center">
-              <p className="text-[9px] tracking-wider text-cyan-glow/40">SOURCES</p>
-              <p className="font-mono text-sm font-bold text-cyan-glow">{data.length}</p>
+              <p className="text-[9px] tracking-wider text-cyan-glow/40">
+                SOURCES
+              </p>
+              <p className="font-mono text-sm font-bold text-cyan-glow">
+                {data.length}
+              </p>
             </div>
             <div className="glass-panel px-3 py-1.5 text-center">
-              <p className="text-[9px] tracking-wider text-cyan-glow/40">EVENTS</p>
-              <p className="font-mono text-sm font-bold text-cyan-glow">{totalEvents}</p>
+              <p className="text-[9px] tracking-wider text-cyan-glow/40">
+                EVENTS
+              </p>
+              <p className="font-mono text-sm font-bold text-cyan-glow">
+                {totalEvents}
+              </p>
             </div>
             <div className="glass-panel px-3 py-1.5 text-center">
-              <p className="text-[9px] tracking-wider text-cyan-glow/40">COUNTRIES</p>
-              <p className="font-mono text-sm font-bold text-cyan-glow">{uniqueCountries}</p>
+              <p className="text-[9px] tracking-wider text-cyan-glow/40">
+                COUNTRIES
+              </p>
+              <p className="font-mono text-sm font-bold text-cyan-glow">
+                {uniqueCountries}
+              </p>
             </div>
             <div className="glass-panel px-3 py-1.5 text-center">
-              <p className="text-[9px] tracking-wider text-red-400/50">HIGH/CRIT</p>
-              <p className="font-mono text-sm font-bold text-red-400">{criticalCount}</p>
+              <p className="text-[9px] tracking-wider text-red-400/50">
+                HIGH/CRIT
+              </p>
+              <p className="font-mono text-sm font-bold text-red-400">
+                {criticalCount}
+              </p>
             </div>
           </div>
+
+          {/* Connection status */}
+          <div className="glass-panel flex items-center gap-2 px-3 py-1.5">
+            <span className="relative flex h-2 w-2">
+              <span
+                className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  connected ? "animate-ping bg-cyan-glow" : "bg-red-500"
+                }`}
+              />
+              <span
+                className={`relative inline-flex h-2 w-2 rounded-full ${
+                  connected ? "bg-cyan-glow" : "bg-red-500"
+                }`}
+              />
+            </span>
+            <span className="text-[10px] tracking-wider text-gray-500">
+              {connected ? "LIVE" : "OFFLINE"}
+            </span>
+          </div>
+
           <button
             onClick={() => setRefreshKey((k) => k + 1)}
             className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/20 hover:shadow-cyan-md active:scale-95"
@@ -75,7 +133,7 @@ export default function MapPage() {
         className="glass-panel glass-panel-animated overflow-hidden p-1"
         style={{ height: "calc(100vh - 220px)" }}
       >
-        {loading ? (
+        {loading && data.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <svg
               className="h-8 w-8 animate-spin text-cyan-glow/50"

@@ -28,7 +28,7 @@ function SortIcon({ dir }: { dir: SortDir | null }) {
   }
   return (
     <svg
-      className={`ml-1 inline h-3 w-3 text-blue-400 transition-transform ${dir === "desc" ? "rotate-180" : ""}`}
+      className={`ml-1 inline h-3 w-3 text-cyan-glow transition-transform ${dir === "desc" ? "rotate-180" : ""}`}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -87,9 +87,9 @@ export function DataTable<T extends { id: string }>({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-xs uppercase text-gray-400 dark:border-gray-800 dark:text-gray-500">
+            <tr className="border-b border-cyan-glow/10 text-xs uppercase">
               {columns.map((col) => (
-                <th key={col.header} className={`px-3 py-3 font-medium ${col.className ?? ""}`}>
+                <th key={col.header} className={`px-3 py-3 font-medium text-cyan-glow/40 ${col.className ?? ""}`}>
                   {col.header}
                 </th>
               ))}
@@ -97,7 +97,7 @@ export function DataTable<T extends { id: string }>({
           </thead>
           <tbody>
             {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-              <tr key={i} className="border-b border-gray-100 dark:border-gray-800/50">
+              <tr key={i} className="border-b border-cyan-glow/5">
                 {columns.map((col) => (
                   <td key={col.header} className={`px-3 py-3 ${col.className ?? ""}`}>
                     <div className="skeleton h-4 w-3/4 rounded" />
@@ -113,7 +113,8 @@ export function DataTable<T extends { id: string }>({
 
   if (error) {
     return (
-      <div className="flex h-40 items-center justify-center rounded border border-red-300 bg-red-50 text-sm text-red-600 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+      <div className="flex h-40 items-center justify-center glass-panel border-red-500/20 text-sm text-red-400">
+        <span className="mr-2">&#x25B2;</span>
         {error}
       </div>
     );
@@ -121,11 +122,11 @@ export function DataTable<T extends { id: string }>({
 
   if (data.length === 0) {
     return (
-      <div className="flex h-40 flex-col items-center justify-center gap-2 text-gray-400 dark:text-gray-500">
-        <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+      <div className="flex h-40 flex-col items-center justify-center gap-2 text-gray-500">
+        <svg className="h-8 w-8 text-cyan-glow/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         </svg>
-        <span className="text-sm">No results found</span>
+        <span className="text-xs tracking-wider">NO RESULTS FOUND</span>
       </div>
     );
   }
@@ -133,8 +134,8 @@ export function DataTable<T extends { id: string }>({
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
-        <thead className="sticky top-0 z-10 bg-white dark:bg-gray-900">
-          <tr className="border-b border-gray-200 text-xs uppercase text-gray-400 dark:border-gray-800 dark:text-gray-500">
+        <thead className="sticky top-0 z-10 bg-space-deep/95 backdrop-blur-sm">
+          <tr className="border-b border-cyan-glow/10 text-xs uppercase">
             {columns.map((col, idx) => {
               const sortable = !!col.sortValue;
               const isActive = sortCol === idx;
@@ -144,9 +145,9 @@ export function DataTable<T extends { id: string }>({
                   onClick={() => sortable && handleSort(idx)}
                   className={`px-3 py-3 font-medium select-none ${col.className ?? ""} ${
                     sortable
-                      ? "cursor-pointer transition-colors hover:text-gray-300"
+                      ? "cursor-pointer transition-colors hover:text-cyan-glow/70"
                       : ""
-                  } ${isActive ? "text-blue-400" : ""}`}
+                  } ${isActive ? "text-cyan-glow" : "text-cyan-glow/40"}`}
                 >
                   {col.header}
                   {sortable && <SortIcon dir={isActive ? sortDir : null} />}
@@ -156,15 +157,20 @@ export function DataTable<T extends { id: string }>({
           </tr>
         </thead>
         <tbody>
-          {sortedData.map((row) => (
+          {sortedData.map((row, i) => (
             <tr
               key={row.id}
               onClick={() => onRowClick?.(row)}
-              className={`border-b border-gray-100 transition-colors duration-150 dark:border-gray-800/50 ${
+              className={`border-b border-cyan-glow/5 transition-colors duration-150 ${
                 onRowClick
-                  ? "cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
-                  : ""
+                  ? "cursor-pointer hover:bg-cyan-glow/5"
+                  : "hover:bg-cyan-glow/[0.02]"
               }`}
+              style={{
+                animation: i < 20
+                  ? `slide-up 0.25s ease-out ${Math.min(i * 0.02, 0.4)}s both`
+                  : "none",
+              }}
             >
               {columns.map((col) => (
                 <td

@@ -13,16 +13,23 @@ export const eventColumns: Column<Event>[] = [
   {
     header: "Timestamp",
     accessor: (r) => (
-      <span className="whitespace-nowrap text-gray-400">
+      <span className="whitespace-nowrap font-mono text-xs text-cyan-glow/60">
         {new Date(r.ts).toLocaleString()}
       </span>
     ),
     sortValue: (r) => r.ts,
   },
-  { header: "Source", accessor: (r) => r.source },
+  {
+    header: "Source",
+    accessor: (r) => (
+      <span className="text-gray-400">{r.source}</span>
+    ),
+  },
   {
     header: "Type",
-    accessor: (r) => r.event_type,
+    accessor: (r) => (
+      <span className="font-mono text-cyan-dim">{r.event_type}</span>
+    ),
     sortValue: (r) => r.event_type,
   },
   {
@@ -32,14 +39,21 @@ export const eventColumns: Column<Event>[] = [
   },
   {
     header: "Source IP",
-    accessor: (r) => r.src_ip ?? "-",
+    accessor: (r) => (
+      <span className="font-mono text-cyan-glow/50">{r.src_ip ?? "-"}</span>
+    ),
     sortValue: (r) => r.src_ip ?? "",
   },
-  { header: "User", accessor: (r) => r.username ?? "-" },
+  {
+    header: "User",
+    accessor: (r) => (
+      <span className="text-gray-400">{r.username ?? "-"}</span>
+    ),
+  },
   {
     header: "Message",
     accessor: (r) => (
-      <span className="block max-w-xs truncate" title={r.message ?? ""}>
+      <span className="block max-w-xs truncate text-gray-500" title={r.message ?? ""}>
         {r.message ?? "-"}
       </span>
     ),

@@ -24,7 +24,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl =
       process.env.NEXT_PUBLIC_WS_URL ??
-      `${protocol}//127.0.0.1:8000/ws/live`;
+      `${protocol}//${window.location.hostname}:8000/ws/live`;
 
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout>;

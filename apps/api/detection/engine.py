@@ -49,15 +49,18 @@ def run_detection(db: Session) -> dict:
     total_incidents = 0
 
     for rule in rules:
-        matches = evaluate_rule(rule, events)
-        logger.info(
-            "Rule %s produced %d matches", rule.id, len(matches)
-        )
+        try:
+            matches = evaluate_rule(rule, events)
+            logger.info(
+                "Rule %s produced %d matches", rule.id, len(matches)
+            )
 
-        for match in matches:
-            created = create_incident(db, rule, match)
-            if created:
-                total_incidents += 1
+            for match in matches:
+                created = create_incident(db, rule, match)
+                if created:
+                    total_incidents += 1
+        except Exception:
+            logger.exception("Rule %s failed", rule.id)
 
     # Custom rules that need special logic beyond the declarative framework
     try:

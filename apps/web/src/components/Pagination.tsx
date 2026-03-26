@@ -22,13 +22,13 @@ export function Pagination({
   const rangeEnd = offset + count;
 
   return (
-    <div className="flex items-center justify-between border-t border-gray-200 px-1 pt-3 dark:border-gray-800">
+    <div className="flex items-center justify-between border-t border-cyan-glow/10 px-1 pt-3">
       <div className="flex items-center gap-3">
-        <p className="text-sm text-gray-400 dark:text-gray-500">
-          Page {page}
+        <p className="text-xs text-gray-500">
+          <span className="font-mono text-cyan-glow/60">PAGE {page}</span>
           {count > 0 && (
-            <span className="text-gray-500 dark:text-gray-400">
-              {" "}&middot; {rangeStart}–{rangeEnd}
+            <span className="text-gray-600">
+              {" "}&middot; {rangeStart}&ndash;{rangeEnd}
             </span>
           )}
         </p>
@@ -36,7 +36,7 @@ export function Pagination({
           <select
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
-            className="rounded border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-500 outline-none transition-colors focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+            className="rounded-md border border-cyan-glow/15 bg-space-dark px-2 py-1 text-xs text-gray-400 outline-none transition-colors focus:border-cyan-glow/40"
             aria-label="Rows per page"
           >
             {PAGE_SIZES.map((s) => (
@@ -51,7 +51,7 @@ export function Pagination({
         <button
           disabled={!hasPrev}
           onClick={() => onChange(Math.max(0, offset - limit))}
-          className="rounded-lg border border-gray-300 bg-gray-100 px-3 py-1.5 text-sm text-gray-600 transition-all duration-150 hover:bg-gray-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="rounded-md border border-cyan-glow/20 bg-space-mid/50 px-3 py-1.5 text-gray-400 transition-all hover:border-cyan-glow/40 hover:bg-cyan-glow/10 hover:text-cyan-glow active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
           aria-label="Previous page"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -61,7 +61,7 @@ export function Pagination({
         <button
           disabled={!hasNext}
           onClick={() => onChange(offset + limit)}
-          className="rounded-lg border border-gray-300 bg-gray-100 px-3 py-1.5 text-sm text-gray-600 transition-all duration-150 hover:bg-gray-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="rounded-md border border-cyan-glow/20 bg-space-mid/50 px-3 py-1.5 text-gray-400 transition-all hover:border-cyan-glow/40 hover:bg-cyan-glow/10 hover:text-cyan-glow active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
           aria-label="Next page"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
