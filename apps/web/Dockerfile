@@ -27,6 +27,7 @@ COPY --from=builder /app/public ./public
 
 # Rewrites in next.config use this at runtime
 ENV NEXT_PUBLIC_API_BASE_URL=http://api:8000
+ENV NEXT_PUBLIC_API_KEY=elite-secret-key
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 EXPOSE 3000
