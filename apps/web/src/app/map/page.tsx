@@ -7,6 +7,7 @@ import { DynamicGlobe } from "@/components/map/DynamicGlobe";
 import { getGeoEvents } from "@/lib/apiClient";
 import { useFetchData } from "@/lib/hooks";
 import { useWebSocket, type WsMessage } from "@/lib/useWebSocket";
+import { PageTransition, StaggerItem } from "@/components/PageTransition";
 import type { GeoEvent } from "@/lib/types";
 
 type ViewMode = "GLOBE" | "MAP";
@@ -66,9 +67,9 @@ export default function MapPage() {
   ).length;
 
   return (
-    <div className="space-y-4 animate-hud-reveal">
+    <PageTransition className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <StaggerItem><div className="flex items-center justify-between">
         <div>
           <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
             Threat Map
@@ -173,9 +174,9 @@ export default function MapPage() {
             REFRESH
           </button>
         </div>
-      </div>
+      </div></StaggerItem>
 
-      <div className="cyan-line" />
+      <StaggerItem><div className="cyan-line" /></StaggerItem>
 
       {error && (
         <div className="animate-slide-up glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400">
@@ -185,7 +186,7 @@ export default function MapPage() {
       )}
 
       {/* Map / Globe container */}
-      <div
+      <StaggerItem><div
         ref={containerRef}
         className="glass-panel glass-panel-animated overflow-hidden p-1"
         style={{ height: "calc(100vh - 220px)" }}
@@ -244,10 +245,10 @@ export default function MapPage() {
             )}
           </AnimatePresence>
         )}
-      </div>
+      </div></StaggerItem>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6">
+      <StaggerItem><div className="flex items-center justify-center gap-6">
         {[
           { label: "LOW", color: "#00E5FF" },
           { label: "MEDIUM", color: "#EAB308" },
@@ -267,7 +268,7 @@ export default function MapPage() {
             </span>
           </div>
         ))}
-      </div>
-    </div>
+      </div></StaggerItem>
+    </PageTransition>
   );
 }

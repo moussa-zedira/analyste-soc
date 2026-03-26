@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { scanTarget, fetchScanHistory, getScanPdfUrl } from "@/lib/apiClient";
+import { scanTarget, fetchScanHistory, fetchScanDetail, getScanPdfUrl } from "@/lib/apiClient";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
 import type { CveResult, PortResult, ReputationResult, ScanHistoryEntry, ScannerResult } from "@/lib/types";
 
@@ -309,7 +309,6 @@ export default function ScannerPage() {
     setLoading(true);
     setError(null);
     try {
-      const { fetchScanDetail } = await import("@/lib/apiClient");
       const data = await fetchScanDetail(scanId);
       setResult(data);
       setTarget(data.target);
