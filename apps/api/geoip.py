@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from pathlib import Path
 
 import httpx
@@ -13,6 +15,23 @@ logger = logging.getLogger(__name__)
 
 _reader = None
 _geoip_available = False
+
+# Rate limiting for ip-api.com (45 requests/minute free tier)
+_api_lock = threading.Lock()
+_api_calls: list[float] = []
+_API_RATE_LIMIT = 40  # stay under 45/min
+_API_WINDOW = 60.0
+
+
+def _rate_limit_ip_api() -> bool:
+    """Check and enforce rate limit for ip-api.com. Returns True if allowed."""
+    now = time.monotonic()
+    with _api_lock:
+        _api_calls[:] = [t for t in _api_calls if now - t < _API_WINDOW]
+        if len(_api_calls) >= _API_RATE_LIMIT:
+            return False
+        _api_calls.append(now)
+        return True
 
 
 def _init_geoip() -> None:
@@ -67,11 +86,15 @@ def lookup_batch(ips: list[str]) -> dict[str, dict]:
                 results[ip] = geo
         return results
 
-    # Fallback to ip-api.com batch endpoint
+    # Fallback to ip-api.com batch endpoint (rate-limited)
+    if not _rate_limit_ip_api():
+        logger.warning("ip-api.com rate limit reached, skipping batch lookup")
+        return results
+
     try:
         resp = httpx.post(
             "http://ip-api.com/batch",
-            json=[{"query": ip, "fields": "status,query,country,city,lat,lon"} for ip in ips],
+            json=[{"query": ip, "fields": "status,query,country,city,lat,lon"} for ip in ips[:100]],
             timeout=10.0,
         )
         for item in resp.json():

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -29,7 +30,8 @@ logger = logging.getLogger(__name__)
 
 SEVERITY_MAP = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
-# Module-level singleton
+# Module-level singleton (protected by lock for thread safety)
+_ml_lock = threading.Lock()
 _model: IsolationForest | None = None
 _model_info: dict = {}
 
@@ -207,22 +209,26 @@ def train_and_detect(
             "error": "Not enough data (need >= 10 distinct IPs)",
         }
 
-    _model = IsolationForest(
+    model = IsolationForest(
         contamination=contamination,
         random_state=42,
         n_estimators=100,
     )
-    predictions = _model.fit_predict(X)
-    scores = _model.decision_function(X)
+    predictions = model.fit_predict(X)
+    scores = model.decision_function(X)
 
     now = datetime.now(timezone.utc)
-    _model_info = {
+    info = {
         "n_samples": len(ips),
         "n_features": int(X.shape[1]),
         "last_trained": now.isoformat(),
         "contamination": contamination,
         "status": "trained",
     }
+
+    with _ml_lock:
+        _model = model
+        _model_info = info
 
     anomalies_detected = 0
     incidents_created = 0
@@ -248,4 +254,5 @@ def train_and_detect(
 
 def get_model_info() -> dict:
     """Return current model info or not-trained status."""
-    return _model_info if _model_info else {"status": "not_trained"}
+    with _ml_lock:
+        return dict(_model_info) if _model_info else {"status": "not_trained"}

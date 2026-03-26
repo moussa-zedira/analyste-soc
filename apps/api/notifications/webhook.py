@@ -52,20 +52,34 @@ def _build_payload(
     }
 
 
-def _send_webhook(url: str, payload: dict) -> None:
-    """Send the webhook HTTP POST (runs in background thread)."""
-    try:
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            logger.info("Webhook sent successfully: %d", resp.status)
-    except Exception:
-        logger.exception("Failed to send webhook to %s", url)
+def _send_webhook(url: str, payload: dict, max_retries: int = 3) -> None:
+    """Send the webhook HTTP POST with exponential backoff (runs in background thread)."""
+    import time
+
+    data = json.dumps(payload).encode("utf-8")
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                logger.info("Webhook sent successfully: %d", resp.status)
+                return
+        except urllib.error.HTTPError as e:
+            if e.code < 500 and e.code != 429:
+                logger.warning("Webhook rejected (HTTP %d), not retrying", e.code)
+                return
+            logger.warning("Webhook attempt %d/%d failed (HTTP %d)", attempt + 1, max_retries, e.code)
+        except Exception:
+            logger.warning("Webhook attempt %d/%d failed", attempt + 1, max_retries, exc_info=True)
+
+        if attempt < max_retries - 1:
+            time.sleep(2 ** attempt)
+
+    logger.error("Webhook delivery to %s failed after %d attempts", url, max_retries)
 
 
 def notify_incident_created(

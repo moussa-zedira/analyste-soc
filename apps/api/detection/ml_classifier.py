@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -23,7 +24,8 @@ logger = logging.getLogger(__name__)
 MIN_TRAINING_SAMPLES = 50
 SEVERITY_LABELS = ["low", "medium", "high", "critical"]
 
-# Module-level singleton
+# Module-level singleton (protected by lock for thread safety)
+_lock = threading.Lock()
 _classifier: Pipeline | None = None
 _classifier_info: dict = {}
 
@@ -68,18 +70,21 @@ def train_classifier(db: Session) -> dict:
             "required": MIN_TRAINING_SAMPLES,
         }
 
-    _classifier = Pipeline([
+    pipeline = Pipeline([
         ("tfidf", TfidfVectorizer(max_features=500, stop_words="english")),
         ("clf", RandomForestClassifier(n_estimators=100, random_state=42)),
     ])
-    _classifier.fit(texts, labels)
+    pipeline.fit(texts, labels)
 
-    _classifier_info = {
-        "status": "trained",
-        "n_samples": len(texts),
-        "last_trained": datetime.now(timezone.utc).isoformat(),
-        "classes": SEVERITY_LABELS,
-    }
+    with _lock:
+        _classifier = pipeline
+        _classifier_info = {
+            "status": "trained",
+            "n_samples": len(texts),
+            "last_trained": datetime.now(timezone.utc).isoformat(),
+            "classes": SEVERITY_LABELS,
+        }
+
     logger.info("NLP classifier trained on %d samples", len(texts))
     return _classifier_info
 
@@ -91,12 +96,14 @@ def predict_severity(
 
     Returns predicted severity string, or None if model not trained.
     """
-    if _classifier is None:
+    with _lock:
+        clf = _classifier
+    if clf is None:
         return None
     text = f"{title} {description} {' '.join(event_messages)}".strip()
     if not text:
         return None
-    return str(_classifier.predict([text])[0])
+    return str(clf.predict([text])[0])
 
 
 def classify_incidents(db: Session) -> dict:
