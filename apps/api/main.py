@@ -79,7 +79,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def _seed_default_admin() -> None:
-    """Cree un compte admin par defaut si la table users est vide."""
+    """Cree ou met a jour le compte admin par defaut."""
     import uuid
     from datetime import datetime, timezone
     from apps.api.auth import hash_password
@@ -87,8 +87,15 @@ def _seed_default_admin() -> None:
 
     db = SessionLocal()
     try:
-        if db.query(User).first() is not None:
-            return  # Users already exist, skip seeding
+        existing = db.query(User).filter(User.username == "admin").first()
+        if existing:
+            # Reset password to ensure it works
+            existing.hashed_password = hash_password("admin")
+            existing.is_active = True
+            db.commit()
+            logger.info("default_admin_password_reset", username="admin")
+            return
+
         admin = User(
             id=str(uuid.uuid4()),
             username="admin",
