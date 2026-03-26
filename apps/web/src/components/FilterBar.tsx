@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+/** Barre de filtres avec bouton de reinitialisation et compteur de filtres actifs. */
 export function FilterBar({
   children,
   onReset,
@@ -31,6 +32,7 @@ export function FilterBar({
   );
 }
 
+/** Liste deroulante de filtre avec label et options configurables. */
 export function FilterSelect({
   label,
   value,
@@ -66,6 +68,7 @@ export function FilterSelect({
   );
 }
 
+/** Champ de saisie de filtre texte avec bouton d'effacement. */
 export function FilterInput({
   label,
   value,

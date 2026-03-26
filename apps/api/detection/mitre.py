@@ -1,4 +1,4 @@
-"""MITRE ATT&CK mapping registry for detection rules."""
+"""Registre de correspondance MITRE ATT&CK pour les regles de detection."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class MitreTechnique:
+    """Representation d'une technique MITRE ATT&CK."""
+
     id: str
     name: str
     tactic_id: str
@@ -92,10 +94,12 @@ TACTIC_ORDER: list[dict[str, str]] = [
 
 
 def get_techniques_for_rule(rule_id: str) -> list[MitreTechnique]:
+    """Retourne les techniques MITRE associees a une regle donnee."""
     return RULE_MITRE_MAP.get(rule_id, [])
 
 
 def get_all_mapped_techniques() -> list[MitreTechnique]:
+    """Retourne toutes les techniques MITRE uniques utilisees dans les regles."""
     seen: set[str] = set()
     result: list[MitreTechnique] = []
     for techs in RULE_MITRE_MAP.values():

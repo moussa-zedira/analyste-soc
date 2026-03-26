@@ -7,6 +7,7 @@ const COLORS: Record<string, string> = {
   critical: "text-red-400 border-red-600",
 };
 
+/** Badge affichant la severite suggeree par l'IA si differente de l'actuelle. */
 export function SuggestedSeverityBadge({
   actual,
   suggested,

@@ -1,4 +1,4 @@
-"""Rules API — trigger detection engine runs."""
+"""API Regles — lancer l'execution du moteur de detection."""
 
 from __future__ import annotations
 
@@ -21,6 +21,8 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class RulesRunResponse(BaseModel):
+    """Reponse apres execution des regles de detection."""
+
     rules_evaluated: int
     incidents_created: int
 
@@ -29,7 +31,7 @@ class RulesRunResponse(BaseModel):
 def run_rules(
     db: Session = Depends(get_db),
 ) -> dict:
-    """Execute all enabled detection rules via the detection engine."""
+    """Executer toutes les regles de detection actives via le moteur."""
     try:
         result = run_detection(db)
     except Exception:
@@ -42,6 +44,8 @@ def run_rules(
 
 
 class RuleMitreTechnique(BaseModel):
+    """Technique MITRE ATT&CK associee a une regle."""
+
     technique_id: str
     technique_name: str
     tactic_id: str
@@ -49,6 +53,8 @@ class RuleMitreTechnique(BaseModel):
 
 
 class RuleInfo(BaseModel):
+    """Informations detaillees d'une regle de detection."""
+
     id: str
     event_type: str
     threshold_count: int
@@ -61,7 +67,7 @@ class RuleInfo(BaseModel):
 
 @router.get("", response_model=list[RuleInfo])
 def list_rules() -> list[dict]:
-    """List all detection rules with MITRE ATT&CK mappings."""
+    """Lister toutes les regles de detection avec les correspondances MITRE ATT&CK."""
     rules = get_rules(enabled_only=False)
     result = []
     for r in rules:

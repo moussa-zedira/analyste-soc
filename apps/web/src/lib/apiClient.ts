@@ -101,10 +101,12 @@ async function request<T>(
   }
 }
 
+/** Verifie l'etat de sante de l'API backend. */
 export function getHealth(opts?: RequestOptions): Promise<{ status: string }> {
   return request("/health", undefined, opts);
 }
 
+/** Recupere la liste des evenements de securite avec filtres optionnels. */
 export function listEvents(
   params: EventListParams = {},
   opts?: RequestOptions,
@@ -117,10 +119,12 @@ export function listEvents(
   );
 }
 
+/** Recupere un evenement par son identifiant. */
 export function getEvent(id: string, opts?: RequestOptions): Promise<Event> {
   return request<Event>(`/events/${encodeURIComponent(id)}`, undefined, opts);
 }
 
+/** Recupere la liste des incidents avec filtres optionnels. */
 export function listIncidents(
   params: IncidentListParams = {},
   opts?: RequestOptions,
@@ -133,6 +137,7 @@ export function listIncidents(
   );
 }
 
+/** Recupere le detail d'un incident par son identifiant. */
 export function getIncident(
   id: string,
   opts?: RequestOptions,
@@ -144,6 +149,7 @@ export function getIncident(
   );
 }
 
+/** Met a jour le statut d'un incident (open, ack, closed). */
 export function updateIncidentStatus(
   id: string,
   newStatus: IncidentStatus,
@@ -156,6 +162,7 @@ export function updateIncidentStatus(
   );
 }
 
+/** Lance l'evaluation des regles de correlation sur les evenements. */
 export function runRules(opts?: RequestOptions): Promise<RulesRunResponse> {
   return request<RulesRunResponse>(
     "/rules/run",
@@ -166,12 +173,14 @@ export function runRules(opts?: RequestOptions): Promise<RulesRunResponse> {
 
 // --- KPIs ---
 
+/** Recupere les indicateurs cles de performance du SOC. */
 export function getKpis(opts?: RequestOptions): Promise<KpiResponse> {
   return request<KpiResponse>("/stats/kpis", undefined, opts);
 }
 
 // --- Stats endpoints ---
 
+/** Recupere le nombre d'evenements par minute sur une periode donnee. */
 export function getEventsPerMinute(
   params: { minutes?: number } = {},
   opts?: RequestOptions,
@@ -183,6 +192,7 @@ export function getEventsPerMinute(
   );
 }
 
+/** Recupere les donnees de la heatmap des attaques par jour. */
 export function getAttackHeatmap(
   params: { days?: number } = {},
   opts?: RequestOptions,
@@ -194,6 +204,7 @@ export function getAttackHeatmap(
   );
 }
 
+/** Recupere les evenements geolocalises pour la carte des menaces. */
 export function getGeoEvents(
   params: { limit?: number } = {},
   opts?: RequestOptions,
@@ -205,6 +216,7 @@ export function getGeoEvents(
   );
 }
 
+/** Recupere les donnees du graphe de relations (IP, utilisateurs, incidents). */
 export function getRelationshipGraph(
   params: { limit?: number } = {},
   opts?: RequestOptions,
@@ -218,12 +230,14 @@ export function getRelationshipGraph(
 
 // --- MITRE ATT&CK ---
 
+/** Recupere les statistiques de couverture MITRE ATT&CK. */
 export function getMitreStats(opts?: RequestOptions): Promise<MitreStatsResponse> {
   return request<MitreStatsResponse>("/stats/mitre", undefined, opts);
 }
 
 // --- Chat ---
 
+/** Envoie un message au chatbot SOC et retourne la reponse. */
 export function sendChatMessage(
   message: string,
   conversationId?: string,
@@ -244,6 +258,7 @@ export function sendChatMessage(
 
 // --- ML Detection ---
 
+/** Lance la detection d'anomalies par le modele ML (Isolation Forest). */
 export function runMLDetection(opts?: RequestOptions): Promise<MLDetectResponse> {
   return request<MLDetectResponse>(
     "/ml/detect",
@@ -252,10 +267,12 @@ export function runMLDetection(opts?: RequestOptions): Promise<MLDetectResponse>
   );
 }
 
+/** Recupere les informations sur le modele ML (statut, echantillons, etc.). */
 export function getMLModelInfo(opts?: RequestOptions): Promise<MLModelInfo> {
   return request<MLModelInfo>("/ml/model-info", undefined, opts);
 }
 
+/** Lance la classification automatique des incidents par le modele ML. */
 export function classifyIncidents(opts?: RequestOptions): Promise<ClassifyResponse> {
   return request<ClassifyResponse>(
     "/ml/classify",
@@ -264,12 +281,14 @@ export function classifyIncidents(opts?: RequestOptions): Promise<ClassifyRespon
   );
 }
 
+/** Recupere les informations sur le classifieur d'incidents. */
 export function getClassifierInfo(opts?: RequestOptions): Promise<ClassifierInfo> {
   return request<ClassifierInfo>("/ml/classifier-info", undefined, opts);
 }
 
 // --- Threat Scores ---
 
+/** Recupere la liste des scores de menace par IP. */
 export function getThreatScores(
   params: { limit?: number; min_score?: number } = {},
   opts?: RequestOptions,
@@ -281,6 +300,7 @@ export function getThreatScores(
   );
 }
 
+/** Recupere le score de menace d'une IP specifique. */
 export function getThreatScore(
   ip: string,
   opts?: RequestOptions,
@@ -292,6 +312,7 @@ export function getThreatScore(
   );
 }
 
+/** Declenche le calcul des scores de menace pour toutes les IP. */
 export function computeThreatScores(
   opts?: RequestOptions,
 ): Promise<ThreatScoreComputeResponse> {
@@ -304,6 +325,7 @@ export function computeThreatScores(
 
 // --- Anomaly detection ---
 
+/** Lance la detection d'anomalies statistiques sur les metriques. */
 export function runAnomaly(opts?: RequestOptions): Promise<AnomalyRunResponse> {
   return request<AnomalyRunResponse>(
     "/anomaly/run",
@@ -312,6 +334,7 @@ export function runAnomaly(opts?: RequestOptions): Promise<AnomalyRunResponse> {
   );
 }
 
+/** Recupere les lignes de base pour la detection d'anomalies. */
 export function getAnomalyBaselines(
   params: { metric_type?: string; limit?: number } = {},
   opts?: RequestOptions,

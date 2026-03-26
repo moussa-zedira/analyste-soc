@@ -1,4 +1,4 @@
-"""Celery application configuration with Redis broker."""
+"""Configuration de l'application Celery avec le broker Redis."""
 
 from __future__ import annotations
 

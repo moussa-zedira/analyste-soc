@@ -1,4 +1,4 @@
-"""Whitelist model — stores IPs and usernames to exclude from detection."""
+"""Modèle Whitelist — IP et noms d'utilisateur exclus de la détection."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from apps.api.db.base import Base
 
 
 class WhitelistEntry(Base):
+    """Entrée de liste blanche (IP, nom d'utilisateur ou plage IP)."""
+
     __tablename__ = "whitelist"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)

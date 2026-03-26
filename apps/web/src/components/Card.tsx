@@ -1,3 +1,4 @@
+/** Carte KPI affichant une valeur avec titre, sous-titre et indicateur de tendance. */
 export function Card({
   title,
   value,

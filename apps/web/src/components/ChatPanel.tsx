@@ -11,6 +11,7 @@ const QUICK_ACTIONS = [
   "Any critical incidents open?",
 ];
 
+/** Panneau de chat flottant pour interagir avec l'assistant SOC. */
 export function ChatPanel() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);

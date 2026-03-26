@@ -1,4 +1,4 @@
-"""Alerts API — CRUD for alert channel configurations."""
+"""API Alertes — CRUD pour la configuration des canaux d'alerte."""
 
 from __future__ import annotations
 
@@ -18,6 +18,8 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class AlertChannelCreate(BaseModel):
+    """Donnees pour la creation d'un canal d'alerte."""
+
     channel_type: str  # slack | email | webhook
     name: str
     config_json: str = "{}"
@@ -25,6 +27,8 @@ class AlertChannelCreate(BaseModel):
 
 
 class AlertChannelRead(BaseModel):
+    """Schema de lecture d'un canal d'alerte."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -37,12 +41,14 @@ class AlertChannelRead(BaseModel):
 
 
 class AlertChannelToggle(BaseModel):
+    """Donnees pour activer ou desactiver un canal d'alerte."""
+
     enabled: bool
 
 
 @router.get("", response_model=list[AlertChannelRead])
 def list_channels(db: Session = Depends(get_db)) -> list[AlertChannel]:
-    """List all alert channels."""
+    """Lister tous les canaux d'alerte."""
     return db.query(AlertChannel).order_by(AlertChannel.created_at.desc()).all()
 
 
@@ -56,7 +62,7 @@ def create_channel(
     payload: AlertChannelCreate,
     db: Session = Depends(get_db),
 ) -> AlertChannel:
-    """Create a new alert channel (admin only)."""
+    """Creer un nouveau canal d'alerte (admin uniquement)."""
     if payload.channel_type not in ("slack", "email", "webhook"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -88,7 +94,7 @@ def toggle_channel(
     payload: AlertChannelToggle,
     db: Session = Depends(get_db),
 ) -> AlertChannel:
-    """Enable or disable an alert channel (admin only)."""
+    """Activer ou desactiver un canal d'alerte (admin uniquement)."""
     channel = db.get(AlertChannel, channel_id)
     if channel is None:
         raise HTTPException(
@@ -110,7 +116,7 @@ def delete_channel(
     channel_id: str,
     db: Session = Depends(get_db),
 ) -> None:
-    """Delete an alert channel (admin only)."""
+    """Supprimer un canal d'alerte (admin uniquement)."""
     channel = db.get(AlertChannel, channel_id)
     if channel is None:
         raise HTTPException(

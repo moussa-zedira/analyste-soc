@@ -1,4 +1,4 @@
-"""Incident creator — persists rule matches as incidents with dedup."""
+"""Createur d'incidents — persiste les correspondances de regles en incidents avec deduplication."""
 
 from __future__ import annotations
 
@@ -26,14 +26,14 @@ logger = logging.getLogger(__name__)
 
 
 def _compute_dedup_hash(rule_id: str, entity_key: str, end_ts: datetime) -> str:
-    """Deterministic dedup hash: bucket = end_ts truncated to the minute."""
+    """Hash de deduplication deterministe : bucket = end_ts tronque a la minute."""
     bucket = end_ts.strftime("%Y-%m-%dT%H:%M")
     raw = f"{rule_id}|{entity_key}|{bucket}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def _format_title(rule: Rule, match: RuleMatch) -> str:
-    """Render the rule's title template with match values."""
+    """Genere le titre de la regle a partir du modele et des valeurs de correspondance."""
     template_vars: dict[str, str] = {**match.group_values}
     template_vars["count"] = str(match.count)
     try:
@@ -43,7 +43,7 @@ def _format_title(rule: Rule, match: RuleMatch) -> str:
 
 
 def _format_description(rule: Rule, match: RuleMatch) -> str:
-    """Render the rule's description template with match values."""
+    """Genere la description de la regle a partir du modele et des valeurs de correspondance."""
     if not rule.description_template:
         return f"Rule {rule.id} matched {match.count} events."
     template_vars: dict[str, str] = {**match.group_values}
@@ -57,9 +57,9 @@ def _format_description(rule: Rule, match: RuleMatch) -> str:
 
 
 def create_incident(db: Session, rule: Rule, match: RuleMatch) -> bool:
-    """Create an incident from a rule match if not a duplicate.
+    """Cree un incident a partir d'une correspondance de regle si non duplique.
 
-    Returns True if an incident was created, False if deduplicated.
+    Retourne True si un incident a ete cree, False si deduplique.
     """
     entity_key = match.group_key
     dedup_hash = _compute_dedup_hash(rule.id, entity_key, match.end_ts)

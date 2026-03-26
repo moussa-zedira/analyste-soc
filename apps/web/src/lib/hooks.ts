@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 // URL query-param helpers
 // ---------------------------------------------------------------------------
 
+/** Lit un parametre de requete URL avec une valeur par defaut. */
 export function readParam(
   sp: URLSearchParams,
   key: string,
@@ -15,6 +16,7 @@ export function readParam(
   return sp.get(key) ?? fallback;
 }
 
+/** Lit un parametre de requete URL en tant qu'entier avec une valeur par defaut. */
 export function readInt(
   sp: URLSearchParams,
   key: string,
@@ -107,6 +109,7 @@ export function useFetchData<T>(
 
 type Theme = "light" | "dark";
 
+/** Hook de gestion du theme clair/sombre avec persistance dans localStorage. */
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === "undefined") return "dark";

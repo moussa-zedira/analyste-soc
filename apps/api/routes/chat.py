@@ -1,4 +1,4 @@
-"""SOC Chatbot API — natural language queries over security data via Ollama."""
+"""API Chatbot SOC — requetes en langage naturel sur les donnees de securite via Ollama."""
 
 from __future__ import annotations
 
@@ -45,18 +45,22 @@ _IP_RE = re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b")
 
 
 class ChatRequest(BaseModel):
+    """Requete de chat envoyee par l'utilisateur."""
+
     message: str
     conversation_id: str | None = None
 
 
 class ChatResponse(BaseModel):
+    """Reponse du chatbot SOC."""
+
     conversation_id: str
     response: str
     context_used: list[str]
 
 
 def _build_context(db: Session, message: str) -> tuple[str, list[str]]:
-    """Build dynamic context from the database based on the user message."""
+    """Construire un contexte dynamique depuis la base de donnees selon le message utilisateur."""
     parts: list[str] = []
     labels: list[str] = []
 
@@ -141,7 +145,7 @@ def _build_context(db: Session, message: str) -> tuple[str, list[str]]:
 
 @router.post("", response_model=ChatResponse)
 def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> dict:
-    """Chat with the SOC assistant via Ollama (local LLM)."""
+    """Discuter avec l'assistant SOC via Ollama (LLM local)."""
     settings = get_settings()
 
     conv_id = payload.conversation_id or str(uuid.uuid4())

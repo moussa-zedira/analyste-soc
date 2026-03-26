@@ -1,4 +1,4 @@
-"""Anomaly baseline model — stores rolling statistics for anomaly detection."""
+"""Modèle AnomalyBaseline — statistiques glissantes pour la détection d'anomalies."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from apps.api.db.base import Base
 
 
 class AnomalyBaseline(Base):
+    """Ligne de base statistique (moyenne, variance) pour une métrique donnée."""
+
     __tablename__ = "anomaly_baselines"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)

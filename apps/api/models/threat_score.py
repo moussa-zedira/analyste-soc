@@ -1,4 +1,4 @@
-"""ThreatScore model — dynamic risk score per source IP."""
+"""Modèle ThreatScore — score de risque dynamique par IP source."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from apps.api.db.base import Base
 
 
 class ThreatScore(Base):
+    """Score de menace associé à une adresse IP avec facteurs contributifs."""
+
     __tablename__ = "threat_scores"
 
     ip: Mapped[str] = mapped_column(Text, primary_key=True)

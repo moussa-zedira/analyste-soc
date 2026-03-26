@@ -73,6 +73,7 @@ function formatUptime(now: Date, start: Date): string {
   return `${h}:${m}:${s}`;
 }
 
+/** Page principale du tableau de bord avec KPIs, graphiques et flux temps reel. */
 export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [runResult, setRunResult] = useState<RulesRunResponse | null>(null);

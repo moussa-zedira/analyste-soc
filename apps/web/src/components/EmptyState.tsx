@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+/** Composant d'etat vide affichant une icone, un titre et une description optionnelle. */
 export function EmptyState({
   icon,
   title,

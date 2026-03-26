@@ -32,6 +32,7 @@ function generateLayerStars(
   }));
 }
 
+/** Fond etoile anime avec effet de parallaxe au mouvement de la souris. */
 export function StarField() {
   const layersRef = useRef(
     LAYER_CONFIG.map((cfg) =>

@@ -2,6 +2,7 @@
 
 const PAGE_SIZES = [25, 50, 100];
 
+/** Composant de pagination avec navigation et selection du nombre de lignes par page. */
 export function Pagination({
   offset,
   limit,

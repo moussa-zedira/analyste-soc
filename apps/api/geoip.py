@@ -1,4 +1,4 @@
-"""GeoIP lookup using MaxMind GeoLite2 database with fallback to ip-api.com."""
+"""Recherche GeoIP via la base MaxMind GeoLite2 avec repli sur ip-api.com."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ _API_WINDOW = 60.0
 
 
 def _rate_limit_ip_api() -> bool:
-    """Check and enforce rate limit for ip-api.com. Returns True if allowed."""
+    """Vérifie et applique la limite de débit pour ip-api.com. Retourne True si autorisé."""
     now = time.monotonic()
     with _api_lock:
         _api_calls[:] = [t for t in _api_calls if now - t < _API_WINDOW]
@@ -35,7 +35,7 @@ def _rate_limit_ip_api() -> bool:
 
 
 def _init_geoip() -> None:
-    """Lazy-load the MaxMind GeoLite2 database."""
+    """Charge paresseusement la base de données MaxMind GeoLite2."""
     global _reader, _geoip_available
     if _reader is not None or _geoip_available:
         return
@@ -57,7 +57,7 @@ def _init_geoip() -> None:
 
 
 def lookup_ip(ip: str) -> dict | None:
-    """Look up a single IP. Returns {lat, lon, country, city} or None."""
+    """Recherche une IP. Retourne {lat, lon, country, city} ou None."""
     _init_geoip()
     if _reader is not None:
         try:
@@ -74,7 +74,7 @@ def lookup_ip(ip: str) -> dict | None:
 
 
 def lookup_batch(ips: list[str]) -> dict[str, dict]:
-    """Look up a batch of IPs. Returns {ip: {lat, lon, country, city}}."""
+    """Recherche un lot d'IPs. Retourne {ip: {lat, lon, country, city}}."""
     _init_geoip()
     results: dict[str, dict] = {}
 

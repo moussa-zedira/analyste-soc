@@ -1,4 +1,4 @@
-"""Application configuration loaded from environment variables."""
+"""Configuration de l'application chargée depuis les variables d'environnement."""
 
 from __future__ import annotations
 
@@ -8,12 +8,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Runtime settings for the Cyber Defense Dashboard API.
+    """Paramètres d'exécution de l'API du tableau de bord de cyberdéfense.
 
-    In production (ENV != "dev"), API_KEY is required.
-    In development (ENV == "dev"), API_KEY falls back to "dev-insecure-key".
-    WARNING: The dev fallback is intentionally insecure and MUST NOT be used
-    outside of local development.
+    En production (ENV != "dev"), API_KEY est obligatoire.
+    En développement (ENV == "dev"), API_KEY utilise "dev-insecure-key" par défaut.
     """
 
     model_config = SettingsConfigDict(
@@ -56,9 +54,9 @@ class Settings(BaseSettings):
 
     @property
     def effective_api_key(self) -> str:
-        """Return the API key to use for request verification.
+        """Retourne la clé API utilisée pour la vérification des requêtes.
 
-        Raises ``ValueError`` in production when no key is configured.
+        Lève ``ValueError`` en production si aucune clé n'est configurée.
         """
         if self.API_KEY:
             return self.API_KEY
@@ -71,5 +69,5 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Return a cached ``Settings`` instance."""
+    """Retourne une instance ``Settings`` mise en cache."""
     return Settings()

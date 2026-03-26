@@ -1,18 +1,17 @@
-"""Impossible-travel detection rule (impossible-travel.v1).
+"""Regle de detection de voyage impossible (impossible-travel.v1).
 
-Detects a single username authenticating successfully from multiple distinct
-source IPs within a short time window, which may indicate credential compromise.
+Detecte un utilisateur s'authentifiant avec succes depuis plusieurs IP sources
+distinctes dans un court laps de temps, indiquant une possible compromission.
 
-Algorithm:
-- Considers events with event_type == "auth.success", non-null src_ip and username.
-- Groups by username, sorts by ts ascending.
-- Sliding window of 10 minutes.
-- When the window contains >= MIN_DISTINCT_IPS distinct src_ip values, an
-  incident is created.
+Algorithme :
+- Considere les evenements event_type == "auth.success", src_ip et username non nuls.
+- Regroupe par username, trie par ts croissant.
+- Fenetre glissante de 10 minutes.
+- Un incident est cree lorsque la fenetre contient >= MIN_DISTINCT_IPS IP distinctes.
 
-Dedup strategy:
+Strategie de deduplication :
 - dedup_hash = sha256(rule_id | entity_key | bucket)
-- bucket = end_ts truncated to the minute.
+- bucket = end_ts tronque a la minute.
 """
 
 from __future__ import annotations
@@ -40,15 +39,16 @@ SEVERITY = "critical"
 
 
 def _compute_dedup_hash(entity_key: str, end_ts: datetime) -> str:
+    """Calcule le hash de deduplication a partir de la cle d'entite et de l'horodatage."""
     bucket = end_ts.strftime("%Y-%m-%dT%H:%M")
     raw = f"{RULE_ID}|{entity_key}|{bucket}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def run_impossible_travel(db: Session, events: list[Event]) -> int:
-    """Run impossible-travel detection against pre-fetched events.
+    """Execute la detection de voyage impossible sur les evenements pre-charges.
 
-    Returns the number of incidents created.
+    Retourne le nombre d'incidents crees.
     """
     # Filter to successful auths with both username and src_ip
     candidates = [
@@ -73,7 +73,7 @@ def run_impossible_travel(db: Session, events: list[Event]) -> int:
 
 
 def _detect_for_user(db: Session, username: str, events: list[Event]) -> int:
-    """Sliding-window detection for a single username. Returns incident count."""
+    """Detection par fenetre glissante pour un seul utilisateur. Retourne le nombre d'incidents."""
     created = 0
     entity_key = f"user:{username}"
     left = 0

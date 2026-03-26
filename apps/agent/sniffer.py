@@ -1,4 +1,4 @@
-"""Real network traffic sniffer that maps packets to security events."""
+"""Sniffer réseau réel qui convertit les paquets en événements de sécurité."""
 
 from __future__ import annotations
 
@@ -37,6 +37,7 @@ stats = {"events_sent": 0, "errors": 0}
 
 
 def _reset_trackers_if_needed() -> None:
+    """Réinitialise les compteurs si la fenêtre temporelle est dépassée."""
     global _tracker_reset_time
     if time.time() - _tracker_reset_time > TRACKER_WINDOW:
         syn_tracker.clear()
@@ -54,6 +55,7 @@ def _send_event(
     username: str | None = None,
     raw: dict | None = None,
 ) -> None:
+    """Envoie un événement à l'API et met à jour les statistiques."""
     result = post_event(
         {
             "source": "sniffer",
@@ -79,6 +81,7 @@ def _send_event(
 
 
 def _packet_callback(pkt) -> None:  # type: ignore[no-untyped-def]
+    """Analyse un paquet capturé et génère les événements de sécurité associés."""
     _reset_trackers_if_needed()
 
     if not pkt.haslayer(IP):
@@ -157,6 +160,7 @@ def _packet_callback(pkt) -> None:  # type: ignore[no-untyped-def]
 
 
 def _rules_loop(interval: int = 30) -> None:
+    """Boucle d'arrière-plan déclenchant l'évaluation des règles périodiquement."""
     while True:
         time.sleep(interval)
         trigger_rules()
@@ -168,7 +172,7 @@ def _rules_loop(interval: int = 30) -> None:
 
 
 def run(interface: str | None = None) -> None:
-    """Start capturing. Requires admin/elevated privileges + Npcap."""
+    """Lance la capture réseau. Nécessite des privilèges administrateur + Npcap."""
     if sniff is None:
         print("[ERROR] scapy is not installed.")
         print("        Install it with: pip install scapy")

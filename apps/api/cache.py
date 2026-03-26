@@ -1,4 +1,4 @@
-"""Redis cache helper with graceful fallback."""
+"""Utilitaire de cache Redis avec repli gracieux."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ _client: redis.Redis | None = None
 
 
 def _get_redis() -> redis.Redis | None:
-    """Return a Redis client, or None if unavailable."""
+    """Retourne un client Redis, ou None si indisponible."""
     global _client
     if _client is not None:
         return _client
@@ -36,7 +36,7 @@ def _get_redis() -> redis.Redis | None:
 
 
 def get_cache(key: str) -> Any | None:
-    """Get a cached value. Returns None on miss or if Redis is down."""
+    """Récupère une valeur en cache. Retourne None en cas d'absence ou si Redis est indisponible."""
     r = _get_redis()
     if r is None:
         return None
@@ -50,7 +50,7 @@ def get_cache(key: str) -> Any | None:
 
 
 def set_cache(key: str, value: Any, ttl: int = 30) -> None:
-    """Set a cached value with TTL in seconds."""
+    """Stocke une valeur en cache avec un TTL en secondes."""
     r = _get_redis()
     if r is None:
         return
@@ -61,7 +61,7 @@ def set_cache(key: str, value: Any, ttl: int = 30) -> None:
 
 
 def invalidate(pattern: str) -> None:
-    """Delete cache keys matching a pattern."""
+    """Supprime les clés de cache correspondant à un motif."""
     r = _get_redis()
     if r is None:
         return
@@ -74,5 +74,5 @@ def invalidate(pattern: str) -> None:
 
 
 def get_redis_client() -> redis.Redis | None:
-    """Expose the Redis client for health checks and pub/sub."""
+    """Expose le client Redis pour les bilans de santé et le pub/sub."""
     return _get_redis()

@@ -1,4 +1,4 @@
-"""Anomaly detection API — trigger anomaly detection and view baselines."""
+"""API Detection d'anomalies — lancer la detection et consulter les references."""
 
 from __future__ import annotations
 
@@ -20,12 +20,16 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class AnomalyRunResponse(BaseModel):
+    """Reponse apres execution de la detection d'anomalies."""
+
     volume_metrics_evaluated: int
     ip_metrics_evaluated: int
     incidents_created: int
 
 
 class AnomalyBaselineStat(BaseModel):
+    """Statistiques d'une reference d'anomalie."""
+
     metric_type: str
     metric_key: str
     count: int
@@ -36,7 +40,7 @@ class AnomalyBaselineStat(BaseModel):
 
 @router.post("/run", response_model=AnomalyRunResponse)
 def run_anomaly(db: Session = Depends(get_db)) -> dict:
-    """Execute anomaly detection against recent events."""
+    """Executer la detection d'anomalies sur les evenements recents."""
     try:
         return run_anomaly_detection(db)
     except Exception:
@@ -53,7 +57,7 @@ def list_baselines(
     limit: int = 50,
     db: Session = Depends(get_db),
 ) -> list[dict]:
-    """Return current anomaly baselines."""
+    """Retourner les references d'anomalie actuelles."""
     query = db.query(AnomalyBaseline)
     if metric_type:
         query = query.filter(AnomalyBaseline.metric_type == metric_type)

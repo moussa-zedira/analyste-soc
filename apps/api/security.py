@@ -1,4 +1,4 @@
-"""API key and JWT verification dependency for FastAPI."""
+"""Dépendance de vérification par clé API et JWT pour FastAPI."""
 
 from __future__ import annotations
 
@@ -10,14 +10,10 @@ from apps.api.config import get_settings
 
 
 def require_api_key(request: Request) -> None:
-    """FastAPI dependency that enforces authentication.
+    """Dépendance FastAPI qui impose l'authentification.
 
-    Accepts EITHER:
-    - X-API-Key header (legacy / service-to-service)
-    - Authorization: Bearer <JWT> header (user auth)
-
-    Uses constant-time comparison for API key to prevent timing attacks.
-    For JWT, delegates to jose for verification.
+    Accepte soit X-API-Key (service-à-service), soit Authorization: Bearer <JWT>.
+    Utilise une comparaison à temps constant pour la clé API.
     """
     settings = get_settings()
 

@@ -1,4 +1,4 @@
-"""Event triage — classification, whitelist, and severity threshold filtering."""
+"""Triage des evenements — classification, liste blanche et filtrage par seuil de severite."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ _CACHE_TTL = 60.0  # seconds
 
 
 def _load_whitelist(db: Session) -> list[WhitelistEntry]:
-    """Return active whitelist entries, cached for 60 seconds."""
+    """Retourne les entrees de liste blanche actives, mises en cache pendant 60 secondes."""
     global _whitelist_cache, _whitelist_cache_ts
 
     now = time.monotonic()
@@ -63,7 +63,7 @@ def _load_whitelist(db: Session) -> list[WhitelistEntry]:
 
 
 def invalidate_whitelist_cache() -> None:
-    """Force whitelist cache refresh on next call."""
+    """Force le rafraichissement du cache de la liste blanche au prochain appel."""
     global _whitelist_cache_ts
     _whitelist_cache_ts = 0.0
 
@@ -74,7 +74,7 @@ def invalidate_whitelist_cache() -> None:
 
 
 def classify_event(event: Event) -> str:
-    """Return 'benign', 'suspicious', or 'malicious' for an event."""
+    """Retourne 'benign', 'suspicious' ou 'malicious' pour un evenement."""
     return EVENT_CLASSIFICATION.get(event.event_type, DEFAULT_CLASSIFICATION)
 
 
@@ -84,7 +84,7 @@ def classify_event(event: Event) -> str:
 
 
 def _is_whitelisted(event: Event, whitelist: list[WhitelistEntry]) -> bool:
-    """Check if event source matches any active whitelist entry."""
+    """Verifie si la source de l'evenement correspond a une entree de la liste blanche."""
     for entry in whitelist:
         if entry.entry_type == "ip" and event.src_ip == entry.value:
             return True
@@ -109,7 +109,7 @@ def _is_whitelisted(event: Event, whitelist: list[WhitelistEntry]) -> bool:
 
 
 def _below_threshold(event: Event) -> bool:
-    """Return True if event severity is below the configured minimum."""
+    """Retourne True si la severite de l'evenement est inferieure au minimum configure."""
     settings = get_settings()
     min_level = SEVERITY_ORDER.get(settings.MIN_SEVERITY, 1)
     event_level = SEVERITY_ORDER.get(event.severity, 0)
@@ -122,7 +122,7 @@ def _below_threshold(event: Event) -> bool:
 
 
 def filter_events(events: list[Event], db: Session) -> list[Event]:
-    """Filter events before detection. Returns only events that should be analysed."""
+    """Filtre les evenements avant la detection. Retourne uniquement ceux a analyser."""
     settings = get_settings()
 
     if not settings.TRIAGE_ENABLED:

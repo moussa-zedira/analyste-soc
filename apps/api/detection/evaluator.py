@@ -1,4 +1,4 @@
-"""Rule evaluator — sliding-window match detection."""
+"""Evaluateur de regles — detection par fenetre glissante."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from apps.api.models.event import Event
 
 @dataclass(frozen=True, slots=True)
 class RuleMatch:
-    """Result of a single rule triggering on a group of events."""
+    """Resultat du declenchement d'une regle sur un groupe d'evenements."""
 
     rule_id: str
     group_key: str
@@ -24,10 +24,10 @@ class RuleMatch:
 
 
 def evaluate_rule(rule: Rule, events: list[Event]) -> list[RuleMatch]:
-    """Evaluate a rule against a list of events.
+    """Evalue une regle sur une liste d'evenements.
 
-    Filters by event_type, groups by the rule's group_by fields,
-    then applies a two-pointer sliding window per group.
+    Filtre par event_type, regroupe par les champs group_by de la regle,
+    puis applique une fenetre glissante a deux pointeurs par groupe.
     """
     filtered = [e for e in events if e.event_type == rule.event_type]
     if not filtered:
@@ -60,7 +60,7 @@ def evaluate_rule(rule: Rule, events: list[Event]) -> list[RuleMatch]:
 def _sliding_window(
     rule: Rule, group_key: str, events: list[Event]
 ) -> list[RuleMatch]:
-    """Two-pointer sliding window over sorted events for a single group."""
+    """Fenetre glissante a deux pointeurs sur les evenements tries pour un groupe."""
     matches: list[RuleMatch] = []
     left = 0
 

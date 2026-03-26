@@ -1,4 +1,4 @@
-"""Isolation Forest anomaly detection on per-IP feature vectors."""
+"""Detection d'anomalies par Isolation Forest sur les vecteurs de caracteristiques par IP."""
 
 from __future__ import annotations
 
@@ -39,16 +39,13 @@ _model_info: dict = {}
 def _build_feature_vectors(
     db: Session, window_minutes: int = 60,
 ) -> tuple[np.ndarray, list[str], dict[str, list[str]]]:
-    """Build per-IP feature vectors from recent events.
+    """Construit les vecteurs de caracteristiques par IP a partir des evenements recents.
 
-    Features per src_ip:
-      0: event_count
-      1: distinct_event_types
-      2: distinct_dst_ips
-      3: avg_severity_score
-      4: time_spread_seconds (max_ts - min_ts)
+    Caracteristiques par src_ip :
+      0: nombre d'evenements, 1: types distincts, 2: IP destinations distinctes,
+      3: score de severite moyen, 4: etendue temporelle en secondes.
 
-    Returns (feature_matrix, ip_list, ip_event_ids).
+    Retourne (matrice_features, liste_ip, ids_evenements_par_ip).
     """
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
 
@@ -121,7 +118,7 @@ def _create_ml_incident(
     event_ids: list[str],
     now: datetime,
 ) -> bool:
-    """Create an incident for an ML-detected anomaly."""
+    """Cree un incident pour une anomalie detectee par ML."""
     bucket = now.strftime("%Y-%m-%dT%H:%M")
     dedup_hash = hashlib.sha256(
         f"ml.isolation_forest.v1|{ip}|{bucket}".encode()
@@ -185,9 +182,9 @@ def train_and_detect(
     contamination: float = 0.05,
     window_minutes: int = 60,
 ) -> dict:
-    """Train Isolation Forest on recent data and flag anomalies.
+    """Entraine l'Isolation Forest sur les donnees recentes et signale les anomalies.
 
-    Returns a summary dict.
+    Retourne un dictionnaire de resume.
     """
     global _model, _model_info
 
@@ -253,6 +250,6 @@ def train_and_detect(
 
 
 def get_model_info() -> dict:
-    """Return current model info or not-trained status."""
+    """Retourne les informations du modele actuel ou le statut non entraine."""
     with _ml_lock:
         return dict(_model_info) if _model_info else {"status": "not_trained"}

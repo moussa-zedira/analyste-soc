@@ -1,4 +1,4 @@
-"""NLP-based incident severity classifier using TF-IDF + Random Forest."""
+"""Classifieur de severite d'incidents base sur le NLP avec TF-IDF + Random Forest."""
 
 from __future__ import annotations
 
@@ -31,10 +31,10 @@ _classifier_info: dict = {}
 
 
 def _build_training_data(db: Session) -> tuple[list[str], list[str]]:
-    """Build text corpus and labels from existing incidents.
+    """Construit le corpus de textes et les etiquettes a partir des incidents existants.
 
-    text = title + " " + description + joined event messages
-    label = incident.severity
+    texte = titre + " " + description + messages d'evenements concatenes.
+    etiquette = incident.severity.
     """
     incidents = db.query(Incident).all()
     texts: list[str] = []
@@ -52,9 +52,9 @@ def _build_training_data(db: Session) -> tuple[list[str], list[str]]:
 
 
 def train_classifier(db: Session) -> dict:
-    """Train the TF-IDF + Random Forest classifier on existing incidents.
+    """Entraine le classifieur TF-IDF + Random Forest sur les incidents existants.
 
-    Returns info dict with status.
+    Retourne un dictionnaire d'informations avec le statut.
     """
     global _classifier, _classifier_info
 
@@ -92,9 +92,9 @@ def train_classifier(db: Session) -> dict:
 def predict_severity(
     title: str, description: str, event_messages: list[str],
 ) -> str | None:
-    """Predict severity for a new incident.
+    """Predit la severite d'un nouvel incident.
 
-    Returns predicted severity string, or None if model not trained.
+    Retourne la severite predite ou None si le modele n'est pas entraine.
     """
     with _lock:
         clf = _classifier
@@ -107,9 +107,9 @@ def predict_severity(
 
 
 def classify_incidents(db: Session) -> dict:
-    """Train classifier, then classify all incidents missing suggested_severity.
+    """Entraine le classifieur puis classifie les incidents sans severite suggeree.
 
-    Returns summary dict.
+    Retourne un dictionnaire de resume.
     """
     train_result = train_classifier(db)
     if train_result.get("status") != "trained":
@@ -135,5 +135,5 @@ def classify_incidents(db: Session) -> dict:
 
 
 def get_classifier_info() -> dict:
-    """Return current classifier info."""
+    """Retourne les informations du classifieur actuel."""
     return _classifier_info if _classifier_info else {"status": "not_trained"}

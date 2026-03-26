@@ -5,6 +5,7 @@ import { runMLDetection, getMLModelInfo } from "@/lib/apiClient";
 import { useFetchData } from "@/lib/hooks";
 import type { MLModelInfo, MLDetectResponse } from "@/lib/types";
 
+/** Carte affichant le statut du modele ML et permettant de lancer une detection. */
 export function MLStatusCard({ onDetection }: { onDetection?: () => void }) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<MLDetectResponse | null>(null);

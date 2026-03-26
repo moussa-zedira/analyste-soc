@@ -81,6 +81,7 @@ function DetailSkeleton() {
   );
 }
 
+/** Page de detail d'un incident avec actions de gestion et evenements associes. */
 export default function IncidentDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();

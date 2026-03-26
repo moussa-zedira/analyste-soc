@@ -1,4 +1,4 @@
-"""Multi-channel alerting — Slack, Email, Webhook dispatchers."""
+"""Alertes multicanaux — dispatchers Slack, Email et Webhook."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ SEVERITY_COLORS = {
 
 
 def dispatch_alert(incident_data: dict) -> None:
-    """Dispatch alert to all enabled channels matching the severity threshold."""
+    """Distribue l'alerte à tous les canaux actifs correspondant au seuil de sévérité."""
     db = SessionLocal()
     try:
         channels = db.query(AlertChannel).filter(AlertChannel.enabled.is_(True)).all()
@@ -66,7 +66,7 @@ def dispatch_alert(incident_data: dict) -> None:
 
 
 def _send_slack(config: dict, incident: dict) -> None:
-    """Send a Slack notification via incoming webhook."""
+    """Envoie une notification Slack via un webhook entrant."""
     webhook_url = config.get("webhook_url", "")
     if not webhook_url:
         return
@@ -104,7 +104,7 @@ def _send_slack(config: dict, incident: dict) -> None:
 
 
 def _send_email(config: dict, incident: dict) -> None:
-    """Send an email alert via SMTP."""
+    """Envoie une alerte par email via SMTP."""
     settings = get_settings()
     if not settings.SMTP_HOST:
         return
@@ -137,7 +137,7 @@ def _send_email(config: dict, incident: dict) -> None:
 
 
 def _send_webhook(config: dict, incident: dict) -> None:
-    """Send a webhook POST notification."""
+    """Envoie une notification par webhook POST."""
     url = config.get("url", "")
     if not url:
         return
@@ -145,14 +145,14 @@ def _send_webhook(config: dict, incident: dict) -> None:
 
 
 def _try_global_slack(incident: dict) -> None:
-    """Send via global SLACK_WEBHOOK_URL if configured."""
+    """Envoie via le SLACK_WEBHOOK_URL global si configuré."""
     settings = get_settings()
     if settings.SLACK_WEBHOOK_URL:
         _send_slack({"webhook_url": settings.SLACK_WEBHOOK_URL}, incident)
 
 
 def _try_global_webhook(incident: dict) -> None:
-    """Send via global WEBHOOK_URL if configured and enabled."""
+    """Envoie via le WEBHOOK_URL global si configuré et activé."""
     settings = get_settings()
     if settings.WEBHOOK_ENABLED and settings.WEBHOOK_URL:
         _send_webhook({"url": settings.WEBHOOK_URL}, incident)

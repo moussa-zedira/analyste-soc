@@ -1,4 +1,4 @@
-"""Threat scoring engine — computes a 0-100 risk score per source IP."""
+"""Moteur de score de menace — calcule un score de risque 0-100 par IP source."""
 
 from __future__ import annotations
 
@@ -27,13 +27,14 @@ W_RECENCY = 0.15
 
 
 def _severity_score(severity: str) -> int:
+    """Retourne le poids numerique associe a un niveau de severite."""
     return SEVERITY_WEIGHTS.get(severity, 1)
 
 
 def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
-    """Compute threat scores for all active source IPs.
+    """Calcule les scores de menace pour toutes les IP sources actives.
 
-    Returns the number of IPs scored.
+    Retourne le nombre d'IP evaluees.
     """
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(hours=lookback_hours)

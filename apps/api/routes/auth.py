@@ -1,4 +1,4 @@
-"""Auth API — registration, login, and user info."""
+"""API Authentification — inscription, connexion et informations utilisateur."""
 
 from __future__ import annotations
 
@@ -22,6 +22,8 @@ router = APIRouter()
 
 
 class RegisterRequest(BaseModel):
+    """Donnees de la requete d'inscription."""
+
     username: str
     email: str
     password: str
@@ -29,16 +31,22 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    """Donnees de la requete de connexion."""
+
     username: str
     password: str
 
 
 class TokenResponse(BaseModel):
+    """Reponse contenant le jeton d'acces."""
+
     access_token: str
     token_type: str = "bearer"
 
 
 class UserRead(BaseModel):
+    """Schema de lecture d'un utilisateur."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -51,7 +59,7 @@ class UserRead(BaseModel):
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
-    """Register a new user account."""
+    """Inscrire un nouveau compte utilisateur."""
     existing = db.query(User).filter(
         (User.username == payload.username) | (User.email == payload.email)
     ).first()
@@ -84,7 +92,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> dict:
-    """Authenticate and return a JWT token."""
+    """Authentifier et retourner un jeton JWT."""
     user = db.query(User).filter(User.username == payload.username).first()
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
@@ -103,5 +111,5 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> dict:
 
 @router.get("/me", response_model=UserRead)
 def me(user: User = Depends(get_current_user)) -> User:
-    """Return the currently authenticated user."""
+    """Retourner l'utilisateur actuellement authentifie."""
     return user

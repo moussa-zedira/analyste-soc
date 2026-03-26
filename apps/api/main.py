@@ -1,4 +1,4 @@
-"""FastAPI application entrypoint for the Cyber Defense Dashboard API."""
+"""Point d'entrée de l'application FastAPI pour l'API du tableau de bord de cyberdéfense."""
 
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ _start_time = time.time()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Run Alembic migrations on startup, fall back to create_all."""
+    """Exécute les migrations Alembic au démarrage, avec repli sur create_all."""
     try:
         from alembic.config import Config
         from alembic import command
@@ -73,7 +73,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    """Build and return the FastAPI application."""
+    """Construit et retourne l'application FastAPI."""
     kwargs: dict = {}
     if settings.ENV == "prod":
         kwargs["docs_url"] = None
@@ -97,6 +97,7 @@ def create_app() -> FastAPI:
     # -------------------------------------------------------------------
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
+        """Injecte un identifiant unique dans chaque requête HTTP."""
         request_id = generate_request_id()
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
@@ -109,6 +110,7 @@ def create_app() -> FastAPI:
     # -------------------------------------------------------------------
     @app.get("/health")
     def health() -> dict:
+        """Vérifie l'état de santé de l'API et de ses composants."""
         uptime = round(time.time() - _start_time, 1)
         result: dict = {
             "status": "ok",
@@ -146,6 +148,7 @@ def create_app() -> FastAPI:
     def protected_check(
         _: None = Depends(require_api_key),
     ) -> dict[str, str]:
+        """Vérifie que l'authentification par clé API fonctionne."""
         return {"status": "ok"}
 
     # -------------------------------------------------------------------

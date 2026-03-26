@@ -1,4 +1,4 @@
-"""Threat score API — compute and query per-IP risk scores."""
+"""API Scores de menace — calculer et interroger les scores de risque par IP."""
 
 from __future__ import annotations
 
@@ -22,6 +22,8 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class ThreatScoreRead(BaseModel):
+    """Schema de lecture d'un score de menace par IP."""
+
     ip: str
     score: float
     factors: dict
@@ -29,6 +31,8 @@ class ThreatScoreRead(BaseModel):
 
 
 class ThreatScoreComputeResponse(BaseModel):
+    """Reponse apres le calcul des scores de menace."""
+
     ips_scored: int
 
 
@@ -38,7 +42,7 @@ def list_threat_scores(
     min_score: float = 0.0,
     db: Session = Depends(get_db),
 ) -> list[dict]:
-    """Return top threat-scored IPs, ordered by score descending."""
+    """Retourner les IPs avec les scores de menace les plus eleves, par ordre decroissant."""
     cached = get_cache(f"threat_scores:{limit}:{min_score}")
     if cached is not None:
         return cached
@@ -65,7 +69,7 @@ def list_threat_scores(
 
 @router.get("/{ip}", response_model=ThreatScoreRead)
 def get_threat_score(ip: str, db: Session = Depends(get_db)) -> dict:
-    """Return the threat score for a single IP."""
+    """Retourner le score de menace pour une IP donnee."""
     row = db.get(ThreatScore, ip)
     if row is None:
         raise HTTPException(
@@ -85,12 +89,12 @@ def compute_scores(
     lookback_hours: int = 24,
     db: Session = Depends(get_db),
 ) -> dict:
+    """Recalculer les scores de menace pour toutes les IPs actives."""
     if lookback_hours < 1 or lookback_hours > 720:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="lookback_hours must be between 1 and 720 (30 days)",
         )
-    """Recompute threat scores for all active IPs."""
     try:
         count = compute_threat_scores(db, lookback_hours=lookback_hours)
         return {"ips_scored": count}

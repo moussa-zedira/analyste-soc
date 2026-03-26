@@ -213,6 +213,7 @@ function PulsingMarker({
   );
 }
 
+/** Carte Leaflet affichant les menaces geolocalises avec marqueurs pulsants. */
 export default function ThreatMap({ data }: Props) {
   const maxCount = Math.max(1, ...data.map((g) => g.event_count));
 

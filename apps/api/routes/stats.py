@@ -1,4 +1,4 @@
-"""Stats API — aggregation endpoints for dashboard visualizations."""
+"""API Statistiques — points de terminaison d'agregation pour les visualisations du tableau de bord."""
 
 from __future__ import annotations
 
@@ -33,17 +33,23 @@ SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
 
 class EventsPerMinuteBucket(BaseModel):
+    """Seau d'evenements par minute pour les graphiques."""
+
     minute: str
     count: int
 
 
 class HeatmapCell(BaseModel):
+    """Cellule de la carte de chaleur des attaques."""
+
     day_of_week: int
     hour: int
     count: int
 
 
 class GeoEvent(BaseModel):
+    """Evenement geolocalise par IP source."""
+
     src_ip: str
     lat: float
     lon: float
@@ -54,6 +60,8 @@ class GeoEvent(BaseModel):
 
 
 class GraphNode(BaseModel):
+    """Noeud du graphe de relations."""
+
     id: str
     type: str
     label: str
@@ -62,12 +70,16 @@ class GraphNode(BaseModel):
 
 
 class GraphEdge(BaseModel):
+    """Arete du graphe de relations."""
+
     source: str
     target: str
     weight: int
 
 
 class GraphData(BaseModel):
+    """Donnees du graphe de relations (noeuds et aretes)."""
+
     nodes: list[GraphNode]
     edges: list[GraphEdge]
 
@@ -78,6 +90,8 @@ class GraphData(BaseModel):
 
 
 class KpiResponse(BaseModel):
+    """Indicateurs cles de performance du tableau de bord."""
+
     total_events_24h: int
     open_incidents: int
     high_incidents_24h: int
@@ -90,7 +104,7 @@ class KpiResponse(BaseModel):
 
 @router.get("/kpis", response_model=KpiResponse)
 def kpis(db: Session = Depends(get_db)) -> dict:
-    """Return key performance indicators computed server-side."""
+    """Retourner les indicateurs cles de performance calcules cote serveur."""
     cached = get_cache("stats:kpis")
     if cached is not None:
         return cached
@@ -127,6 +141,7 @@ def events_per_minute(
     minutes: int = 60,
     db: Session = Depends(get_db),
 ) -> list[dict]:
+    """Retourner le nombre d'evenements par minute sur la periode demandee."""
     cached = get_cache(f"stats:epm:{minutes}")
     if cached is not None:
         return cached
@@ -158,6 +173,7 @@ def attack_heatmap(
     days: int = 28,
     db: Session = Depends(get_db),
 ) -> list[dict]:
+    """Retourner la carte de chaleur des attaques par jour et heure."""
     cached = get_cache(f"stats:heatmap:{days}")
     if cached is not None:
         return cached
@@ -184,6 +200,7 @@ def geo_events(
     limit: int = 100,
     db: Session = Depends(get_db),
 ) -> list[dict]:
+    """Retourner les evenements geolocalises par IP source."""
     cached = get_cache(f"stats:geo:{limit}")
     if cached is not None:
         return cached
@@ -239,6 +256,7 @@ def relationship_graph(
     limit: int = 200,
     db: Session = Depends(get_db),
 ) -> dict:
+    """Retourner le graphe de relations entre IPs, utilisateurs et incidents."""
     events = db.query(Event).order_by(Event.ts.desc()).limit(limit).all()
 
     nodes: dict[str, dict] = {}
@@ -308,6 +326,8 @@ def relationship_graph(
 
 
 class MitreTechniqueInfo(BaseModel):
+    """Informations d'une technique MITRE ATT&CK avec compteurs d'incidents."""
+
     technique_id: str
     technique_name: str
     tactic_id: str
@@ -318,6 +338,8 @@ class MitreTechniqueInfo(BaseModel):
 
 
 class MitreStatsResponse(BaseModel):
+    """Reponse des statistiques de couverture MITRE ATT&CK."""
+
     tactics: list[dict]
     techniques: list[MitreTechniqueInfo]
     total_mapped_incidents: int
@@ -325,7 +347,7 @@ class MitreStatsResponse(BaseModel):
 
 @router.get("/mitre", response_model=MitreStatsResponse)
 def mitre_stats(db: Session = Depends(get_db)) -> dict:
-    """Return MITRE ATT&CK coverage with incident counts per technique."""
+    """Retourner la couverture MITRE ATT&CK avec le nombre d'incidents par technique."""
     rule_counts = dict(
         db.query(Incident.rule_id, func.count(Incident.id))
         .group_by(Incident.rule_id)

@@ -1,4 +1,4 @@
-"""WebSocket endpoint for real-time event streaming."""
+"""Point de terminaison WebSocket pour le streaming d'evenements en temps reel."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.websocket("/ws/live")
 async def websocket_live(ws: WebSocket) -> None:
-    """Stream real-time events and incidents to connected clients."""
+    """Diffuser les evenements et incidents en temps reel aux clients connectes."""
     await ws.accept()
     queue = broadcaster.subscribe()
     try:

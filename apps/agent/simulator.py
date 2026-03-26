@@ -1,4 +1,4 @@
-"""Realistic security event simulator for the Cyber Defense Dashboard."""
+"""Simulateur réaliste d'événements de sécurité pour le tableau de bord."""
 
 from __future__ import annotations
 
@@ -40,6 +40,7 @@ stats: dict[str, int] = {"total": 0}
 
 
 def generate_auth_success() -> dict:
+    """Génère un événement d'authentification réussie."""
     return {
         "source": "simulator",
         "event_type": "auth.success",
@@ -56,6 +57,7 @@ def generate_auth_success() -> dict:
 
 
 def generate_auth_fail() -> dict:
+    """Génère un événement d'échec d'authentification."""
     return {
         "source": "simulator",
         "event_type": "auth.fail",
@@ -72,7 +74,7 @@ def generate_auth_fail() -> dict:
 
 
 def generate_brute_force_burst(count: int = 12) -> list[dict]:
-    """Burst of auth.fail from SAME IP -> triggers bruteforce.v1 rule."""
+    """Rafale d'auth.fail depuis la même IP -> déclenche la règle bruteforce.v1."""
     attacker = random.choice(ATTACKER_IPS)
     target = random.choice(INTERNAL_IPS)
     return [
@@ -91,6 +93,7 @@ def generate_brute_force_burst(count: int = 12) -> list[dict]:
 
 
 def generate_conn_attempt() -> dict:
+    """Génère un événement de tentative de connexion."""
     return {
         "source": "simulator",
         "event_type": "conn.attempt",
@@ -103,7 +106,7 @@ def generate_conn_attempt() -> dict:
 
 
 def generate_port_scan_burst(count: int = 55) -> list[dict]:
-    """Burst of conn.attempt from SAME IP -> triggers portscan.v1 rule."""
+    """Rafale de conn.attempt depuis la même IP -> déclenche la règle portscan.v1."""
     attacker = random.choice(ATTACKER_IPS)
     return [
         {
@@ -120,6 +123,7 @@ def generate_port_scan_burst(count: int = 55) -> list[dict]:
 
 
 def generate_dns_anomaly() -> dict:
+    """Génère un événement d'anomalie DNS vers un domaine suspect."""
     domain = random.choice(SUSPICIOUS_DOMAINS)
     return {
         "source": "simulator",
@@ -133,6 +137,7 @@ def generate_dns_anomaly() -> dict:
 
 
 def generate_blocked_connection() -> dict:
+    """Génère un événement de connexion bloquée par le pare-feu."""
     return {
         "source": "simulator",
         "event_type": "blocked_connection",
@@ -145,6 +150,7 @@ def generate_blocked_connection() -> dict:
 
 
 def generate_data_exfil() -> dict:
+    """Génère un événement d'exfiltration de données volumineuse."""
     mb = round(random.uniform(5.0, 50.0), 1)
     return {
         "source": "simulator",
@@ -172,6 +178,7 @@ _GENERATORS = [
 
 
 def _pick_generator():
+    """Sélectionne un générateur d'événements selon les poids définis."""
     funcs, weights = zip(*_GENERATORS)
     return random.choices(funcs, weights=weights, k=1)[0]
 
@@ -182,6 +189,7 @@ def _pick_generator():
 
 
 def _rules_loop(interval: int = 30) -> None:
+    """Boucle d'arrière-plan déclenchant règles et détection d'anomalies."""
     while True:
         time.sleep(interval)
         trigger_rules()
@@ -194,6 +202,7 @@ def _rules_loop(interval: int = 30) -> None:
 
 
 def _send_and_count(event_data: dict) -> None:
+    """Envoie un événement et incrémente les compteurs de statistiques."""
     result = post_event(event_data)
     if result:
         stats["total"] += 1
@@ -202,7 +211,7 @@ def _send_and_count(event_data: dict) -> None:
 
 
 def run(eps: float = DEFAULT_EPS, duration: int | None = None) -> None:
-    """Run the simulator. *eps* = events per second."""
+    """Lance le simulateur. *eps* = événements par seconde."""
     print(f"[SIMULATOR] Starting at ~{eps} events/sec")
     print(f"[SIMULATOR] Attack bursts every ~{BURST_INTERVAL}s")
     print(f"[SIMULATOR] Rules evaluated every ~30s")

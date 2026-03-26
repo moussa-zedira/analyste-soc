@@ -1,4 +1,4 @@
-"""Celery tasks for background processing."""
+"""Tâches Celery pour le traitement en arrière-plan."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @celery.task(name="apps.api.tasks.task_run_detection")
 def task_run_detection() -> dict:
-    """Run the detection engine in a background worker."""
+    """Exécute le moteur de détection dans un worker en arrière-plan."""
     from apps.api.detection.engine import run_detection
 
     db = SessionLocal()
@@ -32,7 +32,7 @@ def task_run_detection() -> dict:
 
 @celery.task(name="apps.api.tasks.task_compute_threat_scores")
 def task_compute_threat_scores(lookback_hours: int = 24) -> dict:
-    """Recompute threat scores in background."""
+    """Recalcule les scores de menace en arrière-plan."""
     from apps.api.detection.threat_score import compute_threat_scores
 
     db = SessionLocal()
@@ -51,7 +51,7 @@ def task_compute_threat_scores(lookback_hours: int = 24) -> dict:
 
 @celery.task(name="apps.api.tasks.task_run_anomaly")
 def task_run_anomaly() -> dict:
-    """Run anomaly detection in background."""
+    """Exécute la détection d'anomalies en arrière-plan."""
     from apps.api.detection.anomaly import run_anomaly_detection
 
     db = SessionLocal()
@@ -70,7 +70,7 @@ def task_run_anomaly() -> dict:
 
 @celery.task(name="apps.api.tasks.task_run_ml_detect")
 def task_run_ml_detect() -> dict:
-    """Train Isolation Forest and detect anomalies in background."""
+    """Entraîne Isolation Forest et détecte les anomalies en arrière-plan."""
     from apps.api.detection.ml_anomaly import train_and_detect as run_ml_detection
 
     db = SessionLocal()
@@ -88,7 +88,7 @@ def task_run_ml_detect() -> dict:
 
 @celery.task(name="apps.api.tasks.task_send_alert")
 def task_send_alert(incident_data: dict) -> dict:
-    """Send alert notifications for an incident."""
+    """Envoie les notifications d'alerte pour un incident."""
     from apps.api.alerting import dispatch_alert
 
     try:

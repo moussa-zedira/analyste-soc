@@ -1,4 +1,4 @@
-"""Prometheus metrics middleware and custom counters."""
+"""Middleware de métriques Prometheus et compteurs personnalisés."""
 
 from __future__ import annotations
 

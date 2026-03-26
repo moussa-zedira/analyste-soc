@@ -22,6 +22,7 @@ function severityDotColor(severity: string): string {
   }
 }
 
+/** Chronologie verticale des evenements lies a un incident. */
 export function IncidentTimeline({ events }: IncidentTimelineProps) {
   const sorted = [...events].sort(
     (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),

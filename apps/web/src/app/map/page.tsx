@@ -7,6 +7,7 @@ import { useFetchData } from "@/lib/hooks";
 import { useWebSocket, type WsMessage } from "@/lib/useWebSocket";
 import type { GeoEvent } from "@/lib/types";
 
+/** Page de la carte mondiale des menaces geolocalises en temps reel. */
 export default function MapPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

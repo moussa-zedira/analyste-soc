@@ -1,4 +1,4 @@
-"""AlertChannel model — configurable alert destinations."""
+"""Modèle AlertChannel — destinations d'alerte configurables."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from apps.api.db.base import Base
 
 
 class AlertChannel(Base):
+    """Canal d'alerte (slack, email, webhook) avec sévérité minimale."""
+
     __tablename__ = "alert_channels"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)

@@ -1,4 +1,4 @@
-"""Detection rules — declarative rule definitions."""
+"""Regles de detection — definitions declaratives des regles."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ from datetime import timedelta
 
 
 class Severity(enum.Enum):
+    """Niveaux de severite des regles de detection."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -16,7 +18,7 @@ class Severity(enum.Enum):
 
 @dataclass(frozen=True, slots=True)
 class Rule:
-    """Declarative detection rule definition."""
+    """Definition declarative d'une regle de detection."""
 
     id: str
     event_type: str
@@ -121,7 +123,7 @@ ALL_RULES: list[Rule] = [
 
 
 def get_rules(*, enabled_only: bool = True) -> list[Rule]:
-    """Return registered rules, optionally filtering by enabled status."""
+    """Retourne les regles enregistrees, avec filtrage optionnel par statut actif."""
     if enabled_only:
         return [r for r in ALL_RULES if r.enabled]
     return list(ALL_RULES)

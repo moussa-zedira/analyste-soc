@@ -1,4 +1,4 @@
-"""CLI entrypoint: python -m apps.agent [sniffer|simulator]"""
+"""Point d'entrée CLI : python -m apps.agent [sniffer|simulator]"""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import argparse
 
 
 def main() -> None:
+    """Parse les arguments et lance le mode sniffer ou simulateur."""
     parser = argparse.ArgumentParser(description="Cyber Defense Network Monitor")
     parser.add_argument(
         "mode",

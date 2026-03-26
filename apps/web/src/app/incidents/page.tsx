@@ -172,6 +172,7 @@ function IncidentsContent() {
   );
 }
 
+/** Page de liste des incidents avec filtres par severite et statut. */
 export default function IncidentsPage() {
   return (
     <Suspense

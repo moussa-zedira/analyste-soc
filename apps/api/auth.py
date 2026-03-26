@@ -1,4 +1,4 @@
-"""JWT authentication and role-based access control."""
+"""Authentification JWT et contrôle d'accès basé sur les rôles."""
 
 from __future__ import annotations
 
@@ -19,14 +19,17 @@ ROLE_HIERARCHY = {"analyst": 0, "lead": 1, "admin": 2}
 
 
 def hash_password(password: str) -> str:
+    """Hache un mot de passe en utilisant bcrypt."""
     return pwd_context.hash(password)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    """Vérifie un mot de passe en clair contre son hash."""
     return pwd_context.verify(plain, hashed)
 
 
 def create_access_token(data: dict) -> str:
+    """Crée un jeton d'accès JWT avec une date d'expiration."""
     settings = get_settings()
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
@@ -35,14 +38,15 @@ def create_access_token(data: dict) -> str:
 
 
 def decode_token(token: str) -> dict:
+    """Décode et valide un jeton JWT."""
     settings = get_settings()
     return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
-    """Extract and validate the JWT token from the Authorization header.
+    """Extrait et valide le jeton JWT depuis l'en-tête Authorization.
 
-    Returns the authenticated User object.
+    Retourne l'objet User authentifié.
     """
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
@@ -67,15 +71,17 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
 
 
 class RoleChecker:
-    """Dependency that checks the user's role meets a minimum level.
+    """Dépendance qui vérifie que le rôle de l'utilisateur atteint un niveau minimum.
 
-    Usage: Depends(RoleChecker("lead"))
+    Utilisation : Depends(RoleChecker("lead"))
     """
 
     def __init__(self, min_role: str) -> None:
+        """Initialise le vérificateur avec le rôle minimum requis."""
         self.min_role = min_role
 
     def __call__(self, user: User = Depends(get_current_user)) -> User:
+        """Vérifie le rôle de l'utilisateur et lève 403 si insuffisant."""
         user_level = ROLE_HIERARCHY.get(user.role, 0)
         required_level = ROLE_HIERARCHY.get(self.min_role, 0)
         if user_level < required_level:

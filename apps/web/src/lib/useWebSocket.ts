@@ -12,6 +12,7 @@ interface UseWebSocketOptions {
   enabled?: boolean;
 }
 
+/** Hook de connexion WebSocket pour recevoir les evenements et incidents en temps reel. */
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const { onMessage, enabled = true } = options;
   const [connected, setConnected] = useState(false);

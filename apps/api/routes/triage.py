@@ -1,4 +1,4 @@
-"""Triage API — whitelist CRUD + triage configuration."""
+"""API Triage — CRUD liste blanche et configuration du triage."""
 
 from __future__ import annotations
 
@@ -28,12 +28,16 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class WhitelistCreate(BaseModel):
+    """Donnees pour creer une entree de liste blanche."""
+
     entry_type: str  # "ip" | "username" | "ip_range"
     value: str
     reason: str = ""
 
 
 class WhitelistRead(BaseModel):
+    """Schema de lecture d'une entree de liste blanche."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -45,16 +49,22 @@ class WhitelistRead(BaseModel):
 
 
 class WhitelistToggle(BaseModel):
+    """Donnees pour activer ou desactiver une entree de liste blanche."""
+
     enabled: bool
 
 
 class TriageConfigRead(BaseModel):
+    """Schema de lecture de la configuration du triage."""
+
     triage_enabled: bool
     min_severity: str
     severity_order: dict[str, int]
 
 
 class ClassificationRead(BaseModel):
+    """Schema de lecture des classifications d'evenements."""
+
     classifications: dict[str, str]
     default: str
 
@@ -66,6 +76,7 @@ class ClassificationRead(BaseModel):
 
 @router.get("/whitelist", response_model=list[WhitelistRead])
 def list_whitelist(db: Session = Depends(get_db)) -> list[WhitelistEntry]:
+    """Lister toutes les entrees de la liste blanche."""
     return (
         db.query(WhitelistEntry)
         .order_by(WhitelistEntry.created_at.desc())
@@ -82,6 +93,7 @@ def add_whitelist_entry(
     payload: WhitelistCreate,
     db: Session = Depends(get_db),
 ) -> WhitelistEntry:
+    """Ajouter une nouvelle entree a la liste blanche."""
     if payload.entry_type not in ("ip", "username", "ip_range"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,6 +121,7 @@ def toggle_whitelist_entry(
     payload: WhitelistToggle,
     db: Session = Depends(get_db),
 ) -> WhitelistEntry:
+    """Activer ou desactiver une entree de la liste blanche."""
     entry = db.get(WhitelistEntry, entry_id)
     if entry is None:
         raise HTTPException(
@@ -130,6 +143,7 @@ def delete_whitelist_entry(
     entry_id: str,
     db: Session = Depends(get_db),
 ) -> None:
+    """Supprimer une entree de la liste blanche."""
     entry = db.get(WhitelistEntry, entry_id)
     if entry is None:
         raise HTTPException(
@@ -148,6 +162,7 @@ def delete_whitelist_entry(
 
 @router.get("/config", response_model=TriageConfigRead)
 def get_triage_config() -> dict:
+    """Retourner la configuration actuelle du triage."""
     settings = get_settings()
     return {
         "triage_enabled": settings.TRIAGE_ENABLED,
@@ -158,6 +173,7 @@ def get_triage_config() -> dict:
 
 @router.get("/classifications", response_model=ClassificationRead)
 def get_classifications() -> dict:
+    """Retourner les classifications d'evenements et la valeur par defaut."""
     return {
         "classifications": EVENT_CLASSIFICATION,
         "default": DEFAULT_CLASSIFICATION,

@@ -1,4 +1,4 @@
-"""Statistical anomaly detection using z-scores with Welford's online algorithm."""
+"""Detection d'anomalies statistiques par z-scores avec l'algorithme en ligne de Welford."""
 
 from __future__ import annotations
 
@@ -30,6 +30,7 @@ LOOKBACK_MINUTES = 5
 def _welford_update(
     count: int, mean: float, variance: float, new_value: float,
 ) -> tuple[int, float, float]:
+    """Met a jour les statistiques en ligne avec l'algorithme de Welford."""
     count += 1
     delta = new_value - mean
     mean += delta / count
@@ -39,12 +40,14 @@ def _welford_update(
 
 
 def _stddev(variance: float, count: int) -> float:
+    """Calcule l'ecart-type a partir de la variance et du nombre d'echantillons."""
     if count < 2:
         return 0.0
     return math.sqrt(variance / (count - 1))
 
 
 def _z_score(value: float, mean: float, stddev: float) -> float:
+    """Calcule le z-score d'une valeur par rapport a la moyenne et l'ecart-type."""
     if stddev == 0:
         return 0.0
     return (value - mean) / stddev
@@ -61,6 +64,7 @@ def _create_anomaly_incident(
     start_ts: datetime,
     end_ts: datetime,
 ) -> bool:
+    """Cree un incident d'anomalie avec deduplication. Retourne True si cree."""
     bucket = end_ts.strftime("%Y-%m-%dT%H:%M")
     dedup_hash = hashlib.sha256(f"{rule_id}|{entity_key}|{bucket}".encode()).hexdigest()
 
@@ -105,6 +109,7 @@ def _create_anomaly_incident(
 def _get_or_create_baseline(
     db: Session, metric_key: str, metric_type: str, now: datetime,
 ) -> AnomalyBaseline:
+    """Recupere ou cree une ligne de base d'anomalie pour la metrique donnee."""
     baseline = db.get(AnomalyBaseline, metric_key)
     if baseline is None:
         baseline = AnomalyBaseline(
@@ -116,7 +121,7 @@ def _get_or_create_baseline(
 
 
 def run_anomaly_detection(db: Session) -> dict:
-    """Run statistical anomaly detection. Returns summary."""
+    """Execute la detection d'anomalies statistiques. Retourne un resume."""
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(minutes=LOOKBACK_MINUTES)
     incidents_created = 0

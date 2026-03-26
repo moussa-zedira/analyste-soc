@@ -13,6 +13,7 @@ const STATUS_COLORS: Record<string, string> = {
   closed: "bg-cyan-glow/10 text-cyan-glow border-cyan-glow/30",
 };
 
+/** Badge affichant le niveau de severite avec un code couleur. */
 export function SeverityBadge({ value }: { value: string }) {
   const cls =
     SEVERITY_COLORS[value.toLowerCase()] ??
@@ -26,6 +27,7 @@ export function SeverityBadge({ value }: { value: string }) {
   );
 }
 
+/** Badge affichant le statut d'un incident avec un code couleur. */
 export function StatusBadge({ value }: { value: string }) {
   const cls =
     STATUS_COLORS[value.toLowerCase()] ??

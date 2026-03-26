@@ -26,6 +26,7 @@ function scoreTrackColor(score: number): string {
   return "bg-cyan-glow/10";
 }
 
+/** Carte affichant le classement des IP par score de menace avec barres de progression. */
 export function ThreatScoresCard({ refreshKey }: { refreshKey: number }) {
   const [computing, setComputing] = useState(false);
   const [localRefresh, setLocalRefresh] = useState(0);

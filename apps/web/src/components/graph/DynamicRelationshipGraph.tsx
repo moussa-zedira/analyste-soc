@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 
+/** Chargement dynamique du graphe de relations (sans rendu serveur). */
 const RelationshipGraph = dynamic(
   () =>
     import("./RelationshipGraph").then((mod) => mod.RelationshipGraph),

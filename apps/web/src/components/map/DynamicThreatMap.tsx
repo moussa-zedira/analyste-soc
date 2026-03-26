@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 
+/** Chargement dynamique de la carte des menaces (sans rendu serveur). */
 const ThreatMap = dynamic(() => import("./ThreatMap"), {
   ssr: false,
   loading: () => (

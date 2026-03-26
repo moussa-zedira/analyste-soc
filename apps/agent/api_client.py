@@ -1,4 +1,4 @@
-"""HTTP client for posting events and triggering rules."""
+"""Client HTTP pour envoyer des événements et déclencher les règles."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from apps.agent.config import ANOMALY_RUN_URL, EVENTS_URL, HEADERS, RULES_RUN_UR
 
 
 def post_event(event_data: dict) -> dict | None:
-    """POST a single event to /events. Returns response JSON or None."""
+    """Envoie un événement via POST /events. Retourne le JSON ou None."""
     try:
         resp = requests.post(EVENTS_URL, json=event_data, headers=HEADERS, timeout=5)
         resp.raise_for_status()
@@ -19,7 +19,7 @@ def post_event(event_data: dict) -> dict | None:
 
 
 def trigger_rules() -> dict | None:
-    """POST /rules/run to trigger the detection engine."""
+    """Déclenche le moteur de détection via POST /rules/run."""
     try:
         resp = requests.post(RULES_RUN_URL, json={}, headers=HEADERS, timeout=10)
         resp.raise_for_status()
@@ -34,7 +34,7 @@ def trigger_rules() -> dict | None:
 
 
 def trigger_anomaly() -> dict | None:
-    """POST /anomaly/run to trigger anomaly detection."""
+    """Déclenche la détection d'anomalies via POST /anomaly/run."""
     try:
         resp = requests.post(ANOMALY_RUN_URL, json={}, headers=HEADERS, timeout=10)
         resp.raise_for_status()

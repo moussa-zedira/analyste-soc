@@ -6,6 +6,7 @@ import { getRelationshipGraph } from "@/lib/apiClient";
 import { useFetchData } from "@/lib/hooks";
 import type { GraphData } from "@/lib/types";
 
+/** Page du graphe de relations entre IP, utilisateurs et incidents. */
 export default function GraphPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });

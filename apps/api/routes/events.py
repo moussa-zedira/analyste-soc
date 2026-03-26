@@ -1,4 +1,4 @@
-"""Events API — CRUD endpoints for security events."""
+"""API Evenements — points de terminaison CRUD pour les evenements de securite."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class EventCreate(BaseModel):
-    """Payload accepted by POST /events."""
+    """Donnees acceptees par POST /events."""
 
     source: str
     event_type: str
@@ -38,7 +38,7 @@ class EventCreate(BaseModel):
 
 
 class EventRead(BaseModel):
-    """Response schema returned for every event."""
+    """Schema de reponse renvoye pour chaque evenement."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -65,7 +65,7 @@ class EventRead(BaseModel):
     status_code=status.HTTP_201_CREATED,
 )
 def create_event(payload: EventCreate, db: Session = Depends(get_db)) -> Event:
-    """Ingest a single security event."""
+    """Ingerer un evenement de securite unique."""
     raw_value: str | None = None
     if payload.raw is not None:
         raw_value = (
@@ -119,7 +119,7 @@ def list_events(
     src_ip: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[Event]:
-    """Return a paginated, filterable list of events, newest first."""
+    """Retourner une liste paginee et filtrable d'evenements, les plus recents en premier."""
     query = db.query(Event)
 
     if severity is not None:
@@ -140,7 +140,7 @@ def list_events(
 
 @router.get("/{event_id}", response_model=EventRead)
 def get_event(event_id: str, db: Session = Depends(get_db)) -> Event:
-    """Return a single event by ID."""
+    """Retourner un evenement unique par son identifiant."""
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(

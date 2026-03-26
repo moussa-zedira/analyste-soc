@@ -1,20 +1,20 @@
-"""Brute-force detection rule (bruteforce.v1).
+"""Regle de detection de force brute (bruteforce.v1).
 
-Sliding-window algorithm:
-- Considers events with event_type == "auth.fail" and a non-null src_ip.
-- Groups by src_ip, sorts by ts ascending.
-- Two-pointer sliding window of 2 minutes.
-- When window contains >= THRESHOLD events, an incident is created.
+Algorithme a fenetre glissante :
+- Considere les evenements event_type == "auth.fail" avec src_ip non nul.
+- Regroupe par src_ip, trie par ts croissant.
+- Fenetre glissante a deux pointeurs de 2 minutes.
+- Un incident est cree lorsque la fenetre contient >= THRESHOLD evenements.
 
-Dedup strategy:
+Strategie de deduplication :
 - dedup_hash = sha256(rule_id | entity_key | bucket)
-- bucket = end_ts truncated to the minute (ISO-8601 minute string).
-- If an incident with the same dedup_hash already exists, skip creation.
+- bucket = end_ts tronque a la minute (chaine ISO-8601).
+- Si un incident avec le meme dedup_hash existe deja, la creation est ignoree.
 
-Checkpointing:
-- Reads events from (last_ts - WINDOW) to allow overlap.
-- Updates last_ts to the max processed ts.
-- Dedup hash prevents duplicates caused by the overlap.
+Point de reprise :
+- Lit les evenements depuis (last_ts - WINDOW) pour permettre le chevauchement.
+- Met a jour last_ts au ts maximum traite.
+- Le hash de deduplication empeche les doublons dus au chevauchement.
 """
 
 from __future__ import annotations
@@ -41,14 +41,14 @@ THRESHOLD = 10
 
 
 def _compute_dedup_hash(rule_id: str, entity_key: str, end_ts: datetime) -> str:
-    """Deterministic dedup hash: bucket is end_ts truncated to the minute."""
+    """Hash de deduplication deterministe : bucket = end_ts tronque a la minute."""
     bucket = end_ts.strftime("%Y-%m-%dT%H:%M")
     raw = f"{rule_id}|{entity_key}|{bucket}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
 def run(db: Session) -> dict:
-    """Execute the bruteforce.v1 rule. Returns a summary dict."""
+    """Execute la regle bruteforce.v1. Retourne un dictionnaire de resume."""
 
     now = datetime.now(timezone.utc)
 
@@ -116,7 +116,7 @@ def run(db: Session) -> dict:
 
 
 def _detect_for_ip(db: Session, ip: str, events: list[Event]) -> int:
-    """Sliding-window detection for a single src_ip. Returns incident count."""
+    """Detection par fenetre glissante pour une seule src_ip. Retourne le nombre d'incidents."""
     created = 0
     entity_key = f"ip:{ip}"
     left = 0

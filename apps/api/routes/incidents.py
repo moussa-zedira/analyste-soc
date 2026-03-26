@@ -1,4 +1,4 @@
-"""Incidents API — list and retrieve security incidents."""
+"""API Incidents — lister et consulter les incidents de securite."""
 
 from __future__ import annotations
 
@@ -31,13 +31,13 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
 
 
 class IncidentStatusUpdate(BaseModel):
-    """Payload for PATCH /incidents/{id}."""
+    """Donnees pour PATCH /incidents/{id}."""
 
     status: str
 
 
 class IncidentRead(BaseModel):
-    """List-view schema for incidents (no linked events)."""
+    """Schema liste des incidents (sans evenements lies)."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,7 +57,7 @@ class IncidentRead(BaseModel):
 
 
 class IncidentDetail(IncidentRead):
-    """Detail-view schema including linked events (up to 50)."""
+    """Schema detaille incluant les evenements lies (jusqu'a 50)."""
 
     events: list[EventRead] = []
 
@@ -76,7 +76,7 @@ def list_incidents(
     rule_id: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[Incident]:
-    """Return a paginated, filterable list of incidents."""
+    """Retourner une liste paginee et filtrable d'incidents."""
     query = db.query(Incident)
 
     if severity is not None:
@@ -97,7 +97,7 @@ def list_incidents(
 
 @router.get("/{incident_id}", response_model=IncidentDetail)
 def get_incident(incident_id: str, db: Session = Depends(get_db)) -> dict:
-    """Return a single incident with its linked events (up to 50)."""
+    """Retourner un incident avec ses evenements lies (jusqu'a 50)."""
     incident = db.get(Incident, incident_id)
     if incident is None:
         raise HTTPException(
@@ -136,7 +136,7 @@ def update_incident_status(
     payload: IncidentStatusUpdate,
     db: Session = Depends(get_db),
 ) -> Incident:
-    """Update an incident's status with transition validation."""
+    """Mettre a jour le statut d'un incident avec validation de transition."""
     incident = db.get(Incident, incident_id)
     if incident is None:
         raise HTTPException(

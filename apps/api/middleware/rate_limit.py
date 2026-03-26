@@ -1,4 +1,4 @@
-"""Rate limiting middleware using slowapi."""
+"""Middleware de limitation de débit utilisant slowapi."""
 
 from __future__ import annotations
 

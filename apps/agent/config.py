@@ -1,4 +1,4 @@
-"""Shared configuration for the network monitor agent."""
+"""Configuration partagée pour l'agent de surveillance réseau."""
 
 from __future__ import annotations
 

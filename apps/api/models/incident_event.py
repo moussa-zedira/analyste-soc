@@ -1,4 +1,4 @@
-"""Association table linking incidents to events (many-to-many)."""
+"""Table d'association reliant incidents et événements (many-to-many)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ from apps.api.db.base import Base
 
 
 class IncidentEvent(Base):
+    """Liaison many-to-many entre incidents et événements."""
+
     __tablename__ = "incident_events"
 
     incident_id: Mapped[str] = mapped_column(

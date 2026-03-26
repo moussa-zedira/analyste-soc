@@ -1,4 +1,4 @@
-"""Detection engine — orchestrates rule evaluation and incident creation."""
+"""Moteur de detection — orchestre l'evaluation des regles et la creation d'incidents."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ LOOKBACK = timedelta(hours=1)
 
 
 def _fetch_recent_events(db: Session, since: datetime) -> list[Event]:
-    """Fetch events from the last hour, ordered by timestamp ascending."""
+    """Recupere les evenements de la derniere heure, tries par horodatage croissant."""
     return (
         db.query(Event)
         .filter(Event.ts >= since)
@@ -30,9 +30,9 @@ def _fetch_recent_events(db: Session, since: datetime) -> list[Event]:
 
 
 def run_detection(db: Session) -> dict:
-    """Run all enabled detection rules against recent events.
+    """Execute toutes les regles de detection actives sur les evenements recents.
 
-    Returns a summary dict with rules_evaluated and incidents_created.
+    Retourne un dictionnaire avec rules_evaluated et incidents_created.
     """
     now = datetime.now(timezone.utc)
     since = now - LOOKBACK

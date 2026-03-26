@@ -16,6 +16,7 @@ interface Props {
   height: number;
 }
 
+/** Graphe interactif 2D des relations entre IP, utilisateurs et incidents. */
 export function RelationshipGraph({ data, width, height }: Props) {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

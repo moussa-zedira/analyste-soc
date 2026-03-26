@@ -1,4 +1,4 @@
-"""Rule checkpoint model — tracks last processed timestamp per rule."""
+"""Modèle RuleCheckpoint — suit le dernier horodatage traité par règle."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from apps.api.db.base import Base
 
 
 class RuleCheckpoint(Base):
+    """Point de contrôle enregistrant la progression d'une règle de détection."""
+
     __tablename__ = "rule_checkpoints"
 
     rule_id: Mapped[str] = mapped_column(Text, primary_key=True)

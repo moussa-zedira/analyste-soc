@@ -1,4 +1,4 @@
-"""Incident model — aggregated security incidents."""
+"""Modèle Incident — incidents de sécurité agrégés."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from apps.api.db.base import Base
 
 
 class Incident(Base):
+    """Incident de sécurité regroupant plusieurs événements corrélés."""
+
     __tablename__ = "incidents"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)

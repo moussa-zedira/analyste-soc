@@ -41,6 +41,7 @@ function SortIcon({ dir }: { dir: SortDir | null }) {
 
 const SKELETON_ROWS = 8;
 
+/** Tableau de donnees generique avec tri par colonnes et etats de chargement. */
 export function DataTable<T extends { id: string }>({
   columns,
   data,

@@ -1,4 +1,4 @@
-"""Structured JSON logging configuration using structlog."""
+"""Configuration de journalisation structurée JSON avec structlog."""
 
 from __future__ import annotations
 
@@ -10,10 +10,9 @@ import structlog
 
 
 def setup_logging(json_output: bool = True) -> None:
-    """Configure structured logging for the application.
+    """Configure la journalisation structurée pour l'application.
 
-    Args:
-        json_output: If True, output JSON logs. If False, use colored console output.
+    Si json_output est True, produit des logs JSON ; sinon, sortie console colorée.
     """
     shared_processors: list = [
         structlog.contextvars.merge_contextvars,
@@ -60,5 +59,5 @@ def setup_logging(json_output: bool = True) -> None:
 
 
 def generate_request_id() -> str:
-    """Generate a unique request ID."""
+    """Génère un identifiant de requête unique."""
     return str(uuid.uuid4())[:8]

@@ -1,4 +1,4 @@
-"""Database engine and session management."""
+"""Moteur de base de données et gestion des sessions."""
 
 from __future__ import annotations
 
@@ -34,10 +34,9 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
 def get_db() -> Generator[Session, None, None]:
-    """FastAPI dependency that yields a database session.
+    """Dépendance FastAPI qui fournit une session de base de données.
 
-    The session is committed on success, rolled back on exception,
-    and always closed.
+    La session est annulée en cas d'exception et toujours fermée.
     """
     db = SessionLocal()
     try:

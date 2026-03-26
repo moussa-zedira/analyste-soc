@@ -37,6 +37,7 @@ function generateDemoBlips(): Blip[] {
   }));
 }
 
+/** Radar SVG anime affichant des points de menace avec balayage rotatif. */
 export function RadarSVG({ size = 280, blips, className = "" }: Props) {
   const [activeBlips, setActiveBlips] = useState<Blip[]>(
     blips ?? generateDemoBlips,

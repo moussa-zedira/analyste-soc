@@ -1,4 +1,4 @@
-"""Webhook notification sender — fire-and-forget."""
+"""Envoi de notifications webhook — fire-and-forget."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def _build_payload(
     status: str,
     created_at: str,
 ) -> dict:
-    """Build a webhook payload compatible with Discord embeds."""
+    """Construit un payload webhook compatible avec les embeds Discord."""
     color_map = {
         "low": 0x3B82F6,
         "medium": 0xF59E0B,
@@ -53,7 +53,7 @@ def _build_payload(
 
 
 def _send_webhook(url: str, payload: dict, max_retries: int = 3) -> None:
-    """Send the webhook HTTP POST with exponential backoff (runs in background thread)."""
+    """Envoie le webhook POST avec backoff exponentiel (dans un thread d'arrière-plan)."""
     import time
 
     data = json.dumps(payload).encode("utf-8")
@@ -92,7 +92,7 @@ def notify_incident_created(
     status: str = "open",
     created_at: str = "",
 ) -> None:
-    """Fire-and-forget webhook notification for a new incident."""
+    """Notification webhook fire-and-forget pour un nouvel incident."""
     settings = get_settings()
     if not settings.WEBHOOK_ENABLED or not settings.WEBHOOK_URL:
         return

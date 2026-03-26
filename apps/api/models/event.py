@@ -1,4 +1,4 @@
-"""Event model — stores normalised security events."""
+"""Modèle Event — stocke les événements de sécurité normalisés."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from apps.api.db.base import Base
 
 
 class Event(Base):
+    """Événement de sécurité normalisé avec métadonnées réseau."""
+
     __tablename__ = "events"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)

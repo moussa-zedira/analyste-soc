@@ -13,6 +13,7 @@ function heatColor(count: number): string {
   return "border-red-500/30 bg-red-500/10 text-red-300";
 }
 
+/** Page de la matrice MITRE ATT&CK avec couverture des techniques detectees. */
 export default function MitrePage() {
   const { data, loading, error } = useFetchData<MitreStatsResponse | null>(
     (signal) => getMitreStats({ signal }),

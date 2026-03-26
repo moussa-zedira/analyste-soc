@@ -9,6 +9,7 @@ const SEVERITY_RANK: Record<string, number> = {
   critical: 3,
 };
 
+/** Definition des colonnes du tableau des evenements de securite. */
 export const eventColumns: Column<Event>[] = [
   {
     header: "Timestamp",

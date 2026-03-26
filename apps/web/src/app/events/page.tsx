@@ -207,6 +207,7 @@ function EventsContent() {
   );
 }
 
+/** Page de consultation des evenements de securite avec filtres et temps reel. */
 export default function EventsPage() {
   return (
     <Suspense
