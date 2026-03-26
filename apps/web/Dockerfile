@@ -25,6 +25,8 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
+# Rewrites in next.config use this at runtime
+ENV NEXT_PUBLIC_API_BASE_URL=http://api:8000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 EXPOSE 3000
