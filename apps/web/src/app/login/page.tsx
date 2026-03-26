@@ -8,7 +8,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(""); // auto-generated if empty
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("analyst");
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export default function LoginPage() {
           const res = await fetch(`${BASE}/auth/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
-            body: JSON.stringify({ username, email, password, role }),
+            body: JSON.stringify({ username, email: email || `${username}@cyberdef.local`, password, role }),
           });
           if (!res.ok) {
             const body = await res.json().catch(() => ({}));
@@ -198,26 +198,6 @@ export default function LoginPage() {
                 className="w-full rounded-md border border-cyan-glow/20 bg-space-dark/50 px-4 py-2.5 text-sm text-gray-200 font-mono placeholder-gray-600 outline-none transition-all focus:border-cyan-glow/50 focus:shadow-[0_0_12px_rgba(0,229,255,0.1)]"
               />
             </div>
-
-            {mode === "register" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <label className="mb-1.5 block text-[9px] font-bold tracking-widest text-cyan-glow/50 uppercase">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required={mode === "register"}
-                  placeholder="analyst@cyberdef.local"
-                  className="w-full rounded-md border border-cyan-glow/20 bg-space-dark/50 px-4 py-2.5 text-sm text-gray-200 font-mono placeholder-gray-600 outline-none transition-all focus:border-cyan-glow/50 focus:shadow-[0_0_12px_rgba(0,229,255,0.1)]"
-                />
-              </motion.div>
-            )}
 
             <div>
               <label className="mb-1.5 block text-[9px] font-bold tracking-widest text-cyan-glow/50 uppercase">
