@@ -1,4 +1,4 @@
-"""Analyse de domaines/URLs — endpoint de scan de sécurité complet."""
+"""Analyse de domaines/IPs — scanner réseau complet avec scan de ports."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import re
 import socket
 import ssl
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 import httpx
@@ -17,11 +18,43 @@ from apps.api.security import require_api_key
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
 _DOMAIN_RE = re.compile(
-    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+"
-    r"[a-zA-Z]{2,63}$"
+    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$"
+)
+
+_IP_RE = re.compile(
+    r"^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$"
 )
 
 _CHECK_TIMEOUT = 5
+
+# Ports courants à scanner avec leur service associé
+COMMON_PORTS: dict[int, str] = {
+    21: "FTP",
+    22: "SSH",
+    23: "Telnet",
+    25: "SMTP",
+    53: "DNS",
+    80: "HTTP",
+    110: "POP3",
+    111: "RPCbind",
+    135: "MSRPC",
+    139: "NetBIOS",
+    143: "IMAP",
+    443: "HTTPS",
+    445: "SMB",
+    993: "IMAPS",
+    995: "POP3S",
+    1433: "MSSQL",
+    1521: "Oracle",
+    3306: "MySQL",
+    3389: "RDP",
+    5432: "PostgreSQL",
+    5900: "VNC",
+    6379: "Redis",
+    8080: "HTTP-Alt",
+    8443: "HTTPS-Alt",
+    27017: "MongoDB",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -30,15 +63,25 @@ _CHECK_TIMEOUT = 5
 
 
 class ScannerRequest(BaseModel):
-    """Requête d'analyse d'un domaine ou d'une URL."""
+    """Requête d'analyse d'un domaine ou d'une IP."""
 
     target: str
+
+
+class PortResult(BaseModel):
+    """Résultat du scan d'un port individuel."""
+
+    port: int
+    service: str
+    state: str  # "open", "closed", "filtered"
+    banner: str | None = None
 
 
 class ScannerResult(BaseModel):
-    """Résultat complet de l'analyse d'un domaine."""
+    """Résultat complet de l'analyse réseau."""
 
     target: str
+    target_type: str = "domain"  # "domain" ou "ip"
     resolved_ip: str | None = None
     geo: dict | None = None
     dns: dict | None = None
@@ -46,6 +89,8 @@ class ScannerResult(BaseModel):
     http_headers: dict | None = None
     security_headers: dict | None = None
     whois_info: dict | None = None
+    open_ports: list[PortResult] = []
+    ports_scanned: int = 0
     security_score: int = 0
     score_details: list[dict] = []
     scan_duration_ms: int = 0
@@ -57,17 +102,22 @@ class ScannerResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _clean_domain(raw: str) -> str:
-    """Nettoie l'entrée pour extraire un nom de domaine propre."""
-    domain = raw.strip()
+def _clean_target(raw: str) -> tuple[str, str]:
+    """Nettoie l'entrée et détermine le type (domain ou ip). Retourne (target, type)."""
+    target = raw.strip()
     for prefix in ("https://", "http://"):
-        if domain.lower().startswith(prefix):
-            domain = domain[len(prefix):]
-    domain = domain.split("/")[0]
-    domain = domain.split("?")[0]
-    domain = domain.split("#")[0]
-    domain = domain.rstrip(".")
-    return domain.lower()
+        if target.lower().startswith(prefix):
+            target = target[len(prefix):]
+    target = target.split("/")[0]
+    target = target.split("?")[0]
+    target = target.split("#")[0]
+    target = target.split(":")[0]  # Retirer le port éventuel
+    target = target.rstrip(".")
+    target = target.lower()
+
+    if _IP_RE.match(target):
+        return target, "ip"
+    return target, "domain"
 
 
 def _resolve_ip(domain: str) -> str | None:
@@ -79,6 +129,130 @@ def _resolve_ip(domain: str) -> str | None:
     except socket.gaierror:
         pass
     return None
+
+
+def _reverse_dns(ip: str) -> str | None:
+    """Résolution DNS inverse d'une IP."""
+    try:
+        hostname, _, _ = socket.gethostbyaddr(ip)
+        return hostname
+    except (socket.herror, socket.gaierror, OSError):
+        return None
+
+
+def _scan_single_port(ip: str, port: int, timeout: float = 1.5) -> PortResult:
+    """Scanne un port unique et retourne le résultat."""
+    service = COMMON_PORTS.get(port, "unknown")
+    banner = None
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        result = sock.connect_ex((ip, port))
+        if result == 0:
+            # Tenter de récupérer la bannière
+            try:
+                sock.settimeout(1.0)
+                sock.sendall(b"\r\n")
+                banner_bytes = sock.recv(256)
+                if banner_bytes:
+                    banner = banner_bytes.decode("utf-8", errors="replace").strip()[:200]
+            except Exception:
+                pass
+            sock.close()
+            return PortResult(port=port, service=service, state="open", banner=banner)
+        else:
+            sock.close()
+            return PortResult(port=port, service=service, state="closed")
+    except socket.timeout:
+        return PortResult(port=port, service=service, state="filtered")
+    except Exception:
+        return PortResult(port=port, service=service, state="closed")
+
+
+def _scan_ports(ip: str) -> list[PortResult]:
+    """Scanne tous les ports courants en parallèle."""
+    results: list[PortResult] = []
+    with ThreadPoolExecutor(max_workers=25) as executor:
+        futures = {
+            executor.submit(_scan_single_port, ip, port): port
+            for port in COMMON_PORTS
+        }
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception:
+                port = futures[future]
+                results.append(PortResult(
+                    port=port,
+                    service=COMMON_PORTS.get(port, "unknown"),
+                    state="closed",
+                ))
+    results.sort(key=lambda r: r.port)
+    return results
+
+
+def _get_geo_full(ip: str) -> tuple[dict | None, list[str]]:
+    """Géolocalisation enrichie via ip-api.com (ISP, ASN, org)."""
+    errors: list[str] = []
+
+    # D'abord essayer le module geoip interne
+    try:
+        from apps.api.geoip import lookup_ip
+        basic_geo = lookup_ip(ip)
+        if basic_geo:
+            # Enrichir avec ip-api.com pour ISP/ASN
+            try:
+                resp = httpx.get(
+                    f"http://ip-api.com/json/{ip}",
+                    params={"fields": "status,isp,org,as,asname,reverse,mobile,proxy,hosting"},
+                    timeout=5.0,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get("status") == "success":
+                        basic_geo["isp"] = data.get("isp", "N/A")
+                        basic_geo["org"] = data.get("org", "N/A")
+                        basic_geo["as"] = data.get("as", "N/A")
+                        basic_geo["asname"] = data.get("asname", "N/A")
+                        basic_geo["reverse"] = data.get("reverse", "N/A")
+                        basic_geo["proxy"] = data.get("proxy", False)
+                        basic_geo["hosting"] = data.get("hosting", False)
+            except Exception as exc:
+                errors.append(f"GeoIP enrichment: {exc}")
+            return basic_geo, errors
+    except Exception:
+        pass
+
+    # Repli complet sur ip-api.com
+    try:
+        resp = httpx.get(
+            f"http://ip-api.com/json/{ip}",
+            params={"fields": "status,country,regionName,city,lat,lon,isp,org,as,asname,reverse,mobile,proxy,hosting,timezone,zip"},
+            timeout=5.0,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("status") == "success":
+                return {
+                    "country": data.get("country", "Unknown"),
+                    "region": data.get("regionName", "Unknown"),
+                    "city": data.get("city", "Unknown"),
+                    "lat": data.get("lat", 0),
+                    "lon": data.get("lon", 0),
+                    "timezone": data.get("timezone", "N/A"),
+                    "zip": data.get("zip", "N/A"),
+                    "isp": data.get("isp", "N/A"),
+                    "org": data.get("org", "N/A"),
+                    "as": data.get("as", "N/A"),
+                    "asname": data.get("asname", "N/A"),
+                    "reverse": data.get("reverse", "N/A"),
+                    "proxy": data.get("proxy", False),
+                    "hosting": data.get("hosting", False),
+                }, errors
+    except Exception as exc:
+        errors.append(f"GeoIP: {exc}")
+
+    return None, errors
 
 
 def _get_dns_records(domain: str) -> tuple[dict, list[str]]:
@@ -108,7 +282,6 @@ def _get_dns_records(domain: str) -> tuple[dict, list[str]]:
                 records[rtype] = []
                 errors.append(f"DNS {rtype}: {exc}")
     except ImportError:
-        # Repli sur socket pour l'enregistrement A uniquement
         try:
             infos = socket.getaddrinfo(domain, None, socket.AF_INET, socket.SOCK_STREAM)
             records["A"] = list({info[4][0] for info in infos})
@@ -141,7 +314,6 @@ def _get_ssl_cert(domain: str) -> tuple[dict | None, list[str]]:
                 not_before = cert.get("notBefore", "")
                 not_after = cert.get("notAfter", "")
 
-                # Parse dates — format: 'Mon DD HH:MM:SS YYYY GMT'
                 valid_from = None
                 valid_to = None
                 days_remaining = None
@@ -250,70 +422,100 @@ def _calculate_score(
     ssl_cert: dict | None,
     security_headers: dict | None,
     http_headers: dict | None,
+    open_ports: list[PortResult],
 ) -> tuple[int, list[dict]]:
     """Calcule un score de sécurité de 0 à 100."""
     score = 0
     details: list[dict] = []
 
-    # SSL valide (+25)
+    # SSL valide (+20)
     if ssl_cert and ssl_cert.get("days_remaining") is not None and ssl_cert["days_remaining"] > 0:
-        score += 25
-        details.append({"check": "SSL valide", "points": 25, "passed": True})
+        score += 20
+        details.append({"check": "SSL valide", "points": 20, "passed": True})
     else:
-        details.append({"check": "SSL valide", "points": 0, "passed": False, "max": 25})
+        details.append({"check": "SSL valide", "points": 0, "passed": False, "max": 20})
 
     if security_headers:
-        # HSTS (+15)
+        # HSTS (+10)
         if security_headers.get("Strict-Transport-Security"):
-            score += 15
-            details.append({"check": "HSTS présent", "points": 15, "passed": True})
+            score += 10
+            details.append({"check": "HSTS présent", "points": 10, "passed": True})
         else:
-            details.append({"check": "HSTS présent", "points": 0, "passed": False, "max": 15})
+            details.append({"check": "HSTS présent", "points": 0, "passed": False, "max": 10})
 
-        # X-Frame-Options (+10)
+        # X-Frame-Options (+5)
         if security_headers.get("X-Frame-Options"):
-            score += 10
-            details.append({"check": "X-Frame-Options", "points": 10, "passed": True})
+            score += 5
+            details.append({"check": "X-Frame-Options", "points": 5, "passed": True})
         else:
-            details.append({"check": "X-Frame-Options", "points": 0, "passed": False, "max": 10})
+            details.append({"check": "X-Frame-Options", "points": 0, "passed": False, "max": 5})
 
-        # CSP (+15)
+        # CSP (+10)
         if security_headers.get("Content-Security-Policy"):
-            score += 15
-            details.append({"check": "Content-Security-Policy", "points": 15, "passed": True})
-        else:
-            details.append({"check": "Content-Security-Policy", "points": 0, "passed": False, "max": 15})
-
-        # X-Content-Type-Options (+10)
-        if security_headers.get("X-Content-Type-Options"):
             score += 10
-            details.append({"check": "X-Content-Type-Options", "points": 10, "passed": True})
+            details.append({"check": "Content-Security-Policy", "points": 10, "passed": True})
         else:
-            details.append({"check": "X-Content-Type-Options", "points": 0, "passed": False, "max": 10})
+            details.append({"check": "Content-Security-Policy", "points": 0, "passed": False, "max": 10})
 
-        # X-XSS-Protection (not scored, but tracked)
+        # X-Content-Type-Options (+5)
+        if security_headers.get("X-Content-Type-Options"):
+            score += 5
+            details.append({"check": "X-Content-Type-Options", "points": 5, "passed": True})
+        else:
+            details.append({"check": "X-Content-Type-Options", "points": 0, "passed": False, "max": 5})
     else:
         for name, pts in [
-            ("HSTS présent", 15),
-            ("X-Frame-Options", 10),
-            ("Content-Security-Policy", 15),
-            ("X-Content-Type-Options", 10),
+            ("HSTS présent", 10),
+            ("X-Frame-Options", 5),
+            ("Content-Security-Policy", 10),
+            ("X-Content-Type-Options", 5),
         ]:
             details.append({"check": name, "points": 0, "passed": False, "max": pts})
 
-    # HTTPS redirect (+10) — implied if HTTP headers were retrieved via HTTPS
+    # HTTPS accessible (+10)
     if http_headers and http_headers.get("status_code") and http_headers["status_code"] < 400:
         score += 10
         details.append({"check": "HTTPS accessible", "points": 10, "passed": True})
     else:
         details.append({"check": "HTTPS accessible", "points": 0, "passed": False, "max": 10})
 
-    # Certificate days > 30 (+15)
+    # Certificate > 30 jours (+10)
     if ssl_cert and ssl_cert.get("days_remaining") is not None and ssl_cert["days_remaining"] > 30:
-        score += 15
-        details.append({"check": "Certificat > 30 jours", "points": 15, "passed": True})
+        score += 10
+        details.append({"check": "Certificat > 30 jours", "points": 10, "passed": True})
     else:
-        details.append({"check": "Certificat > 30 jours", "points": 0, "passed": False, "max": 15})
+        details.append({"check": "Certificat > 30 jours", "points": 0, "passed": False, "max": 10})
+
+    # Ports dangereux fermés (+20)
+    dangerous_ports = {21, 23, 135, 139, 445, 3389, 5900}
+    open_port_numbers = {p.port for p in open_ports if p.state == "open"}
+    dangerous_open = open_port_numbers & dangerous_ports
+    if not dangerous_open:
+        score += 20
+        details.append({"check": "Ports dangereux fermés", "points": 20, "passed": True})
+    else:
+        # Score partiel : -3 par port dangereux ouvert
+        penalty = min(20, len(dangerous_open) * 3)
+        pts = max(0, 20 - penalty)
+        score += pts
+        port_list = ", ".join(str(p) for p in sorted(dangerous_open))
+        details.append({
+            "check": f"Ports dangereux ouverts: {port_list}",
+            "points": pts,
+            "passed": False,
+            "max": 20,
+        })
+
+    # Peu de ports ouverts (+10) — moins de 5 ports ouverts = bon
+    total_open = len(open_port_numbers)
+    if total_open <= 3:
+        score += 10
+        details.append({"check": f"Surface d'attaque réduite ({total_open} ports)", "points": 10, "passed": True})
+    elif total_open <= 6:
+        score += 5
+        details.append({"check": f"Surface d'attaque modérée ({total_open} ports)", "points": 5, "passed": True})
+    else:
+        details.append({"check": f"Surface d'attaque large ({total_open} ports)", "points": 0, "passed": False, "max": 10})
 
     return score, details
 
@@ -325,54 +527,80 @@ def _calculate_score(
 
 @router.post("/analyze", response_model=ScannerResult)
 def analyze_target(payload: ScannerRequest) -> ScannerResult:
-    """Analyse complète d'un domaine : DNS, SSL, en-têtes HTTP, WHOIS, GeoIP et score de sécurité."""
+    """Analyse complète d'une cible : ports, DNS, SSL, en-têtes HTTP, WHOIS, GeoIP et score."""
     start = time.monotonic()
     errors: list[str] = []
 
-    domain = _clean_domain(payload.target)
-    if not _DOMAIN_RE.match(domain):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Nom de domaine invalide : {domain}",
-        )
+    target, target_type = _clean_target(payload.target)
 
-    result = ScannerResult(target=domain)
+    if target_type == "domain":
+        if not _DOMAIN_RE.match(target):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Cible invalide : {target}",
+            )
+    elif target_type == "ip":
+        if not _IP_RE.match(target):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Adresse IP invalide : {target}",
+            )
 
-    # 1. Résolution IP
-    result.resolved_ip = _resolve_ip(domain)
+    result = ScannerResult(target=target, target_type=target_type)
 
-    # 2. GeoIP
+    # 1. Résolution IP (si domaine) ou DNS inverse (si IP)
+    if target_type == "domain":
+        result.resolved_ip = _resolve_ip(target)
+    else:
+        result.resolved_ip = target
+        reverse = _reverse_dns(target)
+        if reverse:
+            result.dns = {"reverse": reverse}
+
+    # 2. Scan de ports
+    scan_ip = result.resolved_ip
+    if scan_ip:
+        port_results = _scan_ports(scan_ip)
+        result.open_ports = [p for p in port_results if p.state == "open"]
+        result.ports_scanned = len(COMMON_PORTS)
+
+    # 3. GeoIP enrichie
     if result.resolved_ip:
-        try:
-            from apps.api.geoip import lookup_ip
+        geo, geo_errors = _get_geo_full(result.resolved_ip)
+        result.geo = geo
+        errors.extend(geo_errors)
 
-            result.geo = lookup_ip(result.resolved_ip)
-        except Exception as exc:
-            errors.append(f"GeoIP: {exc}")
+    # 4. DNS (si domaine)
+    if target_type == "domain":
+        dns_records, dns_errors = _get_dns_records(target)
+        result.dns = dns_records
+        errors.extend(dns_errors)
 
-    # 3. DNS
-    dns_records, dns_errors = _get_dns_records(domain)
-    result.dns = dns_records
-    errors.extend(dns_errors)
+    # 5. SSL
+    ssl_domain = target if target_type == "domain" else result.resolved_ip
+    if ssl_domain:
+        ssl_cert, ssl_errors = _get_ssl_cert(ssl_domain)
+        result.ssl_cert = ssl_cert
+        errors.extend(ssl_errors)
 
-    # 4. SSL
-    ssl_cert, ssl_errors = _get_ssl_cert(domain)
-    result.ssl_cert = ssl_cert
-    errors.extend(ssl_errors)
+    # 6. HTTP headers
+    http_target = target if target_type == "domain" else result.resolved_ip
+    if http_target:
+        http_headers, security_headers, http_errors = _get_http_headers(http_target)
+        result.http_headers = http_headers
+        result.security_headers = security_headers
+        errors.extend(http_errors)
 
-    # 5. HTTP headers
-    http_headers, security_headers, http_errors = _get_http_headers(domain)
-    result.http_headers = http_headers
-    result.security_headers = security_headers
-    errors.extend(http_errors)
+    # 7. WHOIS (domaines uniquement)
+    if target_type == "domain":
+        whois_info, whois_errors = _get_whois_info(target)
+        result.whois_info = whois_info
+        errors.extend(whois_errors)
 
-    # 6. WHOIS
-    whois_info, whois_errors = _get_whois_info(domain)
-    result.whois_info = whois_info
-    errors.extend(whois_errors)
-
-    # 7. Score de sécurité
-    score, score_details = _calculate_score(ssl_cert, security_headers, http_headers)
+    # 8. Score de sécurité
+    score, score_details = _calculate_score(
+        result.ssl_cert, result.security_headers, result.http_headers, result.open_ports,
+    )
     result.security_score = score
     result.score_details = score_details
 

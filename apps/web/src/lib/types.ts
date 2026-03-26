@@ -200,8 +200,16 @@ export interface AnomalyBaselineStat {
 
 // --- Scanner types ---
 
+export interface PortResult {
+  port: number;
+  service: string;
+  state: "open" | "closed" | "filtered";
+  banner: string | null;
+}
+
 export interface ScannerResult {
   target: string;
+  target_type: "domain" | "ip";
   resolved_ip: string | null;
   geo: Record<string, unknown> | null;
   dns: Record<string, unknown> | null;
@@ -209,8 +217,10 @@ export interface ScannerResult {
   http_headers: Record<string, unknown> | null;
   security_headers: Record<string, unknown> | null;
   whois_info: Record<string, unknown> | null;
+  open_ports: PortResult[];
+  ports_scanned: number;
   security_score: number;
-  score_details: Array<{ check: string; passed: boolean; points: number }>;
+  score_details: Array<{ check: string; passed: boolean; points: number; max?: number }>;
   scan_duration_ms: number;
   errors: string[];
 }
