@@ -15,9 +15,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head />
-      <body className="flex h-screen overflow-hidden bg-space-dark text-gray-100">
+      <body className="flex h-screen overflow-hidden bg-space-dark text-gray-100" suppressHydrationWarning>
         <StarField />
         <Sidebar />
         <main className="relative z-10 flex-1 overflow-y-auto p-6">
