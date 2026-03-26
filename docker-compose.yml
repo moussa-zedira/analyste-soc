@@ -1,0 +1,131 @@
+version: "3.9"
+
+services:
+  # ── Infrastructure ──────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: siem
+      POSTGRES_PASSWORD: siem
+      POSTGRES_DB: siem
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U siem"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Backend API ─────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: dev
+      DATABASE_URL: postgresql+psycopg2://siem:siem@postgres:5432/siem
+      REDIS_URL: redis://redis:6379/0
+      API_KEY: elite-secret-key
+      API_KEY_HEADER: X-API-Key
+      JWT_SECRET_KEY: change-me-in-production
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: "480"
+      GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: llama3.2
+      TRIAGE_ENABLED: "true"
+      MIN_SEVERITY: medium
+      WEBHOOK_ENABLED: "false"
+      WEBHOOK_URL: ""
+    volumes:
+      - geoip-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Celery Worker ───────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: celery -A apps.api.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      ENV: dev
+      DATABASE_URL: postgresql+psycopg2://siem:siem@postgres:5432/siem
+      REDIS_URL: redis://redis:6379/0
+      API_KEY: elite-secret-key
+      GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
+    volumes:
+      - geoip-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Beat ─────────────────────────────────────────
+  beat:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: celery -A apps.api.celery_app beat --loglevel=info
+    environment:
+      ENV: dev
+      DATABASE_URL: postgresql+psycopg2://siem:siem@postgres:5432/siem
+      REDIS_URL: redis://redis:6379/0
+      API_KEY: elite-secret-key
+      GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
+    volumes:
+      - geoip-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Frontend ────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+      NEXT_PUBLIC_API_KEY: elite-secret-key
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ── Agent (event simulator) ─────────────────────────────
+  agent:
+    build:
+      context: .
+      dockerfile: apps/agent/Dockerfile
+    environment:
+      API_BASE_URL: http://api:8000
+      API_KEY: elite-secret-key
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  geoip-data:
