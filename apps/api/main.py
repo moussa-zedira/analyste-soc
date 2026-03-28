@@ -100,6 +100,14 @@ from apps.api.pentest_traffic_shaping import router as pentest_traffic_router
 from apps.api.routes.findings import router as findings_router
 from apps.api.pentest_vuln_correlator import router as pentest_correlator_router
 from apps.api.pentest_exploit_dispatcher import router as pentest_dispatcher_router
+from apps.api.pentest_race_condition import router as pentest_race_router
+from apps.api.pentest_websocket import router as pentest_ws_security_router
+from apps.api.pentest_api_fuzzer import router as pentest_api_fuzzer_router
+from apps.api.pentest_jwt_attack import router as pentest_jwt_router
+from apps.api.pentest_ssti_engine import router as pentest_ssti_router
+from apps.api.pentest_deserialization import router as pentest_deser_router
+from apps.api.pentest_cloud_scanner import router as pentest_cloud_router
+from apps.api.pentest_ad_attack import router as pentest_ad_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -379,6 +387,14 @@ def create_app() -> FastAPI:
     app.include_router(findings_router, prefix="/findings", tags=["Findings"])
     app.include_router(pentest_correlator_router, tags=["Vuln Correlator"])
     app.include_router(pentest_dispatcher_router, tags=["Exploit Dispatcher"])
+    app.include_router(pentest_race_router, tags=["Race Condition"])
+    app.include_router(pentest_ws_security_router, tags=["WebSocket Security"])
+    app.include_router(pentest_api_fuzzer_router, tags=["API Fuzzer"])
+    app.include_router(pentest_jwt_router, tags=["JWT Attack"])
+    app.include_router(pentest_ssti_router, tags=["SSTI Engine"])
+    app.include_router(pentest_deser_router, tags=["Deserialization"])
+    app.include_router(pentest_cloud_router, tags=["Cloud Scanner"])
+    app.include_router(pentest_ad_router, tags=["AD Attack"])
 
     return app
 
