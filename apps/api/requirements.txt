@@ -42,3 +42,8 @@ asyncssh>=2.14
 pyjwt>=2.8
 websockets>=12.0
 python-multipart>=0.0.6
+
+# Phase 6: Real Execution Engine
+pywinrm>=0.4
+impacket>=0.11
+aioftp>=0.22

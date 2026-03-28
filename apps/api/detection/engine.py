@@ -135,11 +135,82 @@ def run_detection(db: Session) -> dict:
     except Exception:
         logger.exception("SIGMA rules evaluation failed")
 
+    # Multi-event correlation engine
+    correlation_incidents = 0
+    correlation_rules_count = 0
+    try:
+        from apps.api.detection.correlation import (
+            get_correlation_engine,
+            run_correlation,
+        )
+
+        corr_engine = get_correlation_engine()
+        correlation_rules_count = len(corr_engine.get_rules(enabled_only=True))
+        correlation_incidents = run_correlation(db, events)
+        total_incidents += correlation_incidents
+    except Exception:
+        logger.exception("Correlation engine evaluation failed")
+
+    # State machine engine — process events for stateful detection
+    fsm_completions = 0
+    try:
+        from apps.api.detection.state_machine import get_state_machine_engine
+
+        sm_engine = get_state_machine_engine()
+        completions = sm_engine.process_events(events)
+        fsm_completions = len(completions)
+
+        # Create incidents from completed state machines
+        for completion in completions:
+            try:
+                entity_key = completion["group_key"]
+                bucket = now.strftime("%Y-%m-%dT%H:%M")
+                dedup = hashlib.sha256(
+                    f"fsm:{completion['machine_id']}|{entity_key}|{bucket}".encode()
+                ).hexdigest()
+
+                existing = db.query(Incident).filter(
+                    Incident.dedup_hash == dedup
+                ).first()
+                if existing:
+                    continue
+
+                incident = Incident(
+                    id=str(uuid.uuid4()),
+                    title=f"[FSM] {completion['machine_name']}: {entity_key}",
+                    description=(
+                        f"State machine '{completion['machine_name']}' completed "
+                        f"full attack chain for {entity_key}. "
+                        f"MITRE: {', '.join(completion.get('mitre_tactics', []))}"
+                    ),
+                    severity=completion.get("severity", "critical"),
+                    status="open",
+                    rule_id=f"fsm:{completion['machine_id']}",
+                    entity_key=entity_key,
+                    start_ts=now - LOOKBACK,
+                    end_ts=now,
+                    dedup_hash=dedup,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(incident)
+                total_incidents += 1
+            except Exception:
+                logger.exception("FSM incident creation failed for %s", completion.get("machine_id"))
+
+        # Cleanup expired states periodically
+        sm_engine.cleanup()
+    except Exception:
+        logger.exception("State machine engine evaluation failed")
+
     db.commit()
 
     summary = {
-        "rules_evaluated": len(rules) + 1 + sigma_evaluated,
+        "rules_evaluated": len(rules) + 1 + sigma_evaluated + correlation_rules_count,
         "incidents_created": total_incidents,
+        "correlation_rules": correlation_rules_count,
+        "correlation_incidents": correlation_incidents,
+        "fsm_completions": fsm_completions,
     }
     logger.info("Detection engine finished: %s", summary)
     return summary

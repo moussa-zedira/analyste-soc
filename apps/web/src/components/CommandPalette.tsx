@@ -62,6 +62,14 @@ const NAV_PAGES = [
   { href: "/pentest/live", label: "Live Dashboard" },
   { href: "/pentest/auto-exploit", label: "Auto-Exploit" },
   { href: "/pentest/headless", label: "Headless Scanner" },
+  { href: "/correlation", label: "Correlation Engine" },
+  { href: "/parsers", label: "Log Parsers" },
+  { href: "/alerts", label: "Alert Channels" },
+  { href: "/pentest/crawler", label: "Web Crawler" },
+  { href: "/pentest/interceptor", label: "HTTP Interceptor" },
+  { href: "/pentest/brute", label: "Brute Force" },
+  { href: "/pentest/vuln-scan", label: "Vuln Scanner" },
+  { href: "/pentest/payloads", label: "Payload Generator" },
   { href: "/admin", label: "Admin" },
 ];
 

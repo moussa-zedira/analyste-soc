@@ -27,11 +27,13 @@ from apps.api.routes import (
     anomaly,
     auth,
     chat,
+    correlation,
     events,
     export,
     incidents,
     investigate,
     log_sources,
+    parsers,
     pentest,
     recon,
     ml,
@@ -39,6 +41,7 @@ from apps.api.routes import (
     scan_history,
     scanner,
     sigma,
+    soar,
     stats,
     threat_intel,
     threat_scores,
@@ -118,6 +121,16 @@ from apps.api.pentest_social_engineering import router as pentest_social_router
 from apps.api.pentest_network_mapper import router as pentest_netmap_router
 from apps.api.pentest_compliance import router as pentest_compliance_router
 from apps.api.pentest_threat_model import router as pentest_threat_model_router
+from apps.api.pentest_executor import router as pentest_executor_router
+from apps.api.pentest_executor import ws_router as executor_ws_router
+from apps.api.pentest_network_exec import router as pentest_network_exec_router
+from apps.api.pentest_web_crawler import router as pentest_web_crawler_router
+from apps.api.pentest_auth_scanner import router as pentest_auth_scanner_router
+from apps.api.pentest_interceptor import router as pentest_interceptor_router
+from apps.api.pentest_interceptor import ws_router as interceptor_ws_router
+from apps.api.pentest_payload_engine import router as pentest_payload_engine_router
+from apps.api.pentest_vuln_scanner import router as pentest_vuln_scanner_router
+from apps.api.pentest_brute import router as pentest_brute_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -155,6 +168,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create default admin account if no users exist
     _seed_default_admin()
 
+    # Seed built-in SOAR playbooks
+    _seed_soar_playbooks()
+
     yield
 
 
@@ -191,6 +207,22 @@ def _seed_default_admin() -> None:
     except Exception as exc:
         db.rollback()
         logger.warning("seed_admin_failed", error=str(exc))
+    finally:
+        db.close()
+
+
+def _seed_soar_playbooks() -> None:
+    """Seed built-in SOAR playbooks on startup."""
+    from apps.api.routes.soar import seed_builtin_playbooks
+
+    db = SessionLocal()
+    try:
+        count = seed_builtin_playbooks(db)
+        if count:
+            logger.info("soar_playbooks_seeded", count=count)
+    except Exception as exc:
+        db.rollback()
+        logger.warning("soar_seed_failed", error=str(exc))
     finally:
         db.close()
 
@@ -338,10 +370,20 @@ def create_app() -> FastAPI:
     app.include_router(wordlists.router, prefix="/wordlists", tags=["wordlists"])
     app.include_router(sigma.router, prefix="/sigma", tags=["sigma"])
     app.include_router(
+        parsers.router,
+        prefix="/parsers",
+        tags=["parsers"],
+    )
+    app.include_router(
         threat_intel.router,
         prefix="/threat-intel",
         tags=["threat-intel"],
     )
+    app.include_router(
+        correlation.router,
+        tags=["correlation"],
+    )
+    app.include_router(soar.router, prefix="/soar", tags=["SOAR"])
     app.include_router(ws.router, tags=["websocket"])
     app.include_router(pentest_stream_router, tags=["Pentest Stream"])
     app.include_router(pentest_pipeline_router, tags=["Pentest Pipeline"])
@@ -415,6 +457,18 @@ def create_app() -> FastAPI:
     app.include_router(pentest_netmap_router, tags=["Network Mapper"])
     app.include_router(pentest_compliance_router, tags=["Compliance Scanner"])
     app.include_router(pentest_threat_model_router, tags=["Threat Modeling"])
+
+    # ── Real Execution Modules ──
+    app.include_router(pentest_executor_router, tags=["Execution Engine"])
+    app.include_router(executor_ws_router, tags=["Execution Engine WS"])
+    app.include_router(pentest_network_exec_router, tags=["Network Exec"])
+    app.include_router(pentest_web_crawler_router, tags=["Web Crawler"])
+    app.include_router(pentest_auth_scanner_router, tags=["Auth Scanner"])
+    app.include_router(pentest_interceptor_router, tags=["HTTP Interceptor"])
+    app.include_router(interceptor_ws_router, tags=["HTTP Interceptor WS"])
+    app.include_router(pentest_payload_engine_router, tags=["Payload Engine"])
+    app.include_router(pentest_vuln_scanner_router, tags=["Vulnerability Scanner"])
+    app.include_router(pentest_brute_router, tags=["Brute Force"])
 
     return app
 

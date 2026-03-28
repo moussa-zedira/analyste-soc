@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for the Cyber Defense Dashboard."""
 
-from apps.api.models.alert_config import AlertChannel
+from apps.api.models.alert_config import AlertChannel, AlertRule
 from apps.api.models.anomaly_baseline import AnomalyBaseline
 from apps.api.models.audit_log import AuditLog
 from apps.api.models.event import Event
@@ -15,15 +15,20 @@ from apps.api.models.user import User
 from apps.api.models.whitelist import WhitelistEntry
 from apps.api.models.ti_cache import TICache
 from apps.api.models.sigma_rule import SigmaRule
+from apps.api.models.soar import Playbook, PlaybookExecution, PlaybookStepResult
 
 __all__ = [
     "AlertChannel",
+    "AlertRule",
     "AnomalyBaseline",
     "AuditLog",
     "Event",
     "Finding",
     "Incident",
     "IncidentEvent",
+    "Playbook",
+    "PlaybookExecution",
+    "PlaybookStepResult",
     "RuleCheckpoint",
     "ScanHistory",
     "ScanResult",

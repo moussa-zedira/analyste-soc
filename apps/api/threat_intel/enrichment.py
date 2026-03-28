@@ -30,7 +30,56 @@ def _get_providers() -> list:
         from apps.api.threat_intel.otx import OTXProvider
         providers.append(OTXProvider(otx_key))
 
+    vt_key = getattr(settings, "VIRUSTOTAL_API_KEY", "")
+    if vt_key:
+        from apps.api.threat_intel.virustotal import VirusTotalProvider
+        providers.append(VirusTotalProvider(vt_key))
+
+    shodan_key = getattr(settings, "SHODAN_API_KEY", "")
+    if shodan_key:
+        from apps.api.threat_intel.shodan import ShodanProvider
+        providers.append(ShodanProvider(shodan_key))
+
+    greynoise_key = getattr(settings, "GREYNOISE_API_KEY", "")
+    if greynoise_key:
+        from apps.api.threat_intel.greynoise import GreyNoiseProvider
+        providers.append(GreyNoiseProvider(greynoise_key))
+
+    misp_url = getattr(settings, "MISP_URL", "")
+    misp_key = getattr(settings, "MISP_API_KEY", "")
+    if misp_url and misp_key:
+        from apps.api.threat_intel.misp import MISPProvider
+        verify_ssl = getattr(settings, "MISP_VERIFY_SSL", True)
+        providers.append(MISPProvider(misp_url, misp_key, verify_ssl))
+
+    # CIRCL — works with or without credentials
+    circl_user = getattr(settings, "CIRCL_PDNS_USER", "")
+    circl_pass = getattr(settings, "CIRCL_PDNS_PASSWORD", "")
+    from apps.api.threat_intel.circl import CIRCLProvider
+    providers.append(CIRCLProvider(circl_user, circl_pass))
+
+    # URLhaus — free, no key required, always available
+    from apps.api.threat_intel.urlhaus import URLhausProvider
+    providers.append(URLhausProvider())
+
     return providers
+
+
+def get_provider_status() -> list[dict]:
+    """Return status of all providers (configured or not)."""
+    settings = get_settings()
+
+    all_providers = [
+        {"name": "abuseipdb", "configured": bool(getattr(settings, "ABUSEIPDB_API_KEY", "")), "requires_key": True},
+        {"name": "otx", "configured": bool(getattr(settings, "OTX_API_KEY", "")), "requires_key": True},
+        {"name": "virustotal", "configured": bool(getattr(settings, "VIRUSTOTAL_API_KEY", "")), "requires_key": True},
+        {"name": "shodan", "configured": bool(getattr(settings, "SHODAN_API_KEY", "")), "requires_key": True},
+        {"name": "greynoise", "configured": bool(getattr(settings, "GREYNOISE_API_KEY", "")), "requires_key": True},
+        {"name": "misp", "configured": bool(getattr(settings, "MISP_URL", "") and getattr(settings, "MISP_API_KEY", "")), "requires_key": True},
+        {"name": "circl", "configured": True, "requires_key": False},
+        {"name": "urlhaus", "configured": True, "requires_key": False},
+    ]
+    return all_providers
 
 
 async def _lookup_ip(ip: str, db: Session) -> TIResult | None:

@@ -52,9 +52,35 @@ class Settings(BaseSettings):
     # Alerting — Slack
     SLACK_WEBHOOK_URL: str = ""
 
+    # Alerting — PagerDuty
+    PAGERDUTY_ROUTING_KEY: str = ""
+
+    # Alerting — Discord
+    DISCORD_WEBHOOK_URL: str = ""
+
+    # Alerting — Teams
+    TEAMS_WEBHOOK_URL: str = ""
+
+    # Alerting — Telegram
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
+    # Alerting — Syslog
+    SYSLOG_HOST: str = ""
+    SYSLOG_PORT: int = 514
+    SYSLOG_PROTOCOL: str = "udp"
+
     # Threat Intelligence
     ABUSEIPDB_API_KEY: str = ""
     OTX_API_KEY: str = ""
+    VIRUSTOTAL_API_KEY: str = ""
+    SHODAN_API_KEY: str = ""
+    GREYNOISE_API_KEY: str = ""
+    CIRCL_PDNS_USER: str = ""
+    CIRCL_PDNS_PASSWORD: str = ""
+    MISP_URL: str = ""
+    MISP_API_KEY: str = ""
+    MISP_VERIFY_SSL: bool = True
 
     @property
     def effective_api_key(self) -> str:
