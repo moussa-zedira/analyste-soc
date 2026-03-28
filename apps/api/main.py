@@ -108,6 +108,16 @@ from apps.api.pentest_ssti_engine import router as pentest_ssti_router
 from apps.api.pentest_deserialization import router as pentest_deser_router
 from apps.api.pentest_cloud_scanner import router as pentest_cloud_router
 from apps.api.pentest_ad_attack import router as pentest_ad_router
+from apps.api.pentest_ai_vuln_analyzer import router as pentest_ai_vuln_router
+from apps.api.pentest_smart_payload import router as pentest_smart_payload_router
+from apps.api.pentest_iot_analyzer import router as pentest_iot_router
+from apps.api.pentest_mobile_tester import router as pentest_mobile_router
+from apps.api.pentest_adversary_emulation import router as pentest_adversary_router
+from apps.api.pentest_phishing import router as pentest_phishing_router
+from apps.api.pentest_social_engineering import router as pentest_social_router
+from apps.api.pentest_network_mapper import router as pentest_netmap_router
+from apps.api.pentest_compliance import router as pentest_compliance_router
+from apps.api.pentest_threat_model import router as pentest_threat_model_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -395,6 +405,16 @@ def create_app() -> FastAPI:
     app.include_router(pentest_deser_router, tags=["Deserialization"])
     app.include_router(pentest_cloud_router, tags=["Cloud Scanner"])
     app.include_router(pentest_ad_router, tags=["AD Attack"])
+    app.include_router(pentest_ai_vuln_router, tags=["AI Vuln Analyzer"])
+    app.include_router(pentest_smart_payload_router, tags=["Smart Payload"])
+    app.include_router(pentest_iot_router, tags=["IoT Analyzer"])
+    app.include_router(pentest_mobile_router, tags=["Mobile Tester"])
+    app.include_router(pentest_adversary_router, tags=["Adversary Emulation"])
+    app.include_router(pentest_phishing_router, tags=["Phishing Campaigns"])
+    app.include_router(pentest_social_router, tags=["Social Engineering"])
+    app.include_router(pentest_netmap_router, tags=["Network Mapper"])
+    app.include_router(pentest_compliance_router, tags=["Compliance Scanner"])
+    app.include_router(pentest_threat_model_router, tags=["Threat Modeling"])
 
     return app
 
