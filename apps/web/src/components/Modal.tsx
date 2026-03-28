@@ -48,7 +48,7 @@ const panelVariants = {
     opacity: 1,
     scale: 1,
     filter: "blur(0px)",
-    transition: { type: "spring", damping: 26, stiffness: 300 },
+    transition: { type: "spring" as const, damping: 26, stiffness: 300 },
   },
   exit: {
     opacity: 0,

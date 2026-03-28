@@ -15,7 +15,7 @@ interface Notification {
   read: boolean;
 }
 
-const TYPE_CONFIG: Record<NotifType, { color: string; bg: string; icon: JSX.Element }> = {
+const TYPE_CONFIG: Record<NotifType, { color: string; bg: string; icon: React.ReactNode }> = {
   incident: {
     color: "text-severity-critical",
     bg: "bg-severity-critical/10 border-severity-critical/30",
