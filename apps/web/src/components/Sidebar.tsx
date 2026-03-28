@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
+import { FavoritesSidebar } from "@/components/Favorites";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" },
@@ -58,6 +60,7 @@ const NAV_ITEMS = [
   { href: "/pentest/live", label: "Live Dashboard", icon: "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" },
   { href: "/pentest/auto-exploit", label: "Auto-Exploit", icon: "M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" },
   { href: "/pentest/headless", label: "Headless Scanner", icon: "M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" },
+  { href: "/activity", label: "Activity", icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" },
   { href: "/admin", label: "Admin", icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
 ];
 
@@ -125,6 +128,9 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* Favorites */}
+      <FavoritesSidebar />
+
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         <p className="hud-label mb-3 px-3">Navigation</p>
@@ -172,6 +178,8 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-cyan-glow/10 p-3 space-y-2">
+        {/* Theme toggle */}
+        <ThemeToggle />
         {/* System status indicator */}
         <div className="flex items-center gap-2 px-3 py-2">
           <div className="relative">
@@ -182,6 +190,19 @@ export function Sidebar() {
             SYSTEM ONLINE
           </span>
         </div>
+        <Link
+          href="/profile"
+          className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-[10px] font-bold tracking-widest transition-all ${
+            pathname === "/profile"
+              ? "border border-cyan-glow/20 bg-cyan-glow/10 text-cyan-glow shadow-cyan-sm"
+              : "text-gray-500 hover:bg-cyan-glow/5 hover:text-cyan-dim"
+          }`}
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+          PROFILE
+        </Link>
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[10px] font-bold tracking-widest text-red-400/70 transition-all hover:bg-red-500/10 hover:text-red-400"
