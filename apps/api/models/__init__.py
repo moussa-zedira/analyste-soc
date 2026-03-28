@@ -4,6 +4,7 @@ from apps.api.models.alert_config import AlertChannel
 from apps.api.models.anomaly_baseline import AnomalyBaseline
 from apps.api.models.audit_log import AuditLog
 from apps.api.models.event import Event
+from apps.api.models.finding import Finding
 from apps.api.models.incident import Incident
 from apps.api.models.incident_event import IncidentEvent
 from apps.api.models.rule_checkpoint import RuleCheckpoint
@@ -20,6 +21,7 @@ __all__ = [
     "AnomalyBaseline",
     "AuditLog",
     "Event",
+    "Finding",
     "Incident",
     "IncidentEvent",
     "RuleCheckpoint",

@@ -92,6 +92,14 @@ from apps.api.pentest_workflows import router as pentest_workflows_router
 from apps.api.pentest_live_dashboard import router as pentest_live_router
 from apps.api.pentest_headless_scanner import router as pentest_headless_router
 from apps.api.pentest_auto_exploit import router as pentest_autoexploit_router
+from apps.api.pentest_autochain import router as pentest_autochain_router
+from apps.api.pentest_curl_client import router as pentest_curl_router
+from apps.api.pentest_http_history import router as pentest_http_history_router
+from apps.api.pentest_payload_obfuscation import router as pentest_obfuscation_router
+from apps.api.pentest_traffic_shaping import router as pentest_traffic_router
+from apps.api.routes.findings import router as findings_router
+from apps.api.pentest_vuln_correlator import router as pentest_correlator_router
+from apps.api.pentest_exploit_dispatcher import router as pentest_dispatcher_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -363,6 +371,14 @@ def create_app() -> FastAPI:
     app.include_router(pentest_live_router, tags=["Live Dashboard"])
     app.include_router(pentest_headless_router, tags=["Headless Scanner"])
     app.include_router(pentest_autoexploit_router, tags=["Auto-Exploit"])
+    app.include_router(pentest_autochain_router, tags=["Auto-Chain"])
+    app.include_router(pentest_curl_router, tags=["Curl Client"])
+    app.include_router(pentest_http_history_router, tags=["HTTP History"])
+    app.include_router(pentest_obfuscation_router, tags=["Payload Obfuscation"])
+    app.include_router(pentest_traffic_router, tags=["Traffic Shaping"])
+    app.include_router(findings_router, prefix="/findings", tags=["Findings"])
+    app.include_router(pentest_correlator_router, tags=["Vuln Correlator"])
+    app.include_router(pentest_dispatcher_router, tags=["Exploit Dispatcher"])
 
     return app
 
