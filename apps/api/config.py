@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # Alerting — Slack
     SLACK_WEBHOOK_URL: str = ""
 
+    # Threat Intelligence
+    ABUSEIPDB_API_KEY: str = ""
+    OTX_API_KEY: str = ""
+
     @property
     def effective_api_key(self) -> str:
         """Retourne la clé API utilisée pour la vérification des requêtes.

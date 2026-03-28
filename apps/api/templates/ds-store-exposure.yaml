@@ -1,0 +1,23 @@
+id: ds-store-exposure
+info:
+  name: ".DS_Store File Exposure"
+  severity: high
+  description: "Detection de fichiers .DS_Store exposes revelant la structure des repertoires."
+  tags: exposure,ds-store,high,disclosure,macos
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.DS_Store"
+    matchers:
+      - type: word
+        words:
+          - "Bud1"
+        condition: or
+      - type: regex
+        regex:
+          - "\\x00\\x00\\x00\\x01Bud1"
+      - type: status
+        status:
+          - 200
+    matchers-condition: and

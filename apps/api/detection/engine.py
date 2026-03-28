@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
@@ -13,10 +15,54 @@ from apps.api.detection.incident_creator import create_incident
 from apps.api.detection.rules import Rule, get_rules
 from apps.api.detection.triage import filter_events
 from apps.api.models.event import Event
+from apps.api.models.incident import Incident
+from apps.api.models.incident_event import IncidentEvent
 
 logger = logging.getLogger(__name__)
 
 LOOKBACK = timedelta(hours=1)
+
+_SIGMA_SEVERITY_MAP = {"high": "high", "medium": "medium", "low": "low"}
+
+
+def _create_sigma_incident(
+    db: Session,
+    sigma_rule: object,
+    compiled: dict,
+    event: Event,
+    now: datetime,
+) -> bool:
+    """Cree un incident pour une correspondance SIGMA avec deduplication."""
+    rule_id = f"sigma:{sigma_rule.id}"  # type: ignore[attr-defined]
+    entity_key = event.src_ip or event.username or event.id
+    bucket = now.strftime("%Y-%m-%dT%H:%M")
+    dedup = hashlib.sha256(f"{rule_id}|{entity_key}|{bucket}".encode()).hexdigest()
+
+    existing = db.query(Incident).filter(Incident.dedup_hash == dedup).first()
+    if existing:
+        return False
+
+    severity = _SIGMA_SEVERITY_MAP.get(compiled.get("level", "medium"), "medium")
+    title = f"[SIGMA] {sigma_rule.name}: {entity_key}"  # type: ignore[attr-defined]
+
+    incident = Incident(
+        id=str(uuid.uuid4()),
+        title=title,
+        description=compiled.get("description", ""),
+        severity=severity,
+        status="open",
+        rule_id=rule_id,
+        entity_key=entity_key,
+        start_ts=event.ts,
+        end_ts=event.ts,
+        dedup_hash=dedup,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(incident)
+    db.add(IncidentEvent(incident_id=incident.id, event_id=event.id))
+    logger.info("SIGMA incident created: %s", title)
+    return True
 
 
 def _fetch_recent_events(db: Session, since: datetime) -> list[Event]:
@@ -68,10 +114,31 @@ def run_detection(db: Session) -> dict:
     except Exception:
         logger.exception("Impossible-travel rule failed")
 
+    # SIGMA rules evaluation
+    sigma_evaluated = 0
+    try:
+        from apps.api.detection.sigma_engine import (
+            evaluate_sigma_rule,
+            get_enabled_sigma_rules,
+        )
+
+        sigma_rules = get_enabled_sigma_rules(db)
+        for sigma_rule, compiled in sigma_rules:
+            sigma_evaluated += 1
+            for event in events:
+                if evaluate_sigma_rule(compiled, event):
+                    created = _create_sigma_incident(
+                        db, sigma_rule, compiled, event, now,
+                    )
+                    if created:
+                        total_incidents += 1
+    except Exception:
+        logger.exception("SIGMA rules evaluation failed")
+
     db.commit()
 
     summary = {
-        "rules_evaluated": len(rules) + 1,  # +1 for impossible-travel
+        "rules_evaluated": len(rules) + 1 + sigma_evaluated,
         "incidents_created": total_incidents,
     }
     logger.info("Detection engine finished: %s", summary)

@@ -1,0 +1,33 @@
+id: graphql-introspection
+info:
+  name: "GraphQL Introspection Enabled"
+  severity: high
+  description: "Detection de l'introspection GraphQL activee, permettant l'enumeration complete du schema."
+  tags: graphql,introspection,high,api,misconfig
+
+http:
+  - method: POST
+    path:
+      - "{{BaseURL}}/graphql"
+      - "{{BaseURL}}/api/graphql"
+      - "{{BaseURL}}/graphql/console"
+      - "{{BaseURL}}/v1/graphql"
+    headers:
+      Content-Type: "application/json"
+    body: '{"query":"{ __schema { types { name fields { name } } } }"}'
+    matchers:
+      - type: word
+        words:
+          - "__schema"
+          - "__type"
+          - "queryType"
+        condition: or
+      - type: status
+        status:
+          - 200
+    matchers-condition: and
+    extractors:
+      - name: types
+        type: regex
+        regex:
+          - "\"name\":\"(\\w+)\""

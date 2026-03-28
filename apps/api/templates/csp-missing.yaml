@@ -1,0 +1,21 @@
+id: csp-missing
+info:
+  name: "Missing Content-Security-Policy"
+  severity: medium
+  description: "Detection de l'absence de l'en-tete Content-Security-Policy, augmentant le risque XSS."
+  tags: csp,headers,medium,misconfig,xss
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "Content-Security-Policy"
+        negative: true
+      - type: status
+        status:
+          - 200
+    matchers-condition: and

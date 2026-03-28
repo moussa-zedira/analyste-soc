@@ -1,0 +1,23 @@
+id: missing-security-headers
+info:
+  name: "Missing Security Headers"
+  severity: medium
+  description: "Detection de l'absence d'en-tetes de securite HTTP importants."
+  tags: headers,misconfig,medium,security
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "Strict-Transport-Security"
+        negative: true
+      - type: status
+        status:
+          - 200
+          - 301
+          - 302
+    matchers-condition: and

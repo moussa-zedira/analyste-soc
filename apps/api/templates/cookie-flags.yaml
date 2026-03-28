@@ -1,0 +1,27 @@
+id: cookie-flags
+info:
+  name: "Missing Cookie Security Flags"
+  severity: medium
+  description: "Detection de cookies sans les drapeaux de securite HttpOnly, Secure ou SameSite."
+  tags: cookies,misconfig,medium,security
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/login"
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - "(?i)set-cookie:(?!.*httponly).*$"
+          - "(?i)set-cookie:(?!.*secure).*$"
+          - "(?i)set-cookie:(?!.*samesite).*$"
+        condition: or
+    matchers-condition: or
+    extractors:
+      - name: cookies
+        type: regex
+        part: header
+        regex:
+          - "(?i)set-cookie:\\s*(.*)"

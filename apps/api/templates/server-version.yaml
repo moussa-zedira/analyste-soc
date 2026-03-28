@@ -1,0 +1,26 @@
+id: server-version
+info:
+  name: "Server Version Disclosure"
+  severity: medium
+  description: "Detection de la divulgation de la version du serveur dans les en-tetes HTTP."
+  tags: disclosure,server,medium,headers
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - "(?i)server:\\s*(apache|nginx|iis|lighttpd|tomcat|jetty|caddy)/[0-9.]+"
+          - "(?i)x-powered-by:\\s*(php|asp\\.net|express|ruby|python|servlet)"
+        condition: or
+    matchers-condition: or
+    extractors:
+      - name: server_info
+        type: regex
+        part: header
+        regex:
+          - "(?i)server:\\s*(.*)"
+          - "(?i)x-powered-by:\\s*(.*)"

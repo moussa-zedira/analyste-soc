@@ -1,0 +1,31 @@
+id: options-method
+info:
+  name: "OPTIONS Method Enabled"
+  severity: medium
+  description: "Detection de la methode OPTIONS activee revelant les methodes HTTP autorisees."
+  tags: misconfig,methods,medium,http
+
+http:
+  - method: OPTIONS
+    path:
+      - "{{BaseURL}}"
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "Allow:"
+          - "PUT"
+          - "DELETE"
+          - "TRACE"
+        condition: or
+      - type: status
+        status:
+          - 200
+          - 204
+    matchers-condition: and
+    extractors:
+      - name: allowed_methods
+        type: regex
+        part: header
+        regex:
+          - "(?i)allow:\\s*(.*)"

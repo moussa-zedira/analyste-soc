@@ -1,0 +1,29 @@
+id: directory-listing
+info:
+  name: "Directory Listing Enabled"
+  severity: medium
+  description: "Detection du listing de repertoires active sur le serveur web."
+  tags: misconfig,directory-listing,medium,exposure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/images/"
+      - "{{BaseURL}}/css/"
+      - "{{BaseURL}}/js/"
+      - "{{BaseURL}}/uploads/"
+      - "{{BaseURL}}/assets/"
+    matchers:
+      - type: word
+        words:
+          - "Index of /"
+          - "Directory listing"
+          - "<title>Index of"
+          - "Parent Directory"
+          - "[To Parent Directory]"
+        condition: or
+      - type: status
+        status:
+          - 200
+    matchers-condition: and

@@ -1,0 +1,21 @@
+id: clickjacking
+info:
+  name: "Missing X-Frame-Options (Clickjacking)"
+  severity: medium
+  description: "Detection de l'absence de l'en-tete X-Frame-Options permettant le clickjacking."
+  tags: clickjacking,headers,medium,misconfig
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "X-Frame-Options"
+        negative: true
+      - type: status
+        status:
+          - 200
+    matchers-condition: and

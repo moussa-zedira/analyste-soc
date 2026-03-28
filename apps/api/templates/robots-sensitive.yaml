@@ -1,0 +1,25 @@
+id: robots-sensitive
+info:
+  name: "Sensitive Paths in robots.txt"
+  severity: medium
+  description: "Detection de chemins sensibles reveles dans le fichier robots.txt."
+  tags: exposure,robots,medium,disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/robots.txt"
+    matchers:
+      - type: regex
+        regex:
+          - "(?i)disallow:.*(admin|backup|config|database|private|secret|internal|staging|dev|test|api|dashboard|panel|console|phpmyadmin|wp-admin)"
+        condition: or
+      - type: status
+        status:
+          - 200
+    matchers-condition: and
+    extractors:
+      - name: sensitive_paths
+        type: regex
+        regex:
+          - "Disallow: (.*)"

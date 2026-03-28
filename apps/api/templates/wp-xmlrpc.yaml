@@ -1,0 +1,29 @@
+id: wp-xmlrpc
+info:
+  name: "WordPress XML-RPC Enabled"
+  severity: high
+  description: "Detection de l'interface XML-RPC WordPress activee, exploitable pour du brute force et des attaques DDoS."
+  tags: wordpress,xmlrpc,high,brute-force
+
+http:
+  - method: POST
+    path:
+      - "{{BaseURL}}/xmlrpc.php"
+    headers:
+      Content-Type: "text/xml"
+    body: |
+      <?xml version="1.0" encoding="utf-8"?>
+      <methodCall>
+        <methodName>system.listMethods</methodName>
+        <params></params>
+      </methodCall>
+    matchers:
+      - type: word
+        words:
+          - "methodResponse"
+          - "wp.getUsersBlogs"
+        condition: or
+      - type: status
+        status:
+          - 200
+    matchers-condition: and

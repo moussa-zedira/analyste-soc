@@ -1,0 +1,28 @@
+id: git-config-exposure
+info:
+  name: "Git Config Exposure"
+  severity: high
+  description: "Detection de l'exposition du fichier .git/config contenant des informations sensibles."
+  tags: exposure,git,config,high,misconfig
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.git/config"
+      - "{{BaseURL}}/.git/HEAD"
+    matchers:
+      - type: word
+        words:
+          - "[core]"
+          - "[remote"
+          - "ref: refs/"
+        condition: or
+      - type: status
+        status:
+          - 200
+    matchers-condition: and
+    extractors:
+      - name: git_remote
+        type: regex
+        regex:
+          - "url = (.*)"

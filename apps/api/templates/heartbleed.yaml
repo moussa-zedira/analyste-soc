@@ -1,0 +1,30 @@
+id: heartbleed
+info:
+  name: "OpenSSL Heartbleed Detection (CVE-2014-0160)"
+  severity: critical
+  description: "Detection de la vulnerabilite Heartbleed dans OpenSSL permettant la lecture de memoire serveur."
+  tags: cve,cve2014,openssl,heartbleed,critical,disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - "(?i)openssl/1\\.0\\.1[a-f]?"
+          - "(?i)openssl/1\\.0\\.0"
+        condition: or
+      - type: word
+        part: header
+        words:
+          - "OpenSSL/1.0.1"
+        condition: or
+    matchers-condition: or
+    extractors:
+      - name: openssl_version
+        type: regex
+        part: header
+        regex:
+          - "(?i)openssl/[0-9.]+"

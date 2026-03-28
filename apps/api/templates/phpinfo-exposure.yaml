@@ -1,0 +1,31 @@
+id: phpinfo-exposure
+info:
+  name: "phpinfo() Exposure"
+  severity: high
+  description: "Detection de pages phpinfo() exposees revelant la configuration du serveur."
+  tags: exposure,php,phpinfo,high,disclosure
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/phpinfo.php"
+      - "{{BaseURL}}/info.php"
+      - "{{BaseURL}}/php_info.php"
+      - "{{BaseURL}}/test.php"
+      - "{{BaseURL}}/i.php"
+    matchers:
+      - type: word
+        words:
+          - "PHP Version"
+          - "phpinfo()"
+          - "PHP Credits"
+        condition: or
+      - type: status
+        status:
+          - 200
+    matchers-condition: and
+    extractors:
+      - name: php_version
+        type: regex
+        regex:
+          - "PHP Version ([0-9.]+)"

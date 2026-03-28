@@ -59,6 +59,8 @@ function EventsContent() {
         username: p.username ? String(p.username) : null,
         message: p.message ? String(p.message) : null,
         raw: null,
+        ti_score: null,
+        ti_tags: null,
       };
 
       // Only prepend live if we're on the first page with no filters

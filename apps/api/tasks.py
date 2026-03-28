@@ -86,6 +86,48 @@ def task_run_ml_detect() -> dict:
         db.close()
 
 
+@celery.task(name="apps.api.tasks.task_enrich_event")
+def task_enrich_event(event_id: str) -> dict:
+    """Enrichit un event avec les donnees de Threat Intelligence."""
+    from apps.api.threat_intel.enrichment import enrich_event_sync
+
+    db = SessionLocal()
+    try:
+        enrich_event_sync(event_id, db)
+        celery_tasks_total.labels(task_name="enrich_event", status="success").inc()
+        return {"event_id": event_id, "status": "enriched"}
+    except Exception:
+        celery_tasks_total.labels(task_name="enrich_event", status="failure").inc()
+        logger.exception("TI enrichment failed for event %s", event_id)
+        raise
+    finally:
+        db.close()
+
+
+@celery.task(name="apps.api.tasks.task_refresh_ti_cache")
+def task_refresh_ti_cache() -> dict:
+    """Rafraichit le cache TI expire."""
+    from datetime import datetime, timezone
+    from apps.api.models.ti_cache import TICache
+
+    db = SessionLocal()
+    try:
+        now = datetime.now(timezone.utc)
+        expired = db.query(TICache).filter(TICache.expires_at < now).count()
+        db.query(TICache).filter(TICache.expires_at < now).delete()
+        db.commit()
+        celery_tasks_total.labels(task_name="refresh_ti_cache", status="success").inc()
+        logger.info("Cleaned %d expired TI cache entries", expired)
+        return {"expired_cleaned": expired}
+    except Exception:
+        db.rollback()
+        celery_tasks_total.labels(task_name="refresh_ti_cache", status="failure").inc()
+        logger.exception("TI cache refresh failed")
+        raise
+    finally:
+        db.close()
+
+
 @celery.task(name="apps.api.tasks.task_send_alert")
 def task_send_alert(incident_data: dict) -> dict:
     """Envoie les notifications d'alerte pour un incident."""

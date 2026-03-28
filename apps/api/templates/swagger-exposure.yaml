@@ -1,0 +1,32 @@
+id: swagger-exposure
+info:
+  name: "Swagger/OpenAPI Documentation Exposure"
+  severity: high
+  description: "Detection de documentation Swagger ou OpenAPI exposee publiquement."
+  tags: exposure,swagger,openapi,high,api
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/swagger-ui.html"
+      - "{{BaseURL}}/swagger-ui/"
+      - "{{BaseURL}}/api-docs"
+      - "{{BaseURL}}/v2/api-docs"
+      - "{{BaseURL}}/v3/api-docs"
+      - "{{BaseURL}}/swagger.json"
+      - "{{BaseURL}}/swagger.yaml"
+      - "{{BaseURL}}/openapi.json"
+      - "{{BaseURL}}/docs"
+      - "{{BaseURL}}/redoc"
+    matchers:
+      - type: word
+        words:
+          - "swagger"
+          - "openapi"
+          - "\"paths\""
+          - "Swagger UI"
+        condition: or
+      - type: status
+        status:
+          - 200
+    matchers-condition: and

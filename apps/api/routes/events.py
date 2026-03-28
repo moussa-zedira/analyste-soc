@@ -52,6 +52,8 @@ class EventRead(BaseModel):
     username: str | None = None
     message: str | None = None
     raw: str | None = None
+    ti_score: int | None = None
+    ti_tags: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +109,60 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)) -> Event:
         },
     })
 
+    # Dispatch TI enrichment (non-blocking)
+    try:
+        from apps.api.tasks import task_enrich_event
+        task_enrich_event.delay(event.id)
+    except Exception:
+        pass  # Don't block event creation if enrichment dispatch fails
+
     return event
+
+
+@router.post(
+    "/batch",
+    status_code=status.HTTP_201_CREATED,
+)
+def create_events_batch(
+    payloads: list[EventCreate],
+    db: Session = Depends(get_db),
+) -> dict:
+    """Ingerer un batch d'evenements de securite (max 100)."""
+    if len(payloads) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 100 events per batch",
+        )
+
+    created = 0
+    for payload in payloads:
+        raw_value: str | None = None
+        if payload.raw is not None:
+            raw_value = (
+                payload.raw
+                if isinstance(payload.raw, str)
+                else json.dumps(payload.raw)
+            )
+
+        event = Event(
+            id=str(uuid.uuid4()),
+            ts=datetime.now(timezone.utc),
+            source=payload.source,
+            event_type=payload.event_type,
+            severity=payload.severity,
+            src_ip=payload.src_ip,
+            dst_ip=payload.dst_ip,
+            username=payload.username,
+            message=payload.message,
+            raw=raw_value,
+        )
+        db.add(event)
+        created += 1
+
+    db.commit()
+    invalidate("stats:*")
+
+    return {"ingested": created}
 
 
 @router.get("", response_model=list[EventRead])

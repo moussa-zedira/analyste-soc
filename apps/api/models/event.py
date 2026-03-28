@@ -25,6 +25,8 @@ class Event(Base):
     username: Mapped[str | None] = mapped_column(Text, nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ti_score: Mapped[int | None] = mapped_column(nullable=True)
+    ti_tags: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     incidents: Mapped[list["Incident"]] = relationship(
         "Incident",

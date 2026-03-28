@@ -1,0 +1,35 @@
+id: debug-mode
+info:
+  name: "Debug Mode Enabled Detection"
+  severity: high
+  description: "Detection du mode debug actif sur des frameworks web courants (Django, Laravel, Flask)."
+  tags: debug,misconfig,high,django,laravel,flask
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/nonexistent_page_debug_test"
+      - "{{BaseURL}}"
+    matchers:
+      - type: word
+        words:
+          - "Traceback (most recent call last)"
+          - "DJANGO_SETTINGS_MODULE"
+          - "Laravel"
+          - "Whoops! There was an error"
+          - "Debugger"
+          - "FLASK_DEBUG"
+          - "Werkzeug Debugger"
+          - "APP_DEBUG"
+        condition: or
+      - type: status
+        status:
+          - 500
+          - 404
+          - 200
+    matchers-condition: or
+    extractors:
+      - name: framework
+        type: regex
+        regex:
+          - "(?i)(django|laravel|flask|werkzeug|express|rails)"

@@ -19,11 +19,12 @@ logger = logging.getLogger(__name__)
 SEVERITY_WEIGHTS = {"low": 1, "medium": 2, "high": 4, "critical": 8}
 
 # Factor weights (must sum to 1.0)
-W_EVENTS = 0.20
-W_INCIDENTS = 0.30
-W_SEVERITY = 0.25
+W_EVENTS = 0.15
+W_INCIDENTS = 0.25
+W_SEVERITY = 0.20
 W_ATTACK_TYPES = 0.10
 W_RECENCY = 0.15
+W_TI = 0.15
 
 
 def _severity_score(severity: str) -> int:
@@ -54,6 +55,19 @@ def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
 
     if not ip_rows:
         return 0
+
+    # --- Gather per-IP TI scores ---
+    ti_by_ip: dict[str, int] = {}
+    try:
+        ti_rows = (
+            db.query(Event.src_ip, func.max(Event.ti_score))
+            .filter(Event.ts >= cutoff, Event.src_ip.isnot(None), Event.ti_score.isnot(None))
+            .group_by(Event.src_ip)
+            .all()
+        )
+        ti_by_ip = {ip: score for ip, score in ti_rows if score}
+    except Exception:
+        pass
 
     # --- Gather per-IP severity sums ---
     severity_rows = (
@@ -102,6 +116,10 @@ def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
         hours_ago = max((now - last_seen).total_seconds() / 3600, 0.01)
         recency = max(1.0 - (hours_ago / lookback_hours), 0.0)
 
+        # TI score (already 0-100, normalize to 0-1)
+        ti_score_val = ti_by_ip.get(ip, 0)
+        f_ti = ti_score_val / 100.0
+
         # Normalize each factor to 0-1
         f_events = event_count / max_events
         f_incidents = incident_count / max_incidents
@@ -116,6 +134,7 @@ def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
             + W_SEVERITY * f_severity
             + W_ATTACK_TYPES * f_types
             + W_RECENCY * f_recency
+            + W_TI * f_ti
         )
         score = round(min(raw_score * 100, 100.0), 1)
 
@@ -125,12 +144,14 @@ def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
             "severity_total": round(sev_total, 1),
             "distinct_attack_types": distinct_types,
             "recency": round(f_recency, 3),
+            "ti_score": ti_score_val,
             "score_breakdown": {
                 "events": round(f_events * W_EVENTS * 100, 1),
                 "incidents": round(f_incidents * W_INCIDENTS * 100, 1),
                 "severity": round(f_severity * W_SEVERITY * 100, 1),
                 "attack_types": round(f_types * W_ATTACK_TYPES * 100, 1),
                 "recency": round(f_recency * W_RECENCY * 100, 1),
+                "threat_intel": round(f_ti * W_TI * 100, 1),
             },
         }
 

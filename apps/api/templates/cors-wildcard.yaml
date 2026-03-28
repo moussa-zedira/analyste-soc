@@ -1,0 +1,22 @@
+id: cors-wildcard
+info:
+  name: "CORS Wildcard Misconfiguration"
+  severity: medium
+  description: "Detection d'une configuration CORS permissive avec Access-Control-Allow-Origin: *."
+  tags: cors,misconfig,medium,headers
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+    headers:
+      Origin: "https://evil.com"
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "Access-Control-Allow-Origin: *"
+          - "access-control-allow-origin: *"
+          - "Access-Control-Allow-Origin: https://evil.com"
+        condition: or
+    matchers-condition: or

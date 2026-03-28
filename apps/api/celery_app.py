@@ -41,4 +41,8 @@ celery.conf.beat_schedule = {
         "task": "apps.api.tasks.task_run_anomaly",
         "schedule": 180.0,  # every 3 minutes
     },
+    "refresh-ti-cache-every-hour": {
+        "task": "apps.api.tasks.task_refresh_ti_cache",
+        "schedule": 3600.0,  # every 1 hour
+    },
 }

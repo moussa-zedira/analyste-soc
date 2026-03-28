@@ -47,6 +47,8 @@ services:
       MIN_SEVERITY: medium
       WEBHOOK_ENABLED: "false"
       WEBHOOK_URL: ""
+      ABUSEIPDB_API_KEY: "${ABUSEIPDB_API_KEY:-}"
+      OTX_API_KEY: "${OTX_API_KEY:-}"
     volumes:
       - geoip-data:/app/data
     depends_on:
@@ -98,6 +100,25 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+
+  # ── Syslog Receiver ────────────────────────────────────
+  syslog:
+    build:
+      context: .
+      dockerfile: apps/collectors/Dockerfile
+    ports:
+      - "514:514/udp"
+      - "1514:1514"
+    environment:
+      API_BASE_URL: http://api:8000
+      API_KEY: elite-secret-key
+      SYSLOG_UDP_PORT: "514"
+      SYSLOG_TCP_PORT: "1514"
+      BATCH_SIZE: "50"
+      FLUSH_INTERVAL: "2"
+    depends_on:
+      api:
         condition: service_healthy
 
   # ── Frontend ────────────────────────────────────────────

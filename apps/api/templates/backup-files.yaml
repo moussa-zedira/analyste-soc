@@ -1,0 +1,30 @@
+id: backup-files
+info:
+  name: "Backup Files Detection"
+  severity: high
+  description: "Detection de fichiers de sauvegarde accessibles publiquement."
+  tags: exposure,backup,high,misconfig
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/index.php.bak"
+      - "{{BaseURL}}/index.php.old"
+      - "{{BaseURL}}/index.php~"
+      - "{{BaseURL}}/wp-config.php.bak"
+      - "{{BaseURL}}/web.config.bak"
+      - "{{BaseURL}}/config.php.bak"
+      - "{{BaseURL}}/database.sql"
+      - "{{BaseURL}}/dump.sql"
+      - "{{BaseURL}}/backup.zip"
+      - "{{BaseURL}}/backup.tar.gz"
+      - "{{BaseURL}}/site.zip"
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: regex
+        regex:
+          - "(?i)(<?php|CREATE TABLE|INSERT INTO|DROP TABLE|mysqldump|PK\\x03\\x04)"
+        condition: or
+    matchers-condition: and

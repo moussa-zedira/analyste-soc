@@ -1,0 +1,21 @@
+id: trace-method
+info:
+  name: "TRACE Method Enabled (XST)"
+  severity: medium
+  description: "Detection de la methode TRACE activee, permettant des attaques Cross-Site Tracing (XST)."
+  tags: xst,trace,medium,http,misconfig
+
+http:
+  - method: TRACE
+    path:
+      - "{{BaseURL}}"
+    matchers:
+      - type: word
+        words:
+          - "TRACE / HTTP"
+          - "message/http"
+        condition: or
+      - type: status
+        status:
+          - 200
+    matchers-condition: and

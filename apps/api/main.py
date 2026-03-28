@@ -30,14 +30,68 @@ from apps.api.routes import (
     events,
     export,
     incidents,
+    investigate,
+    log_sources,
+    pentest,
+    recon,
     ml,
     rules,
+    scan_history,
     scanner,
+    sigma,
     stats,
+    threat_intel,
     threat_scores,
     triage,
+    wordlists,
     ws,
 )
+from apps.api.pentest_nvd import router as pentest_nvd_router
+from apps.api.pentest_pipeline import router as pentest_pipeline_router
+from apps.api.pentest_sessions import router as pentest_sessions_router
+from apps.api.pentest_stream import router as pentest_stream_router
+from apps.api.pentest_stealth import router as pentest_stealth_router
+from apps.api.pentest_network_evasion import router as pentest_network_evasion_router
+from apps.api.pentest_templates import router as pentest_templates_router
+from apps.api.pentest_hash_cracker import router as pentest_hash_cracker_router
+from apps.api.pentest_report import router as pentest_report_router
+from apps.api.pentest_wordlist_gen import router as pentest_wordgen_router
+from apps.api.pentest_deep_scan import router as pentest_deep_scan_router
+from apps.api.pentest_blind_extract import router as pentest_blind_router
+from apps.api.pentest_oob_server import router as pentest_oob_router
+from apps.api.pentest_oob_server import callback_router as oob_callback_router
+from apps.api.pentest_ssrf_advanced import router as pentest_ssrf_router
+from apps.api.pentest_subdomain_discovery import router as pentest_subdomain_router
+from apps.api.pentest_waf_bypass import router as pentest_waf_bypass_router
+from apps.api.pentest_exfiltration import router as pentest_exfil_router
+from apps.api.pentest_persistence import router as pentest_persist_router
+from apps.api.pentest_antiforensics import router as pentest_antiforensics_router
+from apps.api.pentest_killchain import router as pentest_killchain_router
+from apps.api.pentest_shell_handler import router as pentest_shell_router
+from apps.api.pentest_shell_handler import ws_router as shell_ws_router
+from apps.api.pentest_chain_engine import router as pentest_chain_router
+from apps.api.pentest_sqli_engine import router as pentest_sqli_router
+from apps.api.pentest_session_manager import router as pentest_sessmgr_router
+from apps.api.pentest_privesc import router as pentest_privesc_router
+from apps.api.pentest_cred_harvester import router as pentest_creds_router
+from apps.api.pentest_lateral import router as pentest_lateral_router
+from apps.api.pentest_xss_engine import router as pentest_xss_engine_router
+from apps.api.pentest_lfi_rce import router as pentest_lfi_rce_router
+from apps.api.pentest_protocol_exploit import router as pentest_protocols_router
+from apps.api.pentest_shell_bridge import router as pentest_bridge_router
+from apps.api.pentest_c2_server import router as pentest_c2_router
+from apps.api.pentest_c2_server import beacon_router as c2_beacon_router
+from apps.api.pentest_http_proxy import router as pentest_proxy_router
+from apps.api.pentest_http_proxy import ws_router as proxy_ws_router
+from apps.api.pentest_evasion import router as pentest_evasion_router
+from apps.api.pentest_fuzzer import router as pentest_fuzzer_router
+from apps.api.pentest_net_scanner import router as pentest_netscan_router
+from apps.api.pentest_exploit_dev import router as pentest_exploitdev_router
+from apps.api.pentest_ai_assistant import router as pentest_ai_router
+from apps.api.pentest_workflows import router as pentest_workflows_router
+from apps.api.pentest_live_dashboard import router as pentest_live_router
+from apps.api.pentest_headless_scanner import router as pentest_headless_router
+from apps.api.pentest_auto_exploit import router as pentest_autoexploit_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -238,7 +292,77 @@ def create_app() -> FastAPI:
     app.include_router(scanner.router, prefix="/scanner", tags=["scanner"])
     app.include_router(admin.router, prefix="/admin", tags=["admin"])
     app.include_router(export.router, prefix="/export", tags=["export"])
+    app.include_router(
+        investigate.router,
+        prefix="/investigate",
+        tags=["investigate"],
+    )
+    app.include_router(
+        log_sources.router,
+        prefix="/log-sources",
+        tags=["log-sources"],
+    )
+    app.include_router(recon.router, prefix="/recon", tags=["recon"])
+    app.include_router(
+        scan_history.router,
+        prefix="/scans",
+        tags=["Scan History"],
+    )
+    app.include_router(pentest.router, prefix="/pentest", tags=["pentest"])
+    app.include_router(wordlists.router, prefix="/wordlists", tags=["wordlists"])
+    app.include_router(sigma.router, prefix="/sigma", tags=["sigma"])
+    app.include_router(
+        threat_intel.router,
+        prefix="/threat-intel",
+        tags=["threat-intel"],
+    )
     app.include_router(ws.router, tags=["websocket"])
+    app.include_router(pentest_stream_router, tags=["Pentest Stream"])
+    app.include_router(pentest_pipeline_router, tags=["Pentest Pipeline"])
+    app.include_router(pentest_sessions_router, tags=["Pentest Sessions"])
+    app.include_router(pentest_nvd_router, tags=["NVD CVE"])
+    app.include_router(pentest_stealth_router, tags=["Pentest Stealth"])
+    app.include_router(pentest_templates_router, tags=["Pentest Templates"])
+    app.include_router(pentest_network_evasion_router, tags=["Network Evasion"])
+    app.include_router(pentest_hash_cracker_router, tags=["Hash Cracker"])
+    app.include_router(pentest_report_router, tags=["Pentest Report"])
+    app.include_router(pentest_wordgen_router, tags=["Wordlist Generator"])
+    app.include_router(pentest_deep_scan_router, tags=["Deep Scan"])
+    app.include_router(pentest_blind_router, tags=["Blind Extraction"])
+    app.include_router(pentest_oob_router, tags=["OOB Callback"])
+    app.include_router(oob_callback_router, tags=["OOB Receiver"])
+    app.include_router(pentest_ssrf_router, tags=["SSRF Advanced"])
+    app.include_router(pentest_subdomain_router, tags=["Subdomain Discovery"])
+    app.include_router(pentest_waf_bypass_router, tags=["WAF Bypass"])
+    app.include_router(pentest_exfil_router, tags=["Exfiltration"])
+    app.include_router(pentest_persist_router, tags=["Persistence"])
+    app.include_router(pentest_antiforensics_router, tags=["Anti-Forensics"])
+    app.include_router(pentest_killchain_router, tags=["Kill Chain"])
+    app.include_router(pentest_shell_router, tags=["Shell Handler"])
+    app.include_router(shell_ws_router, tags=["Shell Handler WS"])
+    app.include_router(pentest_chain_router, tags=["Attack Chain"])
+    app.include_router(pentest_sqli_router, tags=["SQLi Engine"])
+    app.include_router(pentest_sessmgr_router, tags=["Session Manager"])
+    app.include_router(pentest_privesc_router, tags=["Privilege Escalation"])
+    app.include_router(pentest_creds_router, tags=["Credential Auditor"])
+    app.include_router(pentest_lateral_router, tags=["Lateral Movement"])
+    app.include_router(pentest_xss_engine_router, tags=["XSS Engine"])
+    app.include_router(pentest_lfi_rce_router, tags=["LFI to RCE"])
+    app.include_router(pentest_protocols_router, tags=["Protocol Exploiter"])
+    app.include_router(pentest_bridge_router, tags=["Execution Bridge"])
+    app.include_router(pentest_c2_router, tags=["C2 Server"])
+    app.include_router(c2_beacon_router, tags=["C2 Beacon"])
+    app.include_router(pentest_proxy_router, tags=["HTTP Proxy"])
+    app.include_router(proxy_ws_router, tags=["HTTP Proxy WS"])
+    app.include_router(pentest_evasion_router, tags=["AV/EDR Evasion"])
+    app.include_router(pentest_fuzzer_router, tags=["Fuzzer"])
+    app.include_router(pentest_netscan_router, tags=["Network Scanner"])
+    app.include_router(pentest_exploitdev_router, tags=["Exploit Dev"])
+    app.include_router(pentest_ai_router, tags=["AI Assistant"])
+    app.include_router(pentest_workflows_router, tags=["Workflows"])
+    app.include_router(pentest_live_router, tags=["Live Dashboard"])
+    app.include_router(pentest_headless_router, tags=["Headless Scanner"])
+    app.include_router(pentest_autoexploit_router, tags=["Auto-Exploit"])
 
     return app
 
