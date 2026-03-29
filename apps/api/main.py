@@ -132,6 +132,8 @@ from apps.api.pentest.tools.interceptor import ws_router as interceptor_ws_route
 from apps.api.pentest.implants.payload_engine import router as pentest_payload_engine_router
 from apps.api.pentest.recon.vuln_scanner import router as pentest_vuln_scanner_router
 from apps.api.pentest.tools.brute import router as pentest_brute_router
+from apps.api.routes.orchestrator import router as orchestrator_router
+from apps.api.routes.orchestrator import ws_router as orchestrator_ws_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -472,6 +474,10 @@ def create_app() -> FastAPI:
     app.include_router(pentest_vuln_scanner_router, tags=["Vulnerability Scanner"])
     app.include_router(pentest_brute_router, tags=["Brute Force"])
 
+    # ── Event Pipeline ──
+    from apps.api.routes.pipeline import router as pipeline_router
+    app.include_router(pipeline_router, tags=["Pipeline"])
+
     # ── IOC & Threat Feeds ──
     from apps.api.routes.ioc import router as ioc_router
     from apps.api.routes.feeds import router as feeds_router
@@ -489,6 +495,10 @@ def create_app() -> FastAPI:
     # ── Implant Builder ──
     from apps.api.routes.implants import router as implants_router
     app.include_router(implants_router, tags=["Implant Builder"])
+
+    # ── Pentest Orchestrator ──
+    app.include_router(orchestrator_router, tags=["Pentest Orchestrator"])
+    app.include_router(orchestrator_ws_router, tags=["Orchestrator WebSocket"])
 
     return app
 

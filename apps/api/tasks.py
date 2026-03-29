@@ -141,3 +141,99 @@ def task_send_alert(incident_data: dict) -> dict:
         celery_tasks_total.labels(task_name="send_alert", status="failure").inc()
         logger.exception("Alert dispatch failed")
         raise
+
+
+# ---------------------------------------------------------------------------
+# Pipeline tasks
+# ---------------------------------------------------------------------------
+
+@celery.task(name="apps.api.tasks.task_process_event")
+def task_process_event(raw_event) -> dict:
+    """Process a single event through the full pipeline."""
+    import asyncio
+    from apps.api.pipeline.engine import get_pipeline_engine
+
+    try:
+        engine = get_pipeline_engine()
+        loop = asyncio.new_event_loop()
+        try:
+            ctx = loop.run_until_complete(engine.process_event(raw_event))
+        finally:
+            loop.close()
+        celery_tasks_total.labels(task_name="process_event", status="success").inc()
+        return {
+            "context_id": ctx.context_id,
+            "score": ctx.score,
+            "detections": len(ctx.detections),
+            "ioc_matches": len(ctx.ioc_matches),
+            "success": ctx.metadata.get("success", False),
+            "total_ms": ctx.metadata.get("total_ms", 0),
+        }
+    except Exception:
+        celery_tasks_total.labels(task_name="process_event", status="failure").inc()
+        logger.exception("Pipeline process_event failed")
+        raise
+
+
+@celery.task(name="apps.api.tasks.task_process_batch")
+def task_process_batch(events: list) -> dict:
+    """Process a batch of events through the pipeline."""
+    import asyncio
+    from apps.api.pipeline.engine import get_pipeline_engine
+
+    try:
+        engine = get_pipeline_engine()
+        loop = asyncio.new_event_loop()
+        try:
+            results = loop.run_until_complete(engine.process_batch(events))
+        finally:
+            loop.close()
+
+        successes = sum(
+            1 for r in results if r.metadata.get("success", False)
+        )
+        celery_tasks_total.labels(task_name="process_batch", status="success").inc()
+        return {
+            "total": len(results),
+            "success": successes,
+            "errors": len(results) - successes,
+        }
+    except Exception:
+        celery_tasks_total.labels(task_name="process_batch", status="failure").inc()
+        logger.exception("Pipeline process_batch failed")
+        raise
+
+
+@celery.task(name="apps.api.tasks.task_pipeline_replay")
+def task_pipeline_replay(
+    query: dict | None = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
+) -> dict:
+    """Replay historical events through the pipeline."""
+    import asyncio
+    from datetime import datetime, timezone
+    from apps.api.pipeline.engine import get_pipeline_engine
+
+    try:
+        engine = get_pipeline_engine()
+        time_range = None
+        if start_time and end_time:
+            s = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+            e = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+            time_range = (s, e)
+
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(
+                engine.replay(query=query, time_range=time_range)
+            )
+        finally:
+            loop.close()
+
+        celery_tasks_total.labels(task_name="pipeline_replay", status="success").inc()
+        return result
+    except Exception:
+        celery_tasks_total.labels(task_name="pipeline_replay", status="failure").inc()
+        logger.exception("Pipeline replay failed")
+        raise

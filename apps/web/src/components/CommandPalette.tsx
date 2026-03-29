@@ -63,6 +63,8 @@ const NAV_PAGES = [
   { href: "/pentest/live", label: "Live Dashboard" },
   { href: "/pentest/auto-exploit", label: "Auto-Exploit" },
   { href: "/pentest/headless", label: "Headless Scanner" },
+  { href: "/pipeline", label: "Event Pipeline" },
+  { href: "/orchestrator", label: "Pentest Orchestrator" },
   { href: "/correlation", label: "Correlation Engine" },
   { href: "/parsers", label: "Log Parsers" },
   { href: "/alerts", label: "Alert Channels" },
