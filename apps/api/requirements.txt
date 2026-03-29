@@ -47,3 +47,6 @@ python-multipart>=0.0.6
 pywinrm>=0.4
 impacket>=0.11
 aioftp>=0.22
+
+# Phase 7: Headless Browser Scanning
+playwright>=1.40
