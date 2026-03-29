@@ -69,7 +69,7 @@ class PivotRequest(BaseModel):
 
 @router.post("/build")
 async def build_implant(body: ImplantBuildRequest):
-    from apps.api.pentest_implant_builder import build_implant as _build, ImplantConfig
+    from apps.api.pentest.implants.implant_builder import build_implant as _build, ImplantConfig
     try:
         cfg = ImplantConfig(**body.model_dump())
         result = _build(cfg)
@@ -105,7 +105,7 @@ def list_languages():
 
 @router.post("/shellcode")
 async def gen_shellcode(body: ShellcodeRequest):
-    from apps.api.pentest_implant_builder import generate_shellcode
+    from apps.api.pentest.implants.implant_builder import generate_shellcode
     try:
         result = generate_shellcode(body.model_dump())
         return result
@@ -115,7 +115,7 @@ async def gen_shellcode(body: ShellcodeRequest):
 
 @router.post("/shellcode/encode")
 async def encode_shellcode(body: EncodeRequest):
-    from apps.api.pentest_implant_builder import encode_shellcode
+    from apps.api.pentest.implants.implant_builder import encode_shellcode
     try:
         result = encode_shellcode(body.shellcode_hex, body.encoder, body.key, body.iterations)
         return result
@@ -125,7 +125,7 @@ async def encode_shellcode(body: EncodeRequest):
 
 @router.post("/shellcode/loader")
 async def gen_loader(body: LoaderRequest):
-    from apps.api.pentest_implant_builder import generate_loader
+    from apps.api.pentest.implants.implant_builder import generate_loader
     try:
         result = generate_loader(body.shellcode_hex, body.language, body.technique)
         return result
@@ -142,32 +142,32 @@ def shellcode_formats():
 
 @router.post("/evasion/process-inject")
 async def process_inject(body: EvasionRequest):
-    from apps.api.pentest_implant_builder import generate_evasion_code
+    from apps.api.pentest.implants.implant_builder import generate_evasion_code
     result = generate_evasion_code("process_inject", body.target_process, body.options or {})
     return result
 
 
 @router.post("/evasion/amsi-bypass")
 async def amsi_bypass():
-    from apps.api.pentest_implant_builder import generate_evasion_code
+    from apps.api.pentest.implants.implant_builder import generate_evasion_code
     return generate_evasion_code("amsi_bypass", "", {})
 
 
 @router.post("/evasion/etw-patch")
 async def etw_patch():
-    from apps.api.pentest_implant_builder import generate_evasion_code
+    from apps.api.pentest.implants.implant_builder import generate_evasion_code
     return generate_evasion_code("etw_patch", "", {})
 
 
 @router.post("/evasion/unhook")
 async def unhook():
-    from apps.api.pentest_implant_builder import generate_evasion_code
+    from apps.api.pentest.implants.implant_builder import generate_evasion_code
     return generate_evasion_code("unhook_ntdll", "", {})
 
 
 @router.post("/evasion/obfuscate")
 async def obfuscate(body: dict):
-    from apps.api.pentest_implant_builder import obfuscate_strings
+    from apps.api.pentest.implants.implant_builder import obfuscate_strings
     return obfuscate_strings(body.get("code", ""), body.get("method", "xor"))
 
 
@@ -198,13 +198,13 @@ async def create_c2_profile(body: dict):
 
 @router.post("/pivot/socks5")
 async def gen_socks5(body: PivotRequest):
-    from apps.api.pentest_implant_builder import generate_pivot_code
+    from apps.api.pentest.implants.implant_builder import generate_pivot_code
     return generate_pivot_code("socks5", body.model_dump())
 
 
 @router.post("/pivot/port-forward")
 async def gen_port_forward(body: PivotRequest):
-    from apps.api.pentest_implant_builder import generate_pivot_code
+    from apps.api.pentest.implants.implant_builder import generate_pivot_code
     return generate_pivot_code(body.pivot_type, body.model_dump())
 
 

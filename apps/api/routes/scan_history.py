@@ -591,7 +591,7 @@ def wipe_all(confirm: str = "", db: Session = Depends(get_db)):
     redis_cleaned = _clean_redis_keys(pattern="*pentest*")
 
     # Nettoyage des sessions en memoire
-    from apps.api.pentest_sessions import _sessions
+    from apps.api.pentest.tools.sessions import _sessions
 
     sessions_cleaned = len(_sessions)
     _sessions.clear()
