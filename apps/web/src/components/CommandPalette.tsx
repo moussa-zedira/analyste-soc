@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const NAV_PAGES = [
   { href: "/", label: "Dashboard" },
+  { href: "/search", label: "Search (CQL)" },
   { href: "/events", label: "Events" },
   { href: "/incidents", label: "Incidents" },
   { href: "/map", label: "Threat Map" },

@@ -28,6 +28,7 @@ from apps.api.routes import (
     auth,
     chat,
     correlation,
+    cql,
     events,
     export,
     incidents,
@@ -333,6 +334,7 @@ def create_app() -> FastAPI:
     # Routers
     # -------------------------------------------------------------------
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
+    app.include_router(cql.router, tags=["CQL"])
     app.include_router(events.router, prefix="/events", tags=["events"])
     app.include_router(rules.router, prefix="/rules", tags=["rules"])
     app.include_router(incidents.router, prefix="/incidents", tags=["incidents"])
