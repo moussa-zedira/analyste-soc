@@ -470,6 +470,24 @@ def create_app() -> FastAPI:
     app.include_router(pentest_vuln_scanner_router, tags=["Vulnerability Scanner"])
     app.include_router(pentest_brute_router, tags=["Brute Force"])
 
+    # ── IOC & Threat Feeds ──
+    from apps.api.routes.ioc import router as ioc_router
+    from apps.api.routes.feeds import router as feeds_router
+    app.include_router(ioc_router, tags=["IOC Management"])
+    app.include_router(feeds_router, tags=["Threat Feeds"])
+
+    # ── TAXII 2.1 Server ──
+    from apps.api.threat_intel.taxii import router as taxii_router
+    app.include_router(taxii_router, tags=["TAXII 2.1"])
+
+    # ── DevSecOps ──
+    from apps.api.routes.devsecops import router as devsecops_router
+    app.include_router(devsecops_router, tags=["DevSecOps"])
+
+    # ── Implant Builder ──
+    from apps.api.routes.implants import router as implants_router
+    app.include_router(implants_router, tags=["Implant Builder"])
+
     return app
 
 
