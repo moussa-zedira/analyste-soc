@@ -49,6 +49,13 @@ services:
       WEBHOOK_URL: ""
       ABUSEIPDB_API_KEY: "${ABUSEIPDB_API_KEY:-}"
       OTX_API_KEY: "${OTX_API_KEY:-}"
+      # Phishing module (optional — leave empty for preview mode)
+      PHISHING_SMTP_HOST: "${PHISHING_SMTP_HOST:-}"
+      PHISHING_SMTP_PORT: "${PHISHING_SMTP_PORT:-587}"
+      PHISHING_SMTP_USER: "${PHISHING_SMTP_USER:-}"
+      PHISHING_SMTP_PASS: "${PHISHING_SMTP_PASS:-}"
+      PHISHING_SMTP_TLS: "${PHISHING_SMTP_TLS:-true}"
+      PHISHING_CALLBACK_SERVER: "${PHISHING_CALLBACK_SERVER:-http://localhost:8000}"
     volumes:
       - geoip-data:/app/data
     depends_on:
