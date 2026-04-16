@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from apps.api.models.event import Event
 from apps.api.models.incident import Incident
 from apps.api.models.incident_event import IncidentEvent
+from apps.api.observability import record_rule_match
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +214,7 @@ class CorrelationEngine:
             if key not in seen:
                 seen.add(key)
                 unique.append(m)
+                record_rule_match("correlation", m.rule_id, m.severity)
 
         return unique
 

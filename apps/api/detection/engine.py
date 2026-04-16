@@ -17,6 +17,7 @@ from apps.api.detection.triage import filter_events
 from apps.api.models.event import Event
 from apps.api.models.incident import Incident
 from apps.api.models.incident_event import IncidentEvent
+from apps.api.observability import record_rule_match
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,7 @@ def run_detection(db: Session) -> dict:
                 created = create_incident(db, rule, match)
                 if created:
                     total_incidents += 1
+                    record_rule_match("builtin", rule.id, rule.severity)
         except Exception:
             logger.exception("Rule %s failed", rule.id)
 
@@ -132,6 +134,11 @@ def run_detection(db: Session) -> dict:
                     )
                     if created:
                         total_incidents += 1
+                        record_rule_match(
+                            "sigma",
+                            f"sigma:{sigma_rule.id}",  # type: ignore[attr-defined]
+                            _SIGMA_SEVERITY_MAP.get(compiled.get("level", "medium"), "medium"),
+                        )
     except Exception:
         logger.exception("SIGMA rules evaluation failed")
 

@@ -34,6 +34,7 @@ from apps.api.routes import (
     incidents,
     investigate,
     log_sources,
+    mitre,
     parsers,
     pentest,
     recon,
@@ -183,6 +184,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Seed built-in SOAR playbooks
     _seed_soar_playbooks()
 
+    # Seed built-in SIGMA rules pack
+    _seed_builtin_sigma()
+
     yield
 
 
@@ -243,6 +247,22 @@ def _seed_soar_playbooks() -> None:
     except Exception as exc:
         db.rollback()
         logger.warning("soar_seed_failed", error=str(exc))
+    finally:
+        db.close()
+
+
+def _seed_builtin_sigma() -> None:
+    """Seed le pack SIGMA built-in si non present."""
+    from apps.api.detection.sigma_builtin import seed_builtin_sigma
+
+    db = SessionLocal()
+    try:
+        count = seed_builtin_sigma(db)
+        if count:
+            logger.info("sigma_builtin_seeded", count=count)
+    except Exception as exc:
+        db.rollback()
+        logger.warning("sigma_seed_failed", error=str(exc))
     finally:
         db.close()
 
@@ -460,6 +480,7 @@ def create_app() -> FastAPI:
     app.include_router(pentest.router, prefix="/pentest", tags=["pentest"])
     app.include_router(wordlists.router, prefix="/wordlists", tags=["wordlists"])
     app.include_router(sigma.router, prefix="/sigma", tags=["sigma"])
+    app.include_router(mitre.router)
     app.include_router(
         parsers.router,
         prefix="/parsers",
