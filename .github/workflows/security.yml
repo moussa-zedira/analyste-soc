@@ -18,6 +18,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ─────────────────────────────────────────────────────────
+  # CodeQL : analyse statique Python + JS
+  # ─────────────────────────────────────────────────────────
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
@@ -42,45 +45,130 @@ jobs:
         with:
           category: "/language:${{ matrix.language }}"
 
-  trivy:
-    name: Trivy Vulnerability Scan
+  # ─────────────────────────────────────────────────────────
+  # Trivy : scan filesystem (deps Python + JS) + scan images
+  # ─────────────────────────────────────────────────────────
+  trivy-fs:
+    name: Trivy FS (deps + IaC)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker images
-        run: docker compose build
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Trivy FS results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  trivy-images:
+    name: Trivy Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image (local)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          load: true
+          tags: cyberdef-api:scan
+          cache-from: type=gha
+
+      - name: Build Web image (local)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          load: true
+          tags: cyberdef-web:scan
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+          cache-from: type=gha
 
       - name: Scan API image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "analyste-soc-api:latest"
-          format: "sarif"
-          output: "trivy-api.sarif"
-          severity: "CRITICAL,HIGH"
+          image-ref: cyberdef-api:scan
+          format: sarif
+          output: trivy-api.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
 
       - name: Scan Web image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "analyste-soc-web:latest"
-          format: "sarif"
-          output: "trivy-web.sarif"
-          severity: "CRITICAL,HIGH"
+          image-ref: cyberdef-web:scan
+          format: sarif
+          output: trivy-web.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
 
-      - name: Upload API scan results
+      - name: Upload API scan
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: "trivy-api.sarif"
-          category: "trivy-api"
+          sarif_file: trivy-api.sarif
+          category: trivy-api
 
-      - name: Upload Web scan results
+      - name: Upload Web scan
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: "trivy-web.sarif"
-          category: "trivy-web"
+          sarif_file: trivy-web.sarif
+          category: trivy-web
 
+  # ─────────────────────────────────────────────────────────
+  # pip-audit : CVE des dependances Python
+  # ─────────────────────────────────────────────────────────
+  pip-audit:
+    name: pip-audit (Python deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit
+        run: pip-audit -r apps/api/requirements.txt --strict || true
+        # ``|| true`` : informatif tant qu'on n'a pas trie les CVE legacy.
+
+  # ─────────────────────────────────────────────────────────
+  # npm audit : CVE des dependances JS
+  # ─────────────────────────────────────────────────────────
+  npm-audit:
+    name: npm audit (JS deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Audit
+        working-directory: apps/web
+        run: npm audit --audit-level=high || true
+
+  # ─────────────────────────────────────────────────────────
+  # TruffleHog : detection de secrets dans l'historique
+  # ─────────────────────────────────────────────────────────
   secrets-scan:
     name: Secret Detection
     runs-on: ubuntu-latest

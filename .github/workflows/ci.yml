@@ -6,56 +6,56 @@ on:
   pull_request:
     branches: [main]
 
-jobs:
-  backend:
-    name: Backend Lint & Test
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: siem
-          POSTGRES_PASSWORD: siem
-          POSTGRES_DB: siem
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U siem"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # Backend : lint + typecheck + tests unitaires (pas d'integration)
+  # ─────────────────────────────────────────────────────────
+  backend:
+    name: Backend Lint / Type / Test
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           cache: pip
+          cache-dependency-path: |
+            apps/api/requirements.txt
+            apps/api/requirements-dev.txt
 
       - name: Install dependencies
-        run: pip install -r apps/api/requirements.txt ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/api/requirements.txt
+          pip install -r apps/api/requirements-dev.txt
+          pip install ruff mypy
 
-      - name: Lint with ruff
-        run: ruff check apps/api/
+      - name: Lint (ruff)
+        run: ruff check apps alembic
 
-      - name: Type check imports
-        run: python -c "from apps.api.main import app; print('Import OK')"
+      - name: Type check (mypy)
+        run: mypy apps/api --ignore-missing-imports --no-strict-optional || true
+        # ``|| true`` : mypy bloque progressivement, on l'active sans casser la
+        # CI tant que le repo n'est pas 100% type-safe (cf vague qualite future).
+
+      - name: Unit tests
+        run: cd apps/api && python -m pytest -v -m "not integration" --tb=short
         env:
           DATABASE_URL: postgresql+psycopg2://siem:siem@localhost:5432/siem
           REDIS_URL: redis://localhost:6379/0
-          API_KEY: test-key
-          JWT_SECRET_KEY: test-secret
+          API_KEY: test-key-ci
+          JWT_SECRET_KEY: test-jwt-ci
 
+  # ─────────────────────────────────────────────────────────
+  # Frontend : lint + typecheck + build
+  # ─────────────────────────────────────────────────────────
   frontend:
-    name: Frontend Build
+    name: Frontend Lint / Type / Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +70,10 @@ jobs:
         working-directory: apps/web
         run: npm ci || npm install
 
+      - name: Lint (ESLint)
+        working-directory: apps/web
+        run: npm run lint --if-present
+
       - name: Type check
         working-directory: apps/web
         run: npx tsc --noEmit
@@ -82,11 +86,36 @@ jobs:
           INTERNAL_API_BASE_URL: http://localhost:8000
           INTERNAL_API_KEY: test-key
 
-  docker:
-    name: Docker Build
+  # ─────────────────────────────────────────────────────────
+  # Docker build (smoke) — verifie que les Dockerfile compilent
+  # ─────────────────────────────────────────────────────────
+  docker-build:
+    name: Docker Build (smoke)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build all services
-        run: docker compose build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          tags: cyberdef-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          tags: cyberdef-web:ci
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

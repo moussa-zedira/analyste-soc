@@ -1,0 +1,45 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # tous les jours a 03:00 UTC pour detecter les regressions latentes
+    - cron: "0 3 * * *"
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  integration:
+    name: pytest -m integration (testcontainers)
+    runs-on: ubuntu-latest
+    # Docker-in-Docker dispo de base sur ubuntu-latest pour testcontainers.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            apps/api/requirements.txt
+            apps/api/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/api/requirements.txt
+          pip install -r apps/api/requirements-dev.txt
+
+      - name: Run integration tests
+        run: cd apps/api && python -m pytest -v -m integration --tb=short --maxfail=3
+        env:
+          # Les tests creent leurs propres containers via testcontainers,
+          # mais structlog/pydantic veulent au moins un default DATABASE_URL.
+          DATABASE_URL: postgresql+psycopg2://placeholder:placeholder@localhost:5432/placeholder
+          REDIS_URL: redis://localhost:6379/0
+          API_KEY: integration-test-key
+          JWT_SECRET_KEY: integration-test-jwt

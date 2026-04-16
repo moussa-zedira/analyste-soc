@@ -1,0 +1,18 @@
+# Default : tout le repo appartient au mainteneur principal.
+* @moussa-zedira
+
+# Domaines critiques securite : double-check obligatoire avant merge.
+/apps/api/auth.py            @moussa-zedira
+/apps/api/security.py        @moussa-zedira
+/apps/api/security_url.py    @moussa-zedira
+/apps/api/middleware/        @moussa-zedira
+/alembic/                    @moussa-zedira
+
+# Pipeline CI/CD et supply chain.
+/.github/                    @moussa-zedira
+/docker-compose*.yml         @moussa-zedira
+/apps/*/Dockerfile           @moussa-zedira
+
+# Audit immuable pentest : tout changement = revue securite.
+/apps/api/pentest/post_exploit/audit.py  @moussa-zedira
+/apps/api/models/pentest_audit.py        @moussa-zedira

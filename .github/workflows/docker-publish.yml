@@ -4,10 +4,13 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
   packages: write
+  id-token: write   # cosign keyless signing
+  attestations: write
 
 concurrency:
   group: docker-${{ github.ref }}
@@ -18,17 +21,18 @@ env:
 
 jobs:
   build-and-push:
-    name: Build & Push Images
+    name: Build / Sign / Attest
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - context: ./apps/api
-            image: analyste-soc-api
-            dockerfile: ./apps/api/Dockerfile
-          - context: ./apps/web
-            image: analyste-soc-web
-            dockerfile: ./apps/web/Dockerfile
+          - image: cyberdef-api
+            dockerfile: apps/api/Dockerfile
+          - image: cyberdef-web
+            dockerfile: apps/web/Dockerfile
+            build_args: |
+              NEXT_PUBLIC_API_BASE_URL=http://api:8000
     steps:
       - uses: actions/checkout@v4
 
@@ -42,6 +46,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install syft (SBOM)
+        uses: anchore/sbom-action/download-syft@v0
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -49,19 +59,51 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=ref,event=branch
-            type=sha,prefix=
+            type=sha,prefix=sha-
             type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push
+      - name: Build & push (with provenance + SBOM)
+        id: build
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.context }}
+          context: .
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+          build-args: ${{ matrix.build_args }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Sign image (keyless via OIDC)
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          for tag in $TAGS; do
+            cosign sign --yes "${tag}@${DIGEST}"
+          done
+
+      - name: Generate SBOM (SPDX)
+        run: |
+          first_tag=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          syft "${first_tag}@${{ steps.build.outputs.digest }}" -o spdx-json > sbom-${{ matrix.image }}.spdx.json
+
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          sbom-path: sbom-${{ matrix.image }}.spdx.json
+          push-to-registry: true
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.image }}
+          path: sbom-${{ matrix.image }}.spdx.json
+          retention-days: 90
