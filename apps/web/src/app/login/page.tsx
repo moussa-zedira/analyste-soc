@@ -3,9 +3,11 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useAuthStore } from "@/stores/authStore";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login, register } = useAuthStore();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState(""); // auto-generated if empty
@@ -14,9 +16,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
-
-  // Browser always goes through the server-side proxy (which injects the API key).
-  const BASE = "/api/proxy";
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -27,47 +26,18 @@ export default function LoginPage() {
 
       try {
         if (mode === "register") {
-          const res = await fetch(`${BASE}/auth/register`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, email: email || `${username}@cyberdef.local`, password, role }),
+          await register({
+            username,
+            email: email || `${username}@cyberdef.local`,
+            password,
+            role,
           });
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.detail || `Erreur ${res.status}`);
-          }
           setSuccess("Compte cree avec succes ! Connectez-vous.");
           setMode("login");
           setLoading(false);
           return;
         }
-
-        // Login
-        const res = await fetch(`${BASE}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.detail || "Identifiants invalides");
-        }
-        const data = await res.json();
-        localStorage.setItem("jwt_token", data.access_token);
-        localStorage.setItem("username", username);
-
-        // Fetch user info
-        const meRes = await fetch(`${BASE}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${data.access_token}`,
-          },
-        });
-        if (meRes.ok) {
-          const user = await meRes.json();
-          localStorage.setItem("user_role", user.role);
-          localStorage.setItem("user_id", user.id);
-        }
-
+        await login(username, password);
         router.push("/");
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Erreur de connexion");
@@ -75,7 +45,7 @@ export default function LoginPage() {
         setLoading(false);
       }
     },
-    [mode, username, email, password, role, router],
+    [mode, username, email, password, role, router, login, register],
   );
 
   return (

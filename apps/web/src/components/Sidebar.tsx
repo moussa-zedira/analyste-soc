@@ -106,12 +106,13 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem("jwt_token");
-    localStorage.removeItem("username");
-    localStorage.removeItem("user_role");
-    localStorage.removeItem("user_id");
-    router.replace("/login");
+  const handleLogout = async () => {
+    try {
+      const { useAuthStore } = await import("@/stores/authStore");
+      await useAuthStore.getState().logout();
+    } finally {
+      router.replace("/login");
+    }
   };
 
   return (

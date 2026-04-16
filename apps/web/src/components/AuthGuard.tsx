@@ -1,45 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores/authStore";
 
 const PUBLIC_ROUTES = ["/login"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [status, setStatus] = useState<"loading" | "ok" | "redirect">("loading");
+  const { status, refreshMe } = useAuthStore();
 
   useEffect(() => {
-    if (PUBLIC_ROUTES.includes(pathname)) {
-      setStatus("ok");
-      return;
+    if (PUBLIC_ROUTES.includes(pathname)) return;
+    if (status === "idle") {
+      void refreshMe();
     }
+  }, [pathname, status, refreshMe]);
 
-    const token = localStorage.getItem("jwt_token");
-    if (!token) {
-      setStatus("redirect");
+  useEffect(() => {
+    if (PUBLIC_ROUTES.includes(pathname)) return;
+    if (status === "unauthenticated") {
       router.replace("/login");
-    } else {
-      setStatus("ok");
     }
-  }, [pathname, router]);
+  }, [pathname, status, router]);
 
-  if (status === "loading" || status === "redirect") {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-space-dark">
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative h-10 w-10">
-            <div className="absolute inset-0 rounded-full border-2 border-cyan-glow/20 animate-ping" />
-            <div className="absolute inset-2 rounded-full border-2 border-t-cyan-glow border-transparent animate-spin" />
-          </div>
-          <p className="text-[10px] tracking-widest text-cyan-glow/40 animate-pulse">
-            {status === "redirect" ? "REDIRECTING..." : "LOADING..."}
-          </p>
-        </div>
-      </div>
-    );
+  if (PUBLIC_ROUTES.includes(pathname)) {
+    return <>{children}</>;
   }
 
-  return <>{children}</>;
+  if (status === "authenticated") {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-space-dark">
+      <div className="flex flex-col items-center gap-3">
+        <div className="relative h-10 w-10">
+          <div className="absolute inset-0 rounded-full border-2 border-cyan-glow/20 animate-ping" />
+          <div className="absolute inset-2 rounded-full border-2 border-t-cyan-glow border-transparent animate-spin" />
+        </div>
+        <p className="text-[10px] tracking-widest text-cyan-glow/40 animate-pulse">
+          {status === "unauthenticated" ? "REDIRECTING..." : "LOADING..."}
+        </p>
+      </div>
+    </div>
+  );
 }
