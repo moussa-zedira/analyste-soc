@@ -94,7 +94,7 @@ jobs:
           syft "${first_tag}@${{ steps.build.outputs.digest }}" -o spdx-json > sbom-${{ matrix.image }}.spdx.json
 
       - name: Attest SBOM
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
           subject-digest: ${{ steps.build.outputs.digest }}
