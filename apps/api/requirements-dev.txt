@@ -1,0 +1,10 @@
+# Outils de developpement et test
+ruff>=0.6
+mypy>=1.10
+pre-commit>=3.7
+detect-secrets>=1.5
+pytest>=8.0
+pytest-asyncio>=0.23
+pytest-cov>=5.0
+testcontainers[postgres,redis]>=4.7
+fakeredis>=2.23

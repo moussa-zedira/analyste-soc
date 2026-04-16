@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup setup-api setup-web dev dev-api dev-web \
         lint lint-api lint-web format format-api format-web \
-        typecheck test test-api docker-up docker-down docker-logs \
+        typecheck test test-api test-integration docker-up docker-down docker-logs \
         migrate migrate-create secrets-gen clean
 
 PY ?= python
@@ -19,9 +19,9 @@ help:  ## Show this help
 setup: setup-api setup-web  ## Install backend + frontend + pre-commit
 	pre-commit install || pip install pre-commit && pre-commit install
 
-setup-api:  ## Install backend Python dependencies
+setup-api:  ## Install backend Python dependencies (runtime + dev/test)
 	$(PY) -m pip install -r apps/api/requirements.txt
-	$(PY) -m pip install ruff mypy pre-commit pytest pytest-asyncio detect-secrets
+	$(PY) -m pip install -r apps/api/requirements-dev.txt
 
 setup-web:  ## Install frontend Node dependencies
 	cd apps/web && $(NPM) install
@@ -60,8 +60,11 @@ typecheck:  ## Run mypy on the API
 # ── Tests ────────────────────────────────────────────────────
 test: test-api  ## Run all tests
 
-test-api:  ## Run backend tests
-	cd apps/api && $(PY) -m pytest -v
+test-api:  ## Run backend unit tests (skip integration)
+	cd apps/api && $(PY) -m pytest -v -m "not integration"
+
+test-integration:  ## Run integration tests (Postgres + Redis via testcontainers, requires Docker)
+	cd apps/api && $(PY) -m pytest -v -m integration
 
 # ── Docker ───────────────────────────────────────────────────
 docker-up:  ## Start the Docker stack (postgres, redis, api, web, ...)
