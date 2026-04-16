@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from apps.api.auth import RoleChecker
 from apps.api.db.session import get_db
 from apps.api.models.incident import Incident
+from apps.api.observability import record_incident_transition
 from apps.api.routes.events import EventRead
 from apps.api.security import require_api_key
 
@@ -153,8 +154,10 @@ def update_incident_status(
                    f"Allowed: {sorted(allowed)}",
         )
 
+    previous_status = incident.status
     incident.status = new_status
     incident.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(incident)
+    record_incident_transition(previous_status, new_status)
     return incident

@@ -1,0 +1,83 @@
+{
+  "uid": "cyberdef-soc",
+  "title": "Cyber Defense — SOC Business",
+  "tags": ["soc", "business", "incidents", "alerts"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Incidents crees / min (par severite)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (severity) (rate(soc_incidents_created_total[1m]))", "refId": "A", "legendFormat": "{{severity}}"}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Transitions d'incident (from -> to)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (from_status, to_status) (rate(soc_incidents_transitioned_total[5m]))", "refId": "A", "legendFormat": "{{from_status}} -> {{to_status}}"}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Alertes emises (channel x result)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (channel, result) (rate(soc_alerts_emitted_total[1m]))", "refId": "A", "legendFormat": "{{channel}} / {{result}}"}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Auth — succes vs echecs / min",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (event, result) (rate(soc_auth_attempts_total[1m]))", "refId": "A", "legendFormat": "{{event}} / {{result}}"}
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Echecs login (15min)",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum(increase(soc_auth_attempts_total{event=\"login\",result=\"fail\"}[15m]))", "refId": "A"}
+      ],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 5}, {"color": "red", "value": 20}]}}}
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Audit pentest writes / min",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum(rate(soc_audit_writes_total[1m]))", "refId": "A"}
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Detection — matchs / min (par engine)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum by (engine, severity) (rate(soc_detection_rule_matches_total[1m]))", "refId": "A", "legendFormat": "{{engine}} / {{severity}}"}
+      ]
+    }
+  ]
+}

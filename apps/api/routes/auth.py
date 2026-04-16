@@ -22,6 +22,7 @@ from apps.api.auth import (
 from apps.api.db.session import get_db
 from apps.api.middleware.rate_limit import limiter
 from apps.api.models.user import User
+from apps.api.observability import record_login
 
 router = APIRouter()
 
@@ -86,12 +87,14 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
         (User.username == payload.username) | (User.email == payload.email)
     ).first()
     if existing:
+        record_login("register", success=False)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Username or email already exists",
         )
 
     if payload.role not in ("analyst", "lead", "admin"):
+        record_login("register", success=False)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Role must be analyst, lead, or admin",
@@ -109,6 +112,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     db.add(user)
     db.commit()
     db.refresh(user)
+    record_login("register", success=True)
     return user
 
 
@@ -118,15 +122,18 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     """Authentifier et retourner une paire access + refresh."""
     user = db.query(User).filter(User.username == payload.username).first()
     if user is None or not verify_password(payload.password, user.hashed_password):
+        record_login("login", success=False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         )
     if not user.is_active:
+        record_login("login", success=False)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated",
         )
+    record_login("login", success=True)
     return _issue_token_pair(user)
 
 
@@ -141,11 +148,13 @@ def refresh(request: Request, payload: RefreshRequest, db: Session = Depends(get
     user_id: str = refresh_payload.get("sub", "")
     user = db.get(User, user_id)
     if user is None or not user.is_active:
+        record_login("refresh", success=False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
     revoke_jti(refresh_payload.get("jti", ""), refresh_payload.get("exp", 0))
+    record_login("refresh", success=True)
     return _issue_token_pair(user)
 
 
@@ -166,6 +175,7 @@ def logout(request: Request, payload: RefreshRequest | None = None) -> None:
             revoke_jti(ref.get("jti", ""), ref.get("exp", 0))
         except Exception:
             pass
+    record_login("logout", success=True)
 
 
 @router.get("/me", response_model=UserRead)

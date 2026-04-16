@@ -14,6 +14,7 @@ from typing import Any
 from apps.api.config import get_settings
 from apps.api.db.session import SessionLocal
 from apps.api.models.alert_config import AlertChannel, AlertRule
+from apps.api.observability import record_alert
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +128,10 @@ async def async_dispatch_alert(incident_data: dict) -> list[dict[str, Any]]:
         async def _fire(ch: AlertChannel, cfg: dict, fn):
             try:
                 await fn(cfg, incident_data)
+                record_alert(ch.channel_type, success=True)
                 return {"channel_id": ch.id, "channel_type": ch.channel_type, "status": "sent"}
             except Exception as exc:
+                record_alert(ch.channel_type, success=False)
                 logger.exception(
                     "Failed to send alert via %s channel '%s'", ch.channel_type, ch.name
                 )

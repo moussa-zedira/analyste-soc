@@ -6,6 +6,7 @@
 .PHONY: help setup setup-api setup-web dev dev-api dev-web \
         lint lint-api lint-web format format-api format-web \
         typecheck test test-api test-integration docker-up docker-down docker-logs \
+        monitoring-up monitoring-down monitoring-logs \
         migrate migrate-create secrets-gen clean
 
 PY ?= python
@@ -75,6 +76,16 @@ docker-down:  ## Stop the Docker stack
 
 docker-logs:  ## Tail Docker stack logs
 	docker compose logs -f --tail=100
+
+# ── Observabilite (Prometheus + Grafana) ─────────────────────
+monitoring-up:  ## Start monitoring overlay (Prometheus :9090, Grafana :3001)
+	docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d prometheus grafana postgres-exporter redis-exporter
+
+monitoring-down:  ## Stop monitoring overlay
+	docker compose -f docker-compose.yml -f docker-compose.monitoring.yml stop prometheus grafana postgres-exporter redis-exporter
+
+monitoring-logs:  ## Tail monitoring stack logs
+	docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f --tail=100 prometheus grafana
 
 # ── Database migrations ──────────────────────────────────────
 migrate:  ## Apply all pending Alembic migrations

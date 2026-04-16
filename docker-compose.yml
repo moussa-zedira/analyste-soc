@@ -53,6 +53,10 @@ services:
       WEBHOOK_URL: ${WEBHOOK_URL:-}
       ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
       OTX_API_KEY: ${OTX_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-cyberdef-api}
+      OTEL_TRACES_SAMPLER_RATIO: ${OTEL_TRACES_SAMPLER_RATIO:-1.0}
       # Phishing module (optional — leave empty for preview mode)
       PHISHING_SMTP_HOST: ${PHISHING_SMTP_HOST:-}
       PHISHING_SMTP_PORT: ${PHISHING_SMTP_PORT:-587}
@@ -86,6 +90,10 @@ services:
       API_KEY: ${API_KEY:?API_KEY required in .env}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY required in .env}
       GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-cyberdef-api}
+      OTEL_TRACES_SAMPLER_RATIO: ${OTEL_TRACES_SAMPLER_RATIO:-1.0}
     volumes:
       - geoip-data:/app/data
     depends_on:

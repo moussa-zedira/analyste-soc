@@ -16,6 +16,7 @@ from apps.api.models.incident_event import IncidentEvent
 from apps.api.broadcast import broadcaster
 from apps.api.middleware.metrics import incidents_created_total
 from apps.api.notifications.webhook import notify_incident_created
+from apps.api.observability import record_incident_created
 
 try:
     from apps.api.detection.ml_classifier import predict_severity
@@ -132,6 +133,7 @@ def create_incident(db: Session, rule: Rule, match: RuleMatch) -> bool:
         )
 
         incidents_created_total.labels(severity=incident.severity).inc()
+        record_incident_created(incident.severity, rule.id)
 
         broadcaster.publish({
             "type": "new_incident",

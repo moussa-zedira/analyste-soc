@@ -268,24 +268,86 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     # -------------------------------------------------------------------
-    # Request ID middleware
+    # OpenTelemetry tracing (no-op si OTEL_EXPORTER_OTLP_ENDPOINT vide)
+    # -------------------------------------------------------------------
+    from apps.api.observability.tracing import setup_tracing
+
+    setup_tracing(app)
+
+    # -------------------------------------------------------------------
+    # Request ID middleware (+ propagation trace_id si OTel actif)
     # -------------------------------------------------------------------
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next):
-        """Injecte un identifiant unique dans chaque requête HTTP."""
+        """Injecte un identifiant unique + trace_id dans chaque requête HTTP."""
         request_id = generate_request_id()
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
+
+        # Si OTel est actif, accroche le trace_id au log context.
+        try:
+            from opentelemetry import trace as _otel_trace
+
+            span = _otel_trace.get_current_span()
+            ctx = span.get_span_context() if span else None
+            if ctx and ctx.is_valid:
+                structlog.contextvars.bind_contextvars(
+                    trace_id=format(ctx.trace_id, "032x"),
+                    span_id=format(ctx.span_id, "016x"),
+                )
+        except Exception:  # noqa: BLE001
+            pass
+
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         return response
 
     # -------------------------------------------------------------------
-    # Health check (enhanced)
+    # Health checks — separes livez (process) / readyz (DB+Redis)
+    # /health garde le format detaille pour compat retro.
     # -------------------------------------------------------------------
+    @app.get("/livez")
+    def livez() -> dict[str, str]:
+        """Liveness : le process repond. Pas de check de dependance."""
+        return {"status": "ok"}
+
+    @app.get("/readyz")
+    def readyz() -> JSONResponse:
+        """Readiness : DB + Redis OK. 503 sinon (utile pour les LB / k8s)."""
+        components: dict[str, str] = {}
+        ok = True
+
+        try:
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+            db.close()
+            components["database"] = "ok"
+        except Exception:
+            components["database"] = "error"
+            ok = False
+
+        try:
+            from apps.api.cache import get_redis_client
+
+            r = get_redis_client()
+            if r is not None:
+                r.ping()
+                components["redis"] = "ok"
+            else:
+                components["redis"] = "unavailable"
+                ok = False
+        except Exception:
+            components["redis"] = "error"
+            ok = False
+
+        return JSONResponse(
+            status_code=200 if ok else 503,
+            content={"status": "ready" if ok else "not_ready", "components": components},
+        )
+
     @app.get("/health")
     def health() -> dict:
-        """Vérifie l'état de santé de l'API et de ses composants."""
+        """Vue detaillee (compat retro). Renvoie toujours 200, status=degraded si KO."""
         uptime = round(time.time() - _start_time, 1)
         result: dict = {
             "status": "ok",
@@ -294,7 +356,6 @@ def create_app() -> FastAPI:
             "components": {},
         }
 
-        # Check database
         try:
             db = SessionLocal()
             db.execute(text("SELECT 1"))
@@ -304,7 +365,6 @@ def create_app() -> FastAPI:
             result["components"]["database"] = "error"
             result["status"] = "degraded"
 
-        # Check Redis
         try:
             from apps.api.cache import get_redis_client
 
@@ -351,8 +411,13 @@ def create_app() -> FastAPI:
     Instrumentator(
         should_group_status_codes=True,
         should_ignore_untemplated=True,
-        excluded_handlers=["/health", "/metrics"],
+        excluded_handlers=["/health", "/livez", "/readyz", "/metrics"],
     ).instrument(app).expose(app, endpoint="/metrics")
+
+    # Force l'import du module observability pour enregistrer les
+    # compteurs metier dans le default registry (sinon /metrics n'expose
+    # que les compteurs HTTP standard).
+    import apps.api.observability  # noqa: F401
 
     # -------------------------------------------------------------------
     # Routers

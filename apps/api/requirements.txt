@@ -32,6 +32,16 @@ structlog>=24.0
 prometheus-client>=0.20
 prometheus-fastapi-instrumentator>=7.0
 
+# Phase 3b: OpenTelemetry distributed tracing (env-gated, OTEL_EXPORTER_OTLP_ENDPOINT)
+opentelemetry-api>=1.27
+opentelemetry-sdk>=1.27
+opentelemetry-exporter-otlp>=1.27
+opentelemetry-instrumentation-fastapi>=0.48b0
+opentelemetry-instrumentation-sqlalchemy>=0.48b0
+opentelemetry-instrumentation-celery>=0.48b0
+opentelemetry-instrumentation-redis>=0.48b0
+opentelemetry-instrumentation-httpx>=0.48b0
+
 # Phase 4: Threat Intelligence + SIGMA
 pyyaml>=6.0
 

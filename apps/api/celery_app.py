@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import time
+
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import task_postrun, task_prerun, worker_process_init
 
 from apps.api.config import get_settings
 
@@ -37,6 +40,51 @@ celery.conf.update(
     # Eviter qu'une tache plante perde le broker quand Redis blip
     broker_connection_retry_on_startup=True,
 )
+
+# ─────────────────────────────────────────────────────────────────────
+# Observabilite : tracing OTel + histogramme de duree par tache
+# ─────────────────────────────────────────────────────────────────────
+_task_start_times: dict[str, float] = {}
+
+
+@worker_process_init.connect
+def _init_observability(**_kwargs) -> None:
+    """Initialise OTel cote worker (no-op si endpoint non configure)."""
+    try:
+        from apps.api.observability.tracing import setup_celery_tracing
+
+        setup_celery_tracing()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+@task_prerun.connect
+def _task_started(task_id: str | None = None, **_kwargs) -> None:
+    if task_id:
+        _task_start_times[task_id] = time.monotonic()
+
+
+@task_postrun.connect
+def _task_finished(
+    task_id: str | None = None,
+    task=None,
+    state: str | None = None,
+    **_kwargs,
+) -> None:
+    started = _task_start_times.pop(task_id or "", None)
+    if started is None or task is None:
+        return
+    duration = time.monotonic() - started
+    try:
+        from apps.api.observability.metrics import celery_task_duration_seconds
+
+        celery_task_duration_seconds.labels(
+            task=task.name,
+            result=(state or "UNKNOWN").lower(),
+        ).observe(duration)
+    except Exception:  # noqa: BLE001
+        pass
+
 
 # Periodic tasks (Celery Beat)
 celery.conf.beat_schedule = {

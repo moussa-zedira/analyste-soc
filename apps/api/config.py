@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     # GeoIP
     GEOIP_DB_PATH: str = "/app/data/GeoLite2-City.mmdb"
 
+    # Observabilite — tracing OpenTelemetry (desactive si endpoint vide)
+    OTEL_SERVICE_NAME: str = "cyberdef-api"
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    OTEL_EXPORTER_OTLP_INSECURE: bool = True
+    OTEL_TRACES_SAMPLER_RATIO: float = 1.0
+
     # Alerting — SMTP
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
