@@ -1,0 +1,87 @@
+[project]
+name = "analyste-soc"
+version = "0.1.0"
+description = "Cyber Defense Dashboard / SOC platform"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    "alembic/versions",
+    ".venv",
+    "venv",
+    "node_modules",
+    ".next",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
+# Enable pycodestyle (E), pyflakes (F), isort (I), bugbear (B),
+# comprehensions (C4), pyupgrade (UP), security (S), naming (N),
+# simplify (SIM), pathlib (PTH).
+select = ["E", "F", "I", "B", "C4", "UP", "N", "SIM", "PTH"]
+ignore = [
+    "E501",     # line too long (we have a soft limit, not strict)
+    "B008",     # function calls in default args (FastAPI Depends pattern)
+    "N818",     # exception names — many existing classes
+    "SIM108",   # ternary if-else — readability is contextual
+]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/api/tests/*" = ["S101"]  # asserts allowed in tests
+"apps/api/pentest/**/*.py" = ["S"]  # pentest module manipulates dangerous payloads by design
+"alembic/env.py" = ["F401", "E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps"]
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = [
+    "alembic/versions",
+    "node_modules",
+    "build",
+    "dist",
+    "\\.venv",
+    "venv",
+]
+
+# Strict mode for security-critical modules
+[[tool.mypy.overrides]]
+module = [
+    "apps.api.security",
+    "apps.api.security_url",
+    "apps.api.auth",
+    "apps.api.config",
+]
+disallow_untyped_defs = true
+warn_return_any = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["apps/api/tests"]
+python_files = "test_*.py"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+]
+markers = [
+    "integration: tests requiring live Postgres/Redis",
+    "slow: tests slower than 1s",
+]
