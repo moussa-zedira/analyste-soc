@@ -10,7 +10,7 @@ from collections import defaultdict
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from apps.api.config import get_settings
@@ -64,18 +64,15 @@ def _build_context(db: Session, message: str) -> tuple[str, list[str]]:
     parts: list[str] = []
     labels: list[str] = []
 
-    # Always include summary stats
+    # Summary stats: 1 requete par table au lieu de 3 (evite 2 round-trips inutiles)
     event_count = db.query(func.count(Event.id)).scalar() or 0
-    incident_count = db.query(func.count(Incident.id)).scalar() or 0
-    open_incidents = (
-        db.query(func.count(Incident.id))
-        .filter(Incident.status == "open")
-        .scalar()
-        or 0
-    )
+    inc_total, inc_open = db.query(
+        func.count(Incident.id),
+        func.count(case((Incident.status == "open", 1))),
+    ).one()
     parts.append(
         f"DB Summary: {event_count} events total, "
-        f"{incident_count} incidents ({open_incidents} open)."
+        f"{inc_total} incidents ({inc_open} open)."
     )
     labels.append("summary_stats")
 
@@ -94,24 +91,32 @@ def _build_context(db: Session, message: str) -> tuple[str, list[str]]:
         parts.append("Recent incidents:\n" + "\n".join(lines))
         labels.append("recent_incidents")
 
-    # If message mentions an IP, fetch related info
-    ips_mentioned = _IP_RE.findall(message)
-    for ip in ips_mentioned[:3]:
-        ip_events = (
-            db.query(Event.event_type, func.count(Event.id))
-            .filter(Event.src_ip == ip)
-            .group_by(Event.event_type)
+    # Si le message mentionne des IPs (max 3), 2 requetes au total au lieu de 6.
+    ips_mentioned = _IP_RE.findall(message)[:3]
+    if ips_mentioned:
+        rows = (
+            db.query(Event.src_ip, Event.event_type, func.count(Event.id))
+            .filter(Event.src_ip.in_(ips_mentioned))
+            .group_by(Event.src_ip, Event.event_type)
             .all()
         )
-        if ip_events:
-            breakdown = ", ".join(f"{et}: {c}" for et, c in ip_events)
-            parts.append(f"Events from {ip}: {breakdown}")
-            labels.append(f"ip_detail:{ip}")
+        per_ip: dict[str, list[tuple[str, int]]] = defaultdict(list)
+        for src_ip, event_type, count in rows:
+            per_ip[src_ip].append((event_type, count))
 
-        score_row = db.get(ThreatScore, ip)
-        if score_row:
-            parts.append(f"Threat score for {ip}: {score_row.score}/100")
-            labels.append(f"threat_score:{ip}")
+        scores = {
+            t.ip: t.score
+            for t in db.query(ThreatScore).filter(ThreatScore.ip.in_(ips_mentioned)).all()
+        }
+
+        for ip in ips_mentioned:
+            if per_ip.get(ip):
+                breakdown = ", ".join(f"{et}: {c}" for et, c in per_ip[ip])
+                parts.append(f"Events from {ip}: {breakdown}")
+                labels.append(f"ip_detail:{ip}")
+            if ip in scores:
+                parts.append(f"Threat score for {ip}: {scores[ip]}/100")
+                labels.append(f"threat_score:{ip}")
 
     # If message mentions severity keywords, add severity breakdown
     msg_lower = message.lower()

@@ -4,14 +4,28 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy.exc import DBAPIError, OperationalError
+
 from apps.api.celery_app import celery
 from apps.api.db.session import SessionLocal
 from apps.api.middleware.metrics import celery_tasks_total
 
 logger = logging.getLogger(__name__)
 
+# Erreurs transitoires sur lesquelles on retente automatiquement.
+# Erreurs metier (ValueError, KeyError) ne sont PAS retentees pour eviter
+# les boucles infinies sur donnees corrompues.
+_TRANSIENT_ERRORS = (OperationalError, DBAPIError, ConnectionError, TimeoutError)
+_RETRY_KW = {
+    "autoretry_for": _TRANSIENT_ERRORS,
+    "retry_backoff": True,
+    "retry_backoff_max": 300,
+    "retry_jitter": True,
+    "max_retries": 3,
+}
 
-@celery.task(name="apps.api.tasks.task_run_detection")
+
+@celery.task(name="apps.api.tasks.task_run_detection", **_RETRY_KW)
 def task_run_detection() -> dict:
     """Exécute le moteur de détection dans un worker en arrière-plan."""
     from apps.api.detection.engine import run_detection
@@ -23,6 +37,7 @@ def task_run_detection() -> dict:
         logger.info("Detection task completed: %s", result)
         return result
     except Exception:
+        db.rollback()
         celery_tasks_total.labels(task_name="run_detection", status="failure").inc()
         logger.exception("Detection task failed")
         raise
@@ -30,7 +45,7 @@ def task_run_detection() -> dict:
         db.close()
 
 
-@celery.task(name="apps.api.tasks.task_compute_threat_scores")
+@celery.task(name="apps.api.tasks.task_compute_threat_scores", **_RETRY_KW)
 def task_compute_threat_scores(lookback_hours: int = 24) -> dict:
     """Recalcule les scores de menace en arrière-plan."""
     from apps.api.detection.threat_score import compute_threat_scores
@@ -42,6 +57,7 @@ def task_compute_threat_scores(lookback_hours: int = 24) -> dict:
         logger.info("Threat score task completed: %d IPs scored", count)
         return {"ips_scored": count}
     except Exception:
+        db.rollback()
         celery_tasks_total.labels(task_name="compute_threat_scores", status="failure").inc()
         logger.exception("Threat score task failed")
         raise
@@ -49,7 +65,7 @@ def task_compute_threat_scores(lookback_hours: int = 24) -> dict:
         db.close()
 
 
-@celery.task(name="apps.api.tasks.task_run_anomaly")
+@celery.task(name="apps.api.tasks.task_run_anomaly", **_RETRY_KW)
 def task_run_anomaly() -> dict:
     """Exécute la détection d'anomalies en arrière-plan."""
     from apps.api.detection.anomaly import run_anomaly_detection
@@ -61,6 +77,7 @@ def task_run_anomaly() -> dict:
         logger.info("Anomaly task completed: %s", result)
         return result
     except Exception:
+        db.rollback()
         celery_tasks_total.labels(task_name="run_anomaly", status="failure").inc()
         logger.exception("Anomaly task failed")
         raise
@@ -68,7 +85,7 @@ def task_run_anomaly() -> dict:
         db.close()
 
 
-@celery.task(name="apps.api.tasks.task_run_ml_detect")
+@celery.task(name="apps.api.tasks.task_run_ml_detect", **_RETRY_KW)
 def task_run_ml_detect() -> dict:
     """Entraîne Isolation Forest et détecte les anomalies en arrière-plan."""
     from apps.api.detection.ml_anomaly import train_and_detect as run_ml_detection
@@ -79,6 +96,7 @@ def task_run_ml_detect() -> dict:
         celery_tasks_total.labels(task_name="run_ml_detect", status="success").inc()
         return result
     except Exception:
+        db.rollback()
         celery_tasks_total.labels(task_name="run_ml_detect", status="failure").inc()
         logger.exception("ML detection task failed")
         raise
@@ -86,7 +104,7 @@ def task_run_ml_detect() -> dict:
         db.close()
 
 
-@celery.task(name="apps.api.tasks.task_enrich_event")
+@celery.task(name="apps.api.tasks.task_enrich_event", **_RETRY_KW)
 def task_enrich_event(event_id: str) -> dict:
     """Enrichit un event avec les donnees de Threat Intelligence."""
     from apps.api.threat_intel.enrichment import enrich_event_sync
@@ -97,6 +115,7 @@ def task_enrich_event(event_id: str) -> dict:
         celery_tasks_total.labels(task_name="enrich_event", status="success").inc()
         return {"event_id": event_id, "status": "enriched"}
     except Exception:
+        db.rollback()
         celery_tasks_total.labels(task_name="enrich_event", status="failure").inc()
         logger.exception("TI enrichment failed for event %s", event_id)
         raise
@@ -104,7 +123,7 @@ def task_enrich_event(event_id: str) -> dict:
         db.close()
 
 
-@celery.task(name="apps.api.tasks.task_refresh_ti_cache")
+@celery.task(name="apps.api.tasks.task_refresh_ti_cache", **_RETRY_KW)
 def task_refresh_ti_cache() -> dict:
     """Rafraichit le cache TI expire."""
     from datetime import datetime, timezone
@@ -128,7 +147,14 @@ def task_refresh_ti_cache() -> dict:
         db.close()
 
 
-@celery.task(name="apps.api.tasks.task_send_alert")
+@celery.task(
+    name="apps.api.tasks.task_send_alert",
+    autoretry_for=(ConnectionError, TimeoutError),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+    max_retries=5,
+)
 def task_send_alert(incident_data: dict) -> dict:
     """Envoie les notifications d'alerte pour un incident."""
     from apps.api.alerting import dispatch_alert

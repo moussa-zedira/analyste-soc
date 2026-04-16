@@ -269,15 +269,31 @@ def gen_ci(body: CIConfigRequest):
 
 @router.get("/dashboard")
 def dashboard(db: Session = Depends(get_db)):
-    from sqlalchemy import func
+    from sqlalchemy import case, func
+
+    # 1 requete au lieu de 3 pour les comptages findings + criticites ouvertes
     total_projects = db.query(func.count(ScanProject.id)).scalar() or 0
     total_runs = db.query(func.count(ScanRun.id)).scalar() or 0
-    total_findings = db.query(func.count(ScanFinding.id)).scalar() or 0
-    critical = db.query(func.count(ScanFinding.id)).filter(ScanFinding.severity == "critical", ScanFinding.resolved == False).scalar() or 0
-    high = db.query(func.count(ScanFinding.id)).filter(ScanFinding.severity == "high", ScanFinding.resolved == False).scalar() or 0
+    total, critical, high = db.query(
+        func.count(ScanFinding.id),
+        func.count(
+            case((
+                (ScanFinding.severity == "critical") & (ScanFinding.resolved.is_(False)),
+                1,
+            ))
+        ),
+        func.count(
+            case((
+                (ScanFinding.severity == "high") & (ScanFinding.resolved.is_(False)),
+                1,
+            ))
+        ),
+    ).one()
     return {
         "total_projects": total_projects, "total_runs": total_runs,
-        "total_findings": total_findings, "open_critical": critical, "open_high": high,
+        "total_findings": total or 0,
+        "open_critical": critical or 0,
+        "open_high": high or 0,
     }
 
 

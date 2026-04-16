@@ -24,7 +24,18 @@ celery.conf.update(
     enable_utc=True,
     task_track_started=True,
     task_acks_late=True,
+    task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
+    # Retry policy par defaut — surchargeable par tache
+    task_default_retry_delay=30,
+    task_default_rate_limit="60/m",
+    # Visibilite des taches longues
+    task_time_limit=600,
+    task_soft_time_limit=540,
+    # Resultats: TTL court pour ne pas saturer Redis
+    result_expires=3600,
+    # Eviter qu'une tache plante perde le broker quand Redis blip
+    broker_connection_retry_on_startup=True,
 )
 
 # Periodic tasks (Celery Beat)

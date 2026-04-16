@@ -37,7 +37,18 @@ class Settings(BaseSettings):
     # JWT / Auth
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 480
+    JWT_EXPIRE_MINUTES: int = 15
+    JWT_REFRESH_EXPIRE_DAYS: int = 7
+
+    # CORS — liste d'origines autorisees, separees par des virgules
+    CORS_ALLOWED_ORIGINS: str = (
+        "http://localhost:3000,http://127.0.0.1:3000,http://web:3000"
+    )
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        """Liste deduiquee des origines CORS autorisees."""
+        return [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
 
     # GeoIP
     GEOIP_DB_PATH: str = "/app/data/GeoLite2-City.mmdb"

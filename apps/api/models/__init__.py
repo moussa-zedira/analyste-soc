@@ -18,6 +18,7 @@ from apps.api.models.sigma_rule import SigmaRule
 from apps.api.models.soar import Playbook, PlaybookExecution, PlaybookStepResult
 from apps.api.models.ioc import IOC, IOCRelationship, IOCSighting, ThreatFeed, STIXCollection, STIXObject
 from apps.api.models.devsecops import ScanProject, ScanRun, ScanFinding, QualityGate
+from apps.api.models.pentest_audit import PentestAuditLog
 
 __all__ = [
     "AlertChannel",
@@ -31,6 +32,7 @@ __all__ = [
     "IOCSighting",
     "Incident",
     "IncidentEvent",
+    "PentestAuditLog",
     "Playbook",
     "PlaybookExecution",
     "PlaybookStepResult",
