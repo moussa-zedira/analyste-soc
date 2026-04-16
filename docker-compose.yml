@@ -1,17 +1,20 @@
 version: "3.9"
 
+# All secrets are loaded from .env (NOT committed to git).
+# See .env.example for required variables.
+
 services:
   # ── Infrastructure ──────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: siem
-      POSTGRES_PASSWORD: siem
-      POSTGRES_DB: siem
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER required in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB required in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U siem"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -32,30 +35,31 @@ services:
     ports:
       - "8000:8000"
     environment:
-      ENV: dev
-      DATABASE_URL: postgresql+psycopg2://siem:siem@postgres:5432/siem
-      REDIS_URL: redis://redis:6379/0
-      API_KEY: elite-secret-key
-      API_KEY_HEADER: X-API-Key
-      JWT_SECRET_KEY: change-me-in-production
-      JWT_ALGORITHM: HS256
-      JWT_EXPIRE_MINUTES: "480"
+      ENV: ${ENV:-dev}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      API_KEY: ${API_KEY:?API_KEY required in .env}
+      API_KEY_HEADER: ${API_KEY_HEADER:-X-API-Key}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY required in .env}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-480}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
       GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
-      OLLAMA_MODEL: llama3.2
-      TRIAGE_ENABLED: "true"
-      MIN_SEVERITY: medium
-      WEBHOOK_ENABLED: "false"
-      WEBHOOK_URL: ""
-      ABUSEIPDB_API_KEY: "${ABUSEIPDB_API_KEY:-}"
-      OTX_API_KEY: "${OTX_API_KEY:-}"
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      TRIAGE_ENABLED: ${TRIAGE_ENABLED:-true}
+      MIN_SEVERITY: ${MIN_SEVERITY:-medium}
+      WEBHOOK_ENABLED: ${WEBHOOK_ENABLED:-false}
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
+      OTX_API_KEY: ${OTX_API_KEY:-}
       # Phishing module (optional — leave empty for preview mode)
-      PHISHING_SMTP_HOST: "${PHISHING_SMTP_HOST:-}"
-      PHISHING_SMTP_PORT: "${PHISHING_SMTP_PORT:-587}"
-      PHISHING_SMTP_USER: "${PHISHING_SMTP_USER:-}"
-      PHISHING_SMTP_PASS: "${PHISHING_SMTP_PASS:-}"
-      PHISHING_SMTP_TLS: "${PHISHING_SMTP_TLS:-true}"
-      PHISHING_CALLBACK_SERVER: "${PHISHING_CALLBACK_SERVER:-http://localhost:8000}"
+      PHISHING_SMTP_HOST: ${PHISHING_SMTP_HOST:-}
+      PHISHING_SMTP_PORT: ${PHISHING_SMTP_PORT:-587}
+      PHISHING_SMTP_USER: ${PHISHING_SMTP_USER:-}
+      PHISHING_SMTP_PASS: ${PHISHING_SMTP_PASS:-}
+      PHISHING_SMTP_TLS: ${PHISHING_SMTP_TLS:-true}
+      PHISHING_CALLBACK_SERVER: ${PHISHING_CALLBACK_SERVER:-http://localhost:8000}
     volumes:
       - geoip-data:/app/data
     depends_on:
@@ -76,10 +80,11 @@ services:
       dockerfile: apps/api/Dockerfile
     command: celery -A apps.api.celery_app worker --loglevel=info --concurrency=2
     environment:
-      ENV: dev
-      DATABASE_URL: postgresql+psycopg2://siem:siem@postgres:5432/siem
-      REDIS_URL: redis://redis:6379/0
-      API_KEY: elite-secret-key
+      ENV: ${ENV:-dev}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      API_KEY: ${API_KEY:?API_KEY required in .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY required in .env}
       GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
     volumes:
       - geoip-data:/app/data
@@ -96,10 +101,11 @@ services:
       dockerfile: apps/api/Dockerfile
     command: celery -A apps.api.celery_app beat --loglevel=info
     environment:
-      ENV: dev
-      DATABASE_URL: postgresql+psycopg2://siem:siem@postgres:5432/siem
-      REDIS_URL: redis://redis:6379/0
-      API_KEY: elite-secret-key
+      ENV: ${ENV:-dev}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      API_KEY: ${API_KEY:?API_KEY required in .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY required in .env}
       GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
     volumes:
       - geoip-data:/app/data
@@ -119,7 +125,7 @@ services:
       - "1514:1514"
     environment:
       API_BASE_URL: http://api:8000
-      API_KEY: elite-secret-key
+      API_KEY: ${API_KEY:?API_KEY required in .env}
       SYSLOG_UDP_PORT: "514"
       SYSLOG_TCP_PORT: "1514"
       BATCH_SIZE: "50"
@@ -129,18 +135,21 @@ services:
         condition: service_healthy
 
   # ── Frontend ────────────────────────────────────────────
+  # API key is NOT exposed to the browser. The frontend uses a server-side
+  # proxy route (apps/web/src/app/api/proxy/[...path]/route.ts) that injects
+  # the API key from the server-only INTERNAL_API_KEY env var.
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: http://api:8000
-        NEXT_PUBLIC_API_KEY: elite-secret-key
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://api:8000
-      NEXT_PUBLIC_API_KEY: elite-secret-key
+      INTERNAL_API_BASE_URL: http://api:8000
+      INTERNAL_API_KEY: ${API_KEY:?API_KEY required in .env}
     depends_on:
       api:
         condition: service_healthy
@@ -154,7 +163,7 @@ services:
   #     dockerfile: apps/agent/Dockerfile
   #   environment:
   #     API_BASE_URL: http://api:8000
-  #     API_KEY: elite-secret-key
+  #     API_KEY: ${API_KEY}
   #   depends_on:
   #     api:
   #       condition: service_healthy

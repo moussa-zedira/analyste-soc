@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, ConfigDict
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from apps.api.auth import (
     verify_password,
 )
 from apps.api.db.session import get_db
+from apps.api.middleware.rate_limit import limiter
 from apps.api.models.user import User
 
 router = APIRouter()
@@ -58,7 +59,8 @@ class UserRead(BaseModel):
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
+@limiter.limit("10/hour")
+def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
     """Inscrire un nouveau compte utilisateur."""
     existing = db.query(User).filter(
         (User.username == payload.username) | (User.email == payload.email)
@@ -91,7 +93,8 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> dict:
+@limiter.limit("5/minute")
+def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)) -> dict:
     """Authentifier et retourner un jeton JWT."""
     user = db.query(User).filter(User.username == payload.username).first()
     if user is None or not verify_password(payload.password, user.hashed_password):

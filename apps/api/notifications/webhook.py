@@ -9,6 +9,7 @@ import urllib.error
 import urllib.request
 
 from apps.api.config import get_settings
+from apps.api.security_url import UnsafeURLError, validate_outbound_url
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,12 @@ def notify_incident_created(
     if not settings.WEBHOOK_ENABLED or not settings.WEBHOOK_URL:
         return
 
+    try:
+        safe_url = validate_outbound_url(settings.WEBHOOK_URL)
+    except UnsafeURLError as exc:
+        logger.error("webhook_url_blocked", url=settings.WEBHOOK_URL, reason=str(exc))
+        return
+
     payload = _build_payload(
         incident_id=incident_id,
         title=title,
@@ -110,7 +117,7 @@ def notify_incident_created(
 
     thread = threading.Thread(
         target=_send_webhook,
-        args=(settings.WEBHOOK_URL, payload),
+        args=(safe_url, payload),
         daemon=True,
     )
     thread.start()

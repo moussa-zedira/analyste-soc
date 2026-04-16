@@ -101,13 +101,12 @@ export function Terminal() {
     setLines((prev) => [...prev, { type, text }]);
   }, []);
 
+  // Always go through the server-side proxy from the browser; the proxy injects
+  // the API key. Fallback (for SSR/test contexts only) hits the backend directly.
   const apiBase = typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
-    : "http://localhost:8000";
-
-  const apiKey = typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_API_KEY || localStorage.getItem("api_key") || ""
-    : "";
+    ? "/api/proxy"
+    : (process.env.INTERNAL_API_BASE_URL || "http://localhost:8000");
+  const apiKey = "";
 
   const executeCmd = useCallback(
     async (cmd: string) => {

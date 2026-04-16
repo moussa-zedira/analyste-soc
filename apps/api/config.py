@@ -82,19 +82,41 @@ class Settings(BaseSettings):
     MISP_API_KEY: str = ""
     MISP_VERIFY_SSL: bool = True
 
+    # Sentinelles refusees en production (anciens defaults compromis)
+    _WEAK_API_KEYS = frozenset({
+        "elite-secret-key", "change-me", "dev-insecure-key", "",
+    })
+    _WEAK_JWT_SECRETS = frozenset({
+        "change-me-in-production", "dev-jwt-secret-change-me", "",
+    })
+
     @property
     def effective_api_key(self) -> str:
-        """Retourne la clé API utilisée pour la vérification des requêtes.
+        """Retourne la cle API utilisee pour la verification des requetes.
 
-        Lève ``ValueError`` en production si aucune clé n'est configurée.
+        Leve ``ValueError`` en production si la cle est faible/absente.
         """
-        if self.API_KEY:
+        if self.ENV != "dev":
+            if self.API_KEY in self._WEAK_API_KEYS:
+                raise ValueError(
+                    "API_KEY must be set to a strong random value in production. "
+                    "Generate one: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+                )
             return self.API_KEY
+        return self.API_KEY or "dev-insecure-key"
+
+    def validate_for_prod(self) -> list[str]:
+        """Retourne la liste des problemes de configuration bloquants en prod."""
+        problems: list[str] = []
         if self.ENV == "dev":
-            return "dev-insecure-key"
-        raise ValueError(
-            "API_KEY must be set in production environments (ENV != 'dev')"
-        )
+            return problems
+        if self.API_KEY in self._WEAK_API_KEYS:
+            problems.append("API_KEY is weak or unset")
+        if self.JWT_SECRET_KEY in self._WEAK_JWT_SECRETS:
+            problems.append("JWT_SECRET_KEY is weak or unset")
+        if "siem:siem@" in self.DATABASE_URL:
+            problems.append("DATABASE_URL still uses default credentials (siem:siem)")
+        return problems
 
 
 @lru_cache(maxsize=1)

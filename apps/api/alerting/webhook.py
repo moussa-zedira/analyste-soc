@@ -7,6 +7,8 @@ from typing import Any
 
 import httpx
 
+from apps.api.security_url import UnsafeURLError, validate_outbound_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +23,12 @@ async def send_alert(config: dict[str, Any], incident: dict[str, Any]) -> None:
     url = config.get("url", "")
     if not url:
         raise ValueError("No webhook url configured")
+
+    try:
+        url = validate_outbound_url(url)
+    except UnsafeURLError as exc:
+        logger.error("webhook_url_blocked", url=url, reason=str(exc))
+        raise ValueError(f"Webhook URL rejected: {exc}") from exc
 
     headers = config.get("headers", {})
     method = config.get("method", "POST").upper()

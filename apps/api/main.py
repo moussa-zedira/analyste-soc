@@ -156,6 +156,15 @@ _start_time = time.time()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Exécute les migrations Alembic au démarrage, avec repli sur create_all."""
+    config_problems = settings.validate_for_prod()
+    if config_problems:
+        for problem in config_problems:
+            logger.error("config_invalid_for_prod", problem=problem)
+        raise RuntimeError(
+            "Refusing to start in production with weak configuration: "
+            + "; ".join(config_problems)
+        )
+
     try:
         from alembic.config import Config
         from alembic import command
@@ -178,7 +187,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def _seed_default_admin() -> None:
-    """Cree ou met a jour le compte admin par defaut."""
+    """Cree un compte admin uniquement si aucun utilisateur n'existe.
+
+    Ne reset JAMAIS le mot de passe d'un admin existant (faille critique).
+    En l'absence d'admin, genere un mot de passe aleatoire affiche une seule fois
+    dans les logs au demarrage.
+    """
+    import os
+    import secrets
     import uuid
     from datetime import datetime, timezone
     from apps.api.auth import hash_password
@@ -186,27 +202,28 @@ def _seed_default_admin() -> None:
 
     db = SessionLocal()
     try:
-        existing = db.query(User).filter(User.username == "admin").first()
-        if existing:
-            # Reset password to ensure it works
-            existing.hashed_password = hash_password("admin")
-            existing.is_active = True
-            db.commit()
-            logger.info("default_admin_password_reset", username="admin")
+        any_user = db.query(User).first()
+        if any_user is not None:
             return
 
+        bootstrap_password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD") or secrets.token_urlsafe(24)
         admin = User(
             id=str(uuid.uuid4()),
             username="admin",
             email="admin@cyberdef.local",
-            hashed_password=hash_password("admin"),
+            hashed_password=hash_password(bootstrap_password),
             role="admin",
             is_active=True,
             created_at=datetime.now(timezone.utc),
         )
         db.add(admin)
         db.commit()
-        logger.info("default_admin_created", username="admin")
+        logger.warning(
+            "default_admin_created",
+            username="admin",
+            bootstrap_password=bootstrap_password,
+            note="CHANGE THIS PASSWORD IMMEDIATELY via /auth or admin UI. This message is shown only once.",
+        )
     except Exception as exc:
         db.rollback()
         logger.warning("seed_admin_failed", error=str(exc))

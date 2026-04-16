@@ -15,11 +15,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const BASE =
-    typeof window !== "undefined"
-      ? "/api/proxy"
-      : (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000");
-  const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "elite-secret-key";
+  // Browser always goes through the server-side proxy (which injects the API key).
+  const BASE = "/api/proxy";
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -32,7 +29,7 @@ export default function LoginPage() {
         if (mode === "register") {
           const res = await fetch(`${BASE}/auth/register`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, email: email || `${username}@cyberdef.local`, password, role }),
           });
           if (!res.ok) {
@@ -48,7 +45,7 @@ export default function LoginPage() {
         // Login
         const res = await fetch(`${BASE}/auth/login`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password }),
         });
         if (!res.ok) {
@@ -63,7 +60,6 @@ export default function LoginPage() {
         const meRes = await fetch(`${BASE}/auth/me`, {
           headers: {
             Authorization: `Bearer ${data.access_token}`,
-            "X-API-Key": API_KEY,
           },
         });
         if (meRes.ok) {
@@ -79,7 +75,7 @@ export default function LoginPage() {
         setLoading(false);
       }
     },
-    [mode, username, email, password, role, BASE, API_KEY, router],
+    [mode, username, email, password, role, router],
   );
 
   return (

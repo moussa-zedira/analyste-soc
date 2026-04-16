@@ -13,7 +13,12 @@ load_dotenv(_agent_dir / ".env")
 load_dotenv(_agent_dir.parent.parent / ".env")
 
 API_BASE_URL: str = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
-API_KEY: str = os.getenv("API_KEY", "elite-secret-key")
+API_KEY: str = os.getenv("API_KEY", "")
+if not API_KEY:
+    raise RuntimeError(
+        "API_KEY env var is required for the monitoring agent. "
+        "Set it to match the backend's API_KEY value."
+    )
 
 HEADERS: dict[str, str] = {
     "X-API-Key": API_KEY,

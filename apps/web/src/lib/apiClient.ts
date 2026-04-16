@@ -63,15 +63,18 @@ import type {
   HeadlessLive,
 } from "./types";
 
-// In the browser, use the Next.js rewrite proxy to avoid CORS issues.
-// On the server (SSR) or when NEXT_PUBLIC_API_BASE_URL is set explicitly,
-// call the backend directly.
-const BASE_URL =
-  typeof window !== "undefined"
-    ? "/api/proxy"
-    : (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000");
-const API_KEY =
-  process.env.NEXT_PUBLIC_API_KEY ?? "elite-secret-key";
+// In the browser we MUST go through the server-side proxy (/api/proxy).
+// The proxy injects the X-API-Key header server-side, so the secret is
+// never exposed to the JavaScript bundle.
+// On the server (SSR), call the backend directly with the server-only key.
+const IS_BROWSER = typeof window !== "undefined";
+const BASE_URL = IS_BROWSER
+  ? "/api/proxy"
+  : (process.env.INTERNAL_API_BASE_URL ??
+     process.env.NEXT_PUBLIC_API_BASE_URL ??
+     "http://127.0.0.1:8000");
+// API_KEY is NEVER read in the browser. Server-side requests use INTERNAL_API_KEY.
+const API_KEY = IS_BROWSER ? "" : (process.env.INTERNAL_API_KEY ?? "");
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 

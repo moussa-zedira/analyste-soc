@@ -31,10 +31,12 @@ Create `apps/web/.env.local`:
 
 | Variable | Default | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | `http://127.0.0.1:8000` | Backend API base URL |
-| `NEXT_PUBLIC_API_KEY` | `change-me` | API key sent via `X-API-Key` header |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://127.0.0.1:8000` | Backend base URL (exposed to browser) |
+| `INTERNAL_API_BASE_URL` | `http://127.0.0.1:8000` | Backend URL used by `/api/proxy` route handler (server-only) |
+| `INTERNAL_API_KEY` | _(required)_ | API key injected server-side by the proxy. **Never** exposed to the browser. Must equal the backend's `API_KEY`. |
 
-The API key must match the backend's `API_KEY` value.
+Browser requests go through `/api/proxy/*` which adds `X-API-Key` server-side.
+This is what keeps the secret out of the JavaScript bundle.
 
 ---
 
@@ -170,5 +172,5 @@ All filters and pagination state are stored in URL query parameters, making URLs
 | Problem | Cause |
 |---|---|
 | Empty dashboard | Backend API not running or wrong `NEXT_PUBLIC_API_BASE_URL` |
-| 401 in Network tab | `NEXT_PUBLIC_API_KEY` does not match the backend `API_KEY` |
+| 401 in Network tab | `INTERNAL_API_KEY` does not match the backend `API_KEY` |
 | CORS errors | Backend CORS middleware is configured for `localhost:3000`; the Next.js proxy should bypass CORS entirely |
