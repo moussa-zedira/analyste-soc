@@ -67,6 +67,17 @@ import type {
   CampaignState,
   CampaignSummary,
   CampaignEvent,
+  UbaEntity,
+  UbaListResponse,
+  UbaSummary,
+  UbaRefreshResponse,
+  CaseSummary,
+  CaseEvidenceItem,
+  CaseTimelineItem,
+  CaseStats,
+  ComplianceFrameworkInfo,
+  ComplianceFrameworkReport,
+  ComplianceGlobalReport,
 } from "./types";
 
 // In the browser we MUST go through the server-side proxy (/api/proxy).
@@ -1977,4 +1988,78 @@ export function headlessScanAbort(id: string, opts?: RequestOptions): Promise<{ 
 }
 export function headlessScans(opts?: RequestOptions): Promise<HeadlessScan[]> {
   return request<HeadlessScan[]>("/pentest/headless/scans", undefined, opts);
+}
+
+// ─── UEBA ──────────────────────────────────────────────────────────────────
+export function ubaRefresh(lookbackMin = 60, opts?: RequestOptions): Promise<UbaRefreshResponse> {
+  return request<UbaRefreshResponse>(`/uba/refresh?lookback_min=${lookbackMin}`, { method: "POST" }, opts);
+}
+export function ubaListEntities(minScore = 0, limit = 100, opts?: RequestOptions): Promise<UbaListResponse> {
+  return request<UbaListResponse>(`/uba/entities?min_score=${minScore}&limit=${limit}`, undefined, opts);
+}
+export function ubaGetEntity(entityType: string, entityKey: string, opts?: RequestOptions): Promise<UbaEntity> {
+  return request<UbaEntity>(`/uba/entities/${encodeURIComponent(entityType)}/${encodeURIComponent(entityKey)}`, undefined, opts);
+}
+export function ubaSummary(opts?: RequestOptions): Promise<UbaSummary> {
+  return request<UbaSummary>(`/uba/summary`, undefined, opts);
+}
+
+// ─── Case Management ────────────────────────────────────────────────────────
+export function casesList(filters: { status?: string; priority?: string; sla_breached?: boolean; limit?: number } = {}, opts?: RequestOptions): Promise<{ cases: CaseSummary[]; count: number }> {
+  const p = new URLSearchParams();
+  if (filters.status) p.set("status", filters.status);
+  if (filters.priority) p.set("priority", filters.priority);
+  if (filters.sla_breached !== undefined) p.set("sla_breached", String(filters.sla_breached));
+  if (filters.limit) p.set("limit", String(filters.limit));
+  const q = p.toString();
+  return request<{ cases: CaseSummary[]; count: number }>(`/cases/${q ? `?${q}` : ""}`, undefined, opts);
+}
+export function casesStats(opts?: RequestOptions): Promise<CaseStats> {
+  return request<CaseStats>(`/cases/stats`, undefined, opts);
+}
+export function casesGet(id: string, opts?: RequestOptions): Promise<CaseSummary> {
+  return request<CaseSummary>(`/cases/${id}`, undefined, opts);
+}
+export function casesCreate(body: {
+  title: string; description?: string; priority?: string; severity?: string;
+  incident_ids?: string[]; tags?: string[];
+  sla_response_minutes?: number; sla_resolution_minutes?: number;
+}, opts?: RequestOptions): Promise<CaseSummary> {
+  return request<CaseSummary>(`/cases/`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function casesTransition(id: string, status: string, note = "", opts?: RequestOptions): Promise<CaseSummary> {
+  return request<CaseSummary>(`/cases/${id}/transition`, {
+    method: "POST", body: JSON.stringify({ status, note }),
+  }, opts);
+}
+export function casesAssign(id: string, body: { assignee_id?: string; assignee_username?: string }, opts?: RequestOptions): Promise<CaseSummary> {
+  return request<CaseSummary>(`/cases/${id}/assign`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function casesClose(id: string, resolution: string, summary = "", opts?: RequestOptions): Promise<CaseSummary> {
+  return request<CaseSummary>(`/cases/${id}/close`, {
+    method: "POST", body: JSON.stringify({ resolution, summary }),
+  }, opts);
+}
+export function casesAddEvidence(id: string, body: { kind: string; title: string; content: string; extra?: Record<string, any> }, opts?: RequestOptions): Promise<CaseEvidenceItem> {
+  return request<CaseEvidenceItem>(`/cases/${id}/evidence`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function casesListEvidence(id: string, opts?: RequestOptions): Promise<{ evidence: CaseEvidenceItem[]; count: number }> {
+  return request<{ evidence: CaseEvidenceItem[]; count: number }>(`/cases/${id}/evidence`, undefined, opts);
+}
+export function casesGetTimeline(id: string, opts?: RequestOptions): Promise<{ case_id: string; timeline: CaseTimelineItem[]; count: number }> {
+  return request<{ case_id: string; timeline: CaseTimelineItem[]; count: number }>(`/cases/${id}/timeline`, undefined, opts);
+}
+export function casesScanSla(opts?: RequestOptions): Promise<{ newly_breached: string[]; count: number }> {
+  return request<{ newly_breached: string[]; count: number }>(`/cases/sla/scan`, { method: "POST" }, opts);
+}
+
+// ─── Compliance ────────────────────────────────────────────────────────────
+export function complianceFrameworks(opts?: RequestOptions): Promise<{ frameworks: ComplianceFrameworkInfo[]; count: number }> {
+  return request<{ frameworks: ComplianceFrameworkInfo[]; count: number }>(`/compliance/frameworks`, undefined, opts);
+}
+export function complianceFrameworkReport(fid: string, opts?: RequestOptions): Promise<ComplianceFrameworkReport> {
+  return request<ComplianceFrameworkReport>(`/compliance/frameworks/${fid}/report`, undefined, opts);
+}
+export function complianceGlobalReport(opts?: RequestOptions): Promise<ComplianceGlobalReport> {
+  return request<ComplianceGlobalReport>(`/compliance/report`, undefined, opts);
 }

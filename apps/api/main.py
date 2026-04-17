@@ -137,6 +137,9 @@ from apps.api.routes.orchestrator import router as orchestrator_router
 from apps.api.routes.orchestrator import ws_router as orchestrator_ws_router
 from apps.api.pentest.campaign.routes import router as campaign_router
 from apps.api.pentest.campaign.routes import ws_router as campaign_ws_router
+from apps.api.uba.routes import router as uba_router
+from apps.api.cases.routes import router as cases_router
+from apps.api.compliance.routes import router as compliance_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -613,6 +616,11 @@ def create_app() -> FastAPI:
     # ── Red Team Campaign Engine (Vague 11) ──
     app.include_router(campaign_router, tags=["Red Team Campaign"])
     app.include_router(campaign_ws_router, tags=["Red Team Campaign"])
+
+    # ── SOC Enterprise (Vague 12) ──
+    app.include_router(uba_router, tags=["UEBA"])
+    app.include_router(cases_router, tags=["Case Management"])
+    app.include_router(compliance_router, tags=["Compliance"])
 
     return app
 

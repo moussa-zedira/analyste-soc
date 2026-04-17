@@ -1583,3 +1583,147 @@ export interface AutoExploitLive {
   current_phase: string; progress: number; status: string;
   log: AutoExploitLogEntry[]; findings_count: number;
 }
+
+// --- UEBA types ---
+
+export interface UbaEntity {
+  id: string;
+  entity_type: string;
+  entity_key: string;
+  total_events: number;
+  current_score: number;
+  high_risk: boolean;
+  score_reasons: Record<string, number>;
+  first_seen: string | null;
+  last_seen: string | null;
+  updated_at: string | null;
+  hours_top?: Record<string, number>;
+  event_types_top?: Record<string, number>;
+  geos_top?: Record<string, number>;
+  src_ips_top?: Record<string, number>;
+  user_agents_top?: Record<string, number>;
+}
+
+export interface UbaListResponse {
+  entities: UbaEntity[];
+  high_risk_threshold: number;
+  count: number;
+}
+
+export interface UbaSummary {
+  total_entities: number;
+  high_risk_count: number;
+  high_risk_threshold: number;
+  by_type: Record<string, number>;
+  top_risky: UbaEntity[];
+}
+
+export interface UbaRefreshResponse {
+  entities_updated: number;
+  events_consumed: number;
+  high_risk_count: number;
+}
+
+// --- Case Management types ---
+
+export interface CaseSlaStatus {
+  response_deadline: string;
+  resolution_deadline: string;
+  response_breached: boolean;
+  resolution_breached: boolean;
+  any_breach: boolean;
+  minutes_to_resolution: number;
+}
+
+export interface CaseSummary {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  severity: string;
+  assignee_id: string | null;
+  assignee_username: string | null;
+  incident_ids: string[];
+  tags: string[];
+  resolution: string | null;
+  sla_breached: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  closed_at: string | null;
+  sla?: CaseSlaStatus;
+}
+
+export interface CaseEvidenceItem {
+  id: string;
+  case_id: string;
+  kind: string;
+  title: string;
+  sha256: string | null;
+  extra: Record<string, any>;
+  collected_by: string | null;
+  collected_at: string | null;
+  custody_chain: Array<{
+    actor: string; action: string; ts: string; prev_hash: string; hash: string;
+  }>;
+  content_size: number;
+}
+
+export interface CaseTimelineItem {
+  id: string;
+  ts: string | null;
+  kind: string;
+  actor_username: string | null;
+  message: string;
+  data: Record<string, any>;
+}
+
+export interface CaseStats {
+  total: number;
+  open: number;
+  sla_breached: number;
+  by_status: Record<string, number>;
+  by_priority: Record<string, number>;
+}
+
+// --- Compliance types ---
+
+export interface ComplianceFrameworkInfo {
+  id: string;
+  name: string;
+  version: string;
+  url: string;
+  description: string;
+  controls_count: number;
+}
+
+export interface ComplianceControlReport {
+  id: string;
+  title: string;
+  description: string;
+  mandatory: boolean;
+  status: "covered" | "partial" | "uncovered" | "manual";
+  capabilities: string[];
+  covered_capabilities: string[];
+  missing_capabilities: string[];
+  evidence: Record<string, Array<{ type: string; ref: string }>>;
+}
+
+export interface ComplianceFrameworkReport {
+  framework: { id: string; name: string; version: string; url: string };
+  summary: {
+    controls_total: number;
+    by_status: Record<string, number>;
+    coverage_score: number;
+  };
+  controls: ComplianceControlReport[];
+}
+
+export interface ComplianceGlobalReport {
+  summary: Array<{
+    id: string; name: string;
+    controls_total: number; coverage_score: number;
+    by_status: Record<string, number>;
+  }>;
+  reports: Record<string, ComplianceFrameworkReport>;
+}

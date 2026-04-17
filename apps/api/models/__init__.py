@@ -19,12 +19,17 @@ from apps.api.models.soar import Playbook, PlaybookExecution, PlaybookStepResult
 from apps.api.models.ioc import IOC, IOCRelationship, IOCSighting, ThreatFeed, STIXCollection, STIXObject
 from apps.api.models.devsecops import ScanProject, ScanRun, ScanFinding, QualityGate
 from apps.api.models.pentest_audit import PentestAuditLog
+from apps.api.models.uba import UserBaseline
+from apps.api.models.case import Case, CaseEvidence, CaseTimelineEntry
 
 __all__ = [
     "AlertChannel",
     "AlertRule",
     "AnomalyBaseline",
     "AuditLog",
+    "Case",
+    "CaseEvidence",
+    "CaseTimelineEntry",
     "Event",
     "Finding",
     "IOC",
@@ -50,5 +55,6 @@ __all__ = [
     "ThreatScore",
     "TICache",
     "User",
+    "UserBaseline",
     "WhitelistEntry",
 ]
