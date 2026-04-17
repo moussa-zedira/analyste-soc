@@ -15,6 +15,7 @@ from apps.api.models.user import User
 from apps.api.models.whitelist import WhitelistEntry
 from apps.api.models.ti_cache import TICache
 from apps.api.models.sigma_rule import SigmaRule
+from apps.api.models.sigma import SigmaRuleCache
 from apps.api.models.soar import Playbook, PlaybookExecution, PlaybookStepResult
 from apps.api.models.ioc import IOC, IOCRelationship, IOCSighting, ThreatFeed, STIXCollection, STIXObject
 from apps.api.models.devsecops import ScanProject, ScanRun, ScanFinding, QualityGate
@@ -53,6 +54,7 @@ __all__ = [
     "STIXCollection",
     "STIXObject",
     "SigmaRule",
+    "SigmaRuleCache",
     "ThreatFeed",
     "ThreatScore",
     "TICache",
