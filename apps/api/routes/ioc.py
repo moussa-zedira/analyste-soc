@@ -27,7 +27,7 @@ from apps.api.threat_intel.ioc_manager import (
     bulk_import_text,
     export_stix_bundle,
     export_csv,
-    ioc_stats,
+    get_ioc_stats,
     IOC_TYPES,
     IOC_STATES,
     TLP_LEVELS,
@@ -135,7 +135,7 @@ def get_types():
 
 @router.get("/stats")
 def stats(db: Session = Depends(get_db)):
-    return ioc_stats(db)
+    return get_ioc_stats(db)
 
 
 @router.get("/export/stix")

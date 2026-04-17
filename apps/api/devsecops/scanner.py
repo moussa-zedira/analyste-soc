@@ -20,8 +20,36 @@ from typing import Any, Optional
 import httpx
 import structlog
 
+from apps.api.devsecops import scanner_engines as _engines
+
 logger = logging.getLogger(__name__)
 slog = structlog.get_logger(__name__)
+
+
+def _normalize_findings(items: list) -> list[dict]:
+    """Convert ScanFindingResult instances or dicts to a unified dict shape that
+    works with both ``ScanFindingResult.to_dict()`` consumers and the
+    ``apps.api.routes.devsecops._persist_run`` writer (which reads ``file``/``line``).
+    """
+    out: list[dict] = []
+    for it in items:
+        if isinstance(it, dict):
+            d = dict(it)
+        elif hasattr(it, "to_dict"):
+            d = it.to_dict()
+        else:
+            continue
+        # Aliases so _persist_run finds 'file' and 'line'
+        if "file" not in d:
+            d["file"] = d.get("file_path", "") or ""
+        if "file_path" not in d:
+            d["file_path"] = d.get("file", "") or ""
+        if "line" not in d:
+            d["line"] = d.get("line_number", 0) or 0
+        if "line_number" not in d:
+            d["line_number"] = d.get("line", 0) or 0
+        out.append(d)
+    return out
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # DATA STRUCTURES
@@ -384,12 +412,12 @@ _GENERIC_SECRET_PATTERNS: list[dict] = [
 ]
 
 
-async def run_sast(
+async def _run_sast_regex(
     path: str,
     languages: list[str] | None = None,
     exclude_dirs: list[str] | None = None,
 ) -> list[ScanFindingResult]:
-    """Run SAST scan on a local directory or file."""
+    """Run SAST scan on a local directory or file (regex-based fallback)."""
     findings: list[ScanFindingResult] = []
     target = Path(path)
     exclude = set(exclude_dirs or [".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build"])
@@ -515,13 +543,13 @@ _SECRET_SCAN_EXTENSIONS = {
 }
 
 
-async def run_secret_detection(
+async def _run_secret_detection_regex(
     path: str,
     scan_env_files: bool = True,
     scan_git_history: bool = False,
     exclude_dirs: list[str] | None = None,
 ) -> list[ScanFindingResult]:
-    """Detect secrets in files and optionally in git history."""
+    """Detect secrets in files and optionally in git history (regex fallback)."""
     findings: list[ScanFindingResult] = []
     target = Path(path)
     exclude = set(exclude_dirs or [".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build"])
@@ -793,13 +821,13 @@ def _version_lt(a: str, b: str) -> bool:
         return False
 
 
-async def run_sca(
+async def _run_sca_regex(
     path: str,
     check_vulnerabilities: bool = True,
     check_licenses: bool = True,
     exclude_dirs: list[str] | None = None,
 ) -> list[ScanFindingResult]:
-    """Run Software Composition Analysis on dependency manifests."""
+    """Run Software Composition Analysis on dependency manifests (regex/OSV fallback)."""
     findings: list[ScanFindingResult] = []
     target = Path(path)
     exclude = set(exclude_dirs or [".git", "node_modules", "__pycache__", ".venv", "venv"])
@@ -907,14 +935,14 @@ async def _check_osv(packages: list[dict], ecosystem: str, manifest_path: str) -
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-async def run_dast(
+async def _run_dast_internal(
     target_url: str,
     checks: list[str] | None = None,
     auth: dict[str, str] | None = None,
     timeout: float = 15.0,
     max_pages: int = 50,
 ) -> list[ScanFindingResult]:
-    """Run DAST scan against a live application."""
+    """Run DAST scan against a live application (in-process httpx-based)."""
     findings: list[ScanFindingResult] = []
     all_checks = checks or ["headers", "ssl", "cors", "xss_reflected", "sqli_error", "open_redirect", "info_disclosure"]
 
@@ -1175,11 +1203,11 @@ async def _check_info_disclosure(client: httpx.AsyncClient, url: str) -> list[Sc
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-async def run_container_scan(
+async def _run_container_scan_regex(
     path: str,
     exclude_dirs: list[str] | None = None,
 ) -> list[ScanFindingResult]:
-    """Analyze Dockerfiles and docker-compose files for security issues."""
+    """Analyze Dockerfiles and docker-compose files for security issues (regex fallback)."""
     findings: list[ScanFindingResult] = []
     target = Path(path)
     exclude = set(exclude_dirs or [".git", "node_modules", "__pycache__"])
@@ -1371,11 +1399,11 @@ def _analyze_docker_compose(fpath: Path, base: Path) -> list[ScanFindingResult]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-async def run_iac_scan(
+async def _run_iac_scan_regex(
     path: str,
     exclude_dirs: list[str] | None = None,
 ) -> list[ScanFindingResult]:
-    """Scan Infrastructure as Code files for security misconfigurations."""
+    """Scan Infrastructure as Code files for security misconfigurations (regex fallback)."""
     findings: list[ScanFindingResult] = []
     target = Path(path)
     exclude = set(exclude_dirs or [".git", "node_modules", "__pycache__", ".terraform"])
@@ -1609,31 +1637,31 @@ async def run_full_scan(
     dast_auth: dict[str, str] | None = None,
     languages: list[str] | None = None,
     exclude_dirs: list[str] | None = None,
-) -> dict[str, list[ScanFindingResult]]:
-    """Run all scan types and aggregate results."""
+) -> dict[str, list[dict]]:
+    """Run all scan types and aggregate results (uses real binaries when available)."""
     types = scan_types or ["sast", "sca", "secrets", "container", "iac"]
-    results: dict[str, list[ScanFindingResult]] = {}
+    results: dict[str, list[dict]] = {}
 
     tasks = []
     task_names = []
 
     if "sast" in types:
-        tasks.append(run_sast(path, languages=languages, exclude_dirs=exclude_dirs))
+        tasks.append(run_sast(path, language=languages[0] if languages else None))
         task_names.append("sast")
     if "sca" in types:
-        tasks.append(run_sca(path, exclude_dirs=exclude_dirs))
+        tasks.append(run_sca(path))
         task_names.append("sca")
     if "secrets" in types:
-        tasks.append(run_secret_detection(path, exclude_dirs=exclude_dirs))
+        tasks.append(run_secret_detection(path))
         task_names.append("secrets")
     if "container" in types:
-        tasks.append(run_container_scan(path, exclude_dirs=exclude_dirs))
+        tasks.append(run_container_scan(path))
         task_names.append("container")
     if "iac" in types:
-        tasks.append(run_iac_scan(path, exclude_dirs=exclude_dirs))
+        tasks.append(run_iac_scan(path))
         task_names.append("iac")
     if "dast" in types and dast_target:
-        tasks.append(run_dast(dast_target, auth=dast_auth))
+        tasks.append(run_dast(dast_target, options={"auth": dast_auth} if dast_auth else None))
         task_names.append("dast")
 
     completed = await asyncio.gather(*tasks, return_exceptions=True)
@@ -1645,3 +1673,194 @@ async def run_full_scan(
             results[name] = result
 
     return results
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PUBLIC API — binary-first wrappers with regex fallbacks
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Each public ``run_*`` function:
+#   1. Tries the real binary engine (Semgrep / Bandit / Safety / Gitleaks /
+#      Trivy / Checkov) via ``apps.api.devsecops.scanner_engines``.
+#   2. Falls back to the in-process regex scanner above when the binary is
+#      missing or returns no parsable output.
+#   3. Always returns ``list[dict]`` aligned with ``_persist_run`` in
+#      ``apps/api/routes/devsecops.py``.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+async def run_sast(
+    path: str,
+    language: str | None = None,
+    options: dict | None = None,
+    languages: list[str] | None = None,
+    exclude_dirs: list[str] | None = None,
+) -> list[dict]:
+    """SAST: Semgrep + Bandit (Python) → regex fallback."""
+    options = options or {}
+    langs = languages or ([language] if language else None) or options.get("languages")
+
+    findings: list[dict] = []
+    used_real = False
+
+    semgrep_results = await _engines.semgrep_scan(path)
+    if semgrep_results is not None:
+        findings.extend(semgrep_results)
+        used_real = True
+
+    # Bandit complements Semgrep on Python (or stands alone if Semgrep missing)
+    is_python = (langs is None) or any(str(l).lower() in ("python", "py") for l in (langs or []))
+    if is_python:
+        bandit_results = await _engines.bandit_scan(path)
+        if bandit_results is not None:
+            findings.extend(bandit_results)
+            used_real = True
+
+    if not used_real:
+        slog.info("scan_engine_used", scan="sast", engine="regex_fallback")
+        regex_findings = await _run_sast_regex(path, languages=langs, exclude_dirs=exclude_dirs)
+        findings = _normalize_findings(regex_findings)
+
+    return _normalize_findings(findings)
+
+
+async def run_sca(
+    path: str,
+    options: dict | None = None,
+    check_vulnerabilities: bool = True,
+    check_licenses: bool = True,
+    exclude_dirs: list[str] | None = None,
+) -> list[dict]:
+    """SCA: Safety (Python) + always run the OSV-backed regex engine for cross-ecosystem coverage."""
+    options = options or {}
+
+    findings: list[dict] = []
+    used_real = False
+
+    safety_results = await _engines.safety_scan(path)
+    if safety_results is not None:
+        findings.extend(safety_results)
+        used_real = True
+
+    # Keep the OSV-powered regex pipeline — covers npm/Go/Maven/Gemfile/Cargo
+    regex_findings = await _run_sca_regex(
+        path,
+        check_vulnerabilities=check_vulnerabilities,
+        check_licenses=check_licenses,
+        exclude_dirs=exclude_dirs,
+    )
+    findings.extend(_normalize_findings(regex_findings))
+
+    if not used_real:
+        slog.info("scan_engine_used", scan="sca", engine="regex_fallback+osv")
+
+    return _normalize_findings(findings)
+
+
+async def run_secret_detection(
+    path: str,
+    options: dict | None = None,
+    scan_env_files: bool = True,
+    scan_git_history: bool = False,
+    exclude_dirs: list[str] | None = None,
+) -> list[dict]:
+    """Secrets: Gitleaks → regex fallback. Git-history regex pass kept as bonus."""
+    options = options or {}
+    scan_git_history = options.get("scan_git_history", scan_git_history)
+
+    findings: list[dict] = []
+    used_real = False
+
+    gitleaks_results = await _engines.gitleaks_scan(path)
+    if gitleaks_results is not None:
+        findings.extend(gitleaks_results)
+        used_real = True
+
+    if not used_real:
+        slog.info("scan_engine_used", scan="secrets", engine="regex_fallback")
+        regex_findings = await _run_secret_detection_regex(
+            path,
+            scan_env_files=scan_env_files,
+            scan_git_history=scan_git_history,
+            exclude_dirs=exclude_dirs,
+        )
+        findings.extend(_normalize_findings(regex_findings))
+    elif scan_git_history:
+        # Bonus: still run our git-history regex sweep
+        from pathlib import Path as _P
+        if _P(path).is_dir():
+            git_findings = await _scan_git_history(path)
+            findings.extend(_normalize_findings(git_findings))
+
+    return _normalize_findings(findings)
+
+
+async def run_dast(
+    target: str,
+    options: dict | None = None,
+    checks: list[str] | None = None,
+    auth: dict[str, str] | None = None,
+    timeout: float = 15.0,
+    max_pages: int = 50,
+) -> list[dict]:
+    """DAST: in-process httpx-based scan. (Nuclei integration is a future enhancement.)"""
+    options = options or {}
+    auth = auth or options.get("auth")
+    checks = checks or options.get("checks")
+    timeout = float(options.get("timeout", timeout))
+    max_pages = int(options.get("max_pages", max_pages))
+
+    slog.info("scan_engine_used", scan="dast", engine="builtin_httpx")
+    results = await _run_dast_internal(target, checks=checks, auth=auth, timeout=timeout, max_pages=max_pages)
+    return _normalize_findings(results)
+
+
+async def run_container_scan(
+    target: str,
+    options: dict | None = None,
+    exclude_dirs: list[str] | None = None,
+) -> list[dict]:
+    """Container: Trivy (fs or image) → regex Dockerfile/compose fallback."""
+    options = options or {}
+
+    findings: list[dict] = []
+    used_real = False
+
+    trivy_results = await _engines.trivy_scan(target)
+    if trivy_results is not None:
+        findings.extend(trivy_results)
+        used_real = True
+
+    # Always also lint the Dockerfile/compose with our regex pass (cheap and catches misuses)
+    if Path(target).exists():
+        regex_findings = await _run_container_scan_regex(target, exclude_dirs=exclude_dirs)
+        findings.extend(_normalize_findings(regex_findings))
+
+    if not used_real:
+        slog.info("scan_engine_used", scan="container", engine="regex_fallback")
+
+    return _normalize_findings(findings)
+
+
+async def run_iac_scan(
+    target: str,
+    options: dict | None = None,
+    exclude_dirs: list[str] | None = None,
+) -> list[dict]:
+    """IaC: Checkov → Terraform/K8s/CFN/Ansible regex fallback."""
+    options = options or {}
+
+    findings: list[dict] = []
+    used_real = False
+
+    checkov_results = await _engines.checkov_scan(target)
+    if checkov_results is not None:
+        findings.extend(checkov_results)
+        used_real = True
+
+    if not used_real:
+        slog.info("scan_engine_used", scan="iac", engine="regex_fallback")
+        regex_findings = await _run_iac_scan_regex(target, exclude_dirs=exclude_dirs)
+        findings.extend(_normalize_findings(regex_findings))
+
+    return _normalize_findings(findings)

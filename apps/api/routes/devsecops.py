@@ -15,15 +15,36 @@ from apps.api.db.session import get_db
 from apps.api.security import require_api_key
 from apps.api.models.devsecops import ScanProject, ScanRun, ScanFinding, QualityGate
 from apps.api.devsecops.scanner import (
-    run_sast_scan,
-    run_sca_scan,
-    run_secret_scan,
-    run_dast_scan,
+    run_sast as run_sast_scan,
+    run_sca as run_sca_scan,
+    run_secret_detection as run_secret_scan,
+    run_dast as run_dast_scan,
     run_container_scan,
     run_iac_scan,
 )
 from apps.api.devsecops.sarif import generate_sarif
-from apps.api.devsecops.ci_integrations import generate_ci_config
+from apps.api.devsecops.ci_integrations import (
+    generate_github_actions,
+    generate_gitlab_ci,
+    generate_jenkins_pipeline,
+    generate_azure_devops,
+    generate_circleci,
+)
+
+
+def generate_ci_config(platform: str, scans: list[str], quality_gate: dict | None = None) -> str:
+    p = (platform or "").lower()
+    if p in ("github", "github_actions", "github-actions"):
+        return generate_github_actions(scans, quality_gate)
+    if p in ("gitlab", "gitlab_ci"):
+        return generate_gitlab_ci(scans, quality_gate)
+    if p == "jenkins":
+        return generate_jenkins_pipeline(scans, quality_gate)
+    if p in ("azure", "azure_devops", "azure-devops"):
+        return generate_azure_devops(scans, quality_gate)
+    if p in ("circleci", "circle"):
+        return generate_circleci(scans, quality_gate)
+    raise ValueError(f"Unsupported CI platform: {platform}")
 
 router = APIRouter(prefix="/devsecops", dependencies=[Depends(require_api_key)])
 
