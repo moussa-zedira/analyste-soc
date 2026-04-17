@@ -7,6 +7,11 @@ import logging
 import httpx
 
 from apps.api.threat_intel.base import TIResult
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +28,7 @@ class GreyNoiseProvider:
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key
         self._client = httpx.AsyncClient(timeout=12.0)
+        self._cb = get_circuit_breaker(self.name)
 
     # ------------------------------------------------------------------
     # Rate limiting
@@ -62,12 +68,14 @@ class GreyNoiseProvider:
     # Public API — IP context (full)
     # ------------------------------------------------------------------
 
+    @instrument("greynoise", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
         """Full IP context — classification, actor, tags."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/community/{ip}",
                 headers=self._headers(),
             )
@@ -135,12 +143,14 @@ class GreyNoiseProvider:
     # RIOT check — known benign services
     # ------------------------------------------------------------------
 
+    @instrument("greynoise", "riot_check")
     async def riot_check(self, ip: str) -> dict | None:
         """Check if IP belongs to a known benign service (RIOT dataset)."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/riot/{ip}",
                 headers=self._headers(),
             )
@@ -164,12 +174,14 @@ class GreyNoiseProvider:
     # Noise quick check
     # ------------------------------------------------------------------
 
+    @instrument("greynoise", "noise_check")
     async def noise_check(self, ip: str) -> dict | None:
         """Quick check — is this IP generating internet noise?"""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/noise/quick/{ip}",
                 headers=self._headers(),
             )
@@ -189,12 +201,14 @@ class GreyNoiseProvider:
     # IP context (enterprise — full details)
     # ------------------------------------------------------------------
 
+    @instrument("greynoise", "ip_context")
     async def ip_context(self, ip: str) -> dict | None:
         """Full enterprise context with tags, CVEs, metadata."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/noise/context/{ip}",
                 headers=self._headers(),
             )

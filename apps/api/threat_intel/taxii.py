@@ -19,6 +19,11 @@ from sqlalchemy.orm import Session
 from apps.api.db.session import get_db
 from apps.api.models.ioc import STIXCollection, STIXObject
 from apps.api.security import require_api_key
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 from apps.api.threat_intel.stix import make_bundle, parse_bundle
 
 logger = logging.getLogger(__name__)
@@ -52,6 +57,7 @@ class TAXIIClient:
         self.api_key_header = api_key_header
         self.verify_ssl = verify_ssl
         self.timeout = timeout
+        self._cb = get_circuit_breaker("taxii")
 
     def _build_headers(self) -> dict[str, str]:
         headers: dict[str, str] = {
@@ -67,27 +73,39 @@ class TAXIIClient:
             return httpx.BasicAuth(self.username, self.password)
         return None
 
+    @instrument("taxii", "get")
     async def _get(self, url: str, params: dict | None = None) -> dict | list | None:
-        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout) as client:
-            resp = await client.get(
-                url, headers=self._build_headers(), auth=self._build_auth(), params=params,
-            )
-            if resp.status_code == 200:
-                return resp.json()
-            logger.warning("TAXII GET %s -> %d: %s", url, resp.status_code, resp.text[:200])
+        try:
+            async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout) as client:
+                resp = await self._cb.call(
+                    client.get,
+                    url, headers=self._build_headers(), auth=self._build_auth(), params=params,
+                )
+                if resp.status_code == 200:
+                    return resp.json()
+                logger.warning("TAXII GET %s -> %d: %s", url, resp.status_code, resp.text[:200])
+                return None
+        except CircuitOpenError:
+            logger.warning("TAXII circuit open, skipping GET %s", url)
             return None
 
+    @instrument("taxii", "post")
     async def _post(self, url: str, data: dict) -> dict | None:
-        async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout) as client:
-            resp = await client.post(
-                url,
-                headers=self._build_headers(),
-                auth=self._build_auth(),
-                content=json.dumps(data),
-            )
-            if resp.status_code in (200, 201, 202):
-                return resp.json()
-            logger.warning("TAXII POST %s -> %d: %s", url, resp.status_code, resp.text[:200])
+        try:
+            async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout) as client:
+                resp = await self._cb.call(
+                    client.post,
+                    url,
+                    headers=self._build_headers(),
+                    auth=self._build_auth(),
+                    content=json.dumps(data),
+                )
+                if resp.status_code in (200, 201, 202):
+                    return resp.json()
+                logger.warning("TAXII POST %s -> %d: %s", url, resp.status_code, resp.text[:200])
+                return None
+        except CircuitOpenError:
+            logger.warning("TAXII circuit open, skipping POST %s", url)
             return None
 
     # ── Discovery ──

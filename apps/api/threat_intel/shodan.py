@@ -7,6 +7,11 @@ import logging
 import httpx
 
 from apps.api.threat_intel.base import TIResult
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +27,7 @@ class ShodanProvider:
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key
         self._client = httpx.AsyncClient(timeout=15.0)
+        self._cb = get_circuit_breaker(self.name)
 
     # ------------------------------------------------------------------
     # Rate limiting
@@ -61,12 +67,14 @@ class ShodanProvider:
     # Public API — IP info
     # ------------------------------------------------------------------
 
+    @instrument("shodan", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
         """Retrieve host information for an IP (ports, vulns, location)."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/shodan/host/{ip}",
                 params=self._params(),
             )
@@ -106,6 +114,9 @@ class ShodanProvider:
                     "hostnames": data.get("hostnames", []),
                 },
             )
+        except CircuitOpenError:
+            logger.warning("Shodan circuit open, skipping %s", ip)
+            return None
         except httpx.HTTPStatusError as e:
             logger.warning("Shodan HTTP error for %s: %s", ip, e.response.status_code)
             return None
@@ -117,12 +128,14 @@ class ShodanProvider:
     # Search hosts
     # ------------------------------------------------------------------
 
+    @instrument("shodan", "search_hosts")
     async def search_hosts(self, query: str, page: int = 1) -> dict | None:
         """Search Shodan with a query string (e.g. 'apache country:FR')."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/shodan/host/search",
                 params=self._params(query=query, page=str(page)),
             )
@@ -151,12 +164,14 @@ class ShodanProvider:
     # Exploit search
     # ------------------------------------------------------------------
 
+    @instrument("shodan", "search_exploits")
     async def search_exploits(self, query: str) -> dict | None:
         """Search Shodan exploits database."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"https://exploits.shodan.io/api/search",
                 params=self._params(query=query),
             )
@@ -183,12 +198,14 @@ class ShodanProvider:
     # DNS lookup
     # ------------------------------------------------------------------
 
+    @instrument("shodan", "dns_resolve")
     async def dns_resolve(self, hostnames: list[str]) -> dict | None:
         """Resolve hostnames to IPs via Shodan DNS."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/dns/resolve",
                 params=self._params(hostnames=",".join(hostnames[:10])),
             )
@@ -203,12 +220,14 @@ class ShodanProvider:
     # Honeypot score
     # ------------------------------------------------------------------
 
+    @instrument("shodan", "honeypot_score")
     async def honeypot_score(self, ip: str) -> float | None:
         """Return honeypot probability (0.0 = not, 1.0 = honeypot)."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/labs/honeyscore/{ip}",
                 params=self._params(),
             )

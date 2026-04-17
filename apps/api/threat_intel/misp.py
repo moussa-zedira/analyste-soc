@@ -7,6 +7,11 @@ import logging
 import httpx
 
 from apps.api.threat_intel.base import TIResult
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +27,7 @@ class MISPProvider:
         self._url = url.rstrip("/")
         self._api_key = api_key
         self._client = httpx.AsyncClient(timeout=20.0, verify=verify_ssl)
+        self._cb = get_circuit_breaker(self.name)
 
     # ------------------------------------------------------------------
     # Rate limiting
@@ -65,6 +71,7 @@ class MISPProvider:
     # Public API — IP check
     # ------------------------------------------------------------------
 
+    @instrument("misp", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
         """Search MISP for attributes matching the given IP."""
         result = await self.search_attributes(value=ip, type_attribute="ip-src")
@@ -119,6 +126,7 @@ class MISPProvider:
     # Event search
     # ------------------------------------------------------------------
 
+    @instrument("misp", "search_events")
     async def search_events(
         self,
         value: str | None = None,
@@ -138,7 +146,8 @@ class MISPProvider:
             if tags:
                 body["tags"] = tags
 
-            resp = await self._client.post(
+            resp = await self._cb.call(
+                self._client.post,
                 f"{self._url}/events/restSearch",
                 headers=self._headers(),
                 json=body,
@@ -173,6 +182,7 @@ class MISPProvider:
     # Attribute search
     # ------------------------------------------------------------------
 
+    @instrument("misp", "search_attributes")
     async def search_attributes(
         self,
         value: str | None = None,
@@ -192,7 +202,8 @@ class MISPProvider:
             if category:
                 body["category"] = category
 
-            resp = await self._client.post(
+            resp = await self._cb.call(
+                self._client.post,
                 f"{self._url}/attributes/restSearch",
                 headers=self._headers(),
                 json=body,
@@ -226,12 +237,14 @@ class MISPProvider:
     # Galaxy / cluster lookup
     # ------------------------------------------------------------------
 
+    @instrument("misp", "search_galaxies")
     async def search_galaxies(self, query: str) -> dict | None:
         """Search MISP galaxies and clusters."""
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.post(
+            resp = await self._cb.call(
+                self._client.post,
                 f"{self._url}/galaxies/restSearch",
                 headers=self._headers(),
                 json={"value": query, "returnFormat": "json"},
@@ -261,6 +274,7 @@ class MISPProvider:
     # IOC export
     # ------------------------------------------------------------------
 
+    @instrument("misp", "export_iocs")
     async def export_iocs(
         self,
         event_id: str | None = None,
@@ -280,7 +294,8 @@ class MISPProvider:
             if type_attribute:
                 body["type"] = type_attribute
 
-            resp = await self._client.post(
+            resp = await self._cb.call(
+                self._client.post,
                 f"{self._url}/attributes/restSearch",
                 headers=self._headers(),
                 json=body,

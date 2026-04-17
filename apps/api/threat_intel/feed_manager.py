@@ -22,10 +22,18 @@ from apps.api.threat_intel.ioc_manager import (
     bulk_import_text,
     IOC_TYPES,
 )
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 from apps.api.threat_intel.taxii import TAXIIClient
 from apps.api.threat_intel.stix import parse_bundle
 
 logger = logging.getLogger(__name__)
+
+# Circuit breaker partage pour l'ensemble des polls de feeds.
+_FEED_CB = get_circuit_breaker("feed_manager")
 
 # ---------------------------------------------------------------------------
 # Built-in free feeds
@@ -179,6 +187,7 @@ def delete_feed(db: Session, feed_id: int) -> bool:
 # Feed polling
 # ═══════════════════════════════════════════════════════════════════════════
 
+@instrument("feed_manager", "poll_feed")
 async def poll_feed(db: Session, feed_id: int) -> dict:
     """Poll a feed and import new IOCs. Returns import stats."""
     feed = db.get(ThreatFeed, feed_id)
@@ -264,7 +273,7 @@ async def _poll_taxii(db: Session, feed: ThreatFeed, config: dict, auth_config: 
 async def _poll_stix_url(db: Session, feed: ThreatFeed, config: dict) -> dict:
     """Download a STIX bundle from URL."""
     async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.get(feed.url)
+        resp = await _FEED_CB.call(client.get, feed.url)
         resp.raise_for_status()
         data = resp.json()
 
@@ -274,7 +283,7 @@ async def _poll_stix_url(db: Session, feed: ThreatFeed, config: dict) -> dict:
 async def _poll_csv_url(db: Session, feed: ThreatFeed, config: dict) -> dict:
     """Download CSV and import IOCs."""
     async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.get(feed.url)
+        resp = await _FEED_CB.call(client.get, feed.url)
         resp.raise_for_status()
         text = resp.text
 
@@ -327,7 +336,7 @@ async def _poll_csv_url(db: Session, feed: ThreatFeed, config: dict) -> dict:
 async def _poll_plaintext(db: Session, feed: ThreatFeed, config: dict) -> dict:
     """Download a plain text list (one IOC per line)."""
     async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.get(feed.url)
+        resp = await _FEED_CB.call(client.get, feed.url)
         resp.raise_for_status()
         text = resp.text
 
@@ -360,7 +369,8 @@ async def _poll_plaintext(db: Session, feed: ThreatFeed, config: dict) -> dict:
 async def _poll_threatfox(db: Session, feed: ThreatFeed, config: dict) -> dict:
     """Poll ThreatFox JSON API."""
     async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(
+        resp = await _FEED_CB.call(
+            client.post,
             "https://threatfox-api.abuse.ch/api/v1/",
             json={"query": "get_iocs", "days": 1},
         )
@@ -426,7 +436,8 @@ async def _poll_otx_pulse(db: Session, feed: ThreatFeed, config: dict, auth_conf
         return {"error": "OTX API key required"}
 
     async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.get(
+        resp = await _FEED_CB.call(
+            client.get,
             "https://otx.alienvault.com/api/v1/pulses/subscribed?limit=10",
             headers={"X-OTX-API-KEY": api_key},
         )
@@ -484,7 +495,8 @@ async def _poll_misp(db: Session, feed: ThreatFeed, config: dict, auth_config: d
         return {"error": "MISP API key required"}
 
     async with httpx.AsyncClient(timeout=60.0, verify=config.get("verify_ssl", True)) as client:
-        resp = await client.get(
+        resp = await _FEED_CB.call(
+            client.get,
             f"{feed.url.rstrip('/')}/events/restSearch",
             headers={
                 "Authorization": api_key,

@@ -7,6 +7,11 @@ import logging
 import httpx
 
 from apps.api.threat_intel.base import TIResult
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +27,7 @@ class OTXProvider:
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key
         self._client = httpx.AsyncClient(timeout=10.0)
+        self._cb = get_circuit_breaker(self.name)
 
     async def _check_rate_limit(self) -> bool:
         try:
@@ -50,6 +56,7 @@ class OTXProvider:
         except Exception:
             pass
 
+    @instrument("otx", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
         """Interroge AlienVault OTX pour une IP."""
         if not self._api_key:
@@ -59,7 +66,8 @@ class OTXProvider:
             return None
 
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{API_URL}/{ip}/general",
                 headers={"X-OTX-API-KEY": self._api_key},
             )
@@ -88,6 +96,9 @@ class OTXProvider:
                 total_reports=pulse_count,
                 raw={"pulse_count": pulse_count, "reputation": reputation},
             )
+        except CircuitOpenError:
+            logger.warning("OTX circuit open, skipping %s", ip)
+            return None
         except httpx.HTTPStatusError as e:
             logger.warning("OTX HTTP error for %s: %s", ip, e.response.status_code)
             return None

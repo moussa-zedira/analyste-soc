@@ -7,6 +7,11 @@ import logging
 import httpx
 
 from apps.api.threat_intel.base import TIResult
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +26,7 @@ class URLhausProvider:
 
     def __init__(self) -> None:
         self._client = httpx.AsyncClient(timeout=12.0)
+        self._cb = get_circuit_breaker(self.name)
 
     # ------------------------------------------------------------------
     # Rate limiting (self-imposed)
@@ -57,6 +63,7 @@ class URLhausProvider:
     # Public API — IP check via host lookup
     # ------------------------------------------------------------------
 
+    @instrument("urlhaus", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
         """Lookup an IP/host via URLhaus."""
         result = await self.host_lookup(ip)
@@ -89,12 +96,14 @@ class URLhausProvider:
     # URL lookup
     # ------------------------------------------------------------------
 
+    @instrument("urlhaus", "url_lookup")
     async def url_lookup(self, url: str) -> dict | None:
         """Lookup a specific URL in URLhaus."""
         if not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.post(
+            resp = await self._cb.call(
+                self._client.post,
                 f"{BASE_URL}/url/",
                 data={"url": url},
                 headers={"Accept": "application/json"},
@@ -135,12 +144,14 @@ class URLhausProvider:
     # Host lookup
     # ------------------------------------------------------------------
 
+    @instrument("urlhaus", "host_lookup")
     async def host_lookup(self, host: str) -> dict | None:
         """Lookup a host (IP or domain) in URLhaus."""
         if not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.post(
+            resp = await self._cb.call(
+                self._client.post,
                 f"{BASE_URL}/host/",
                 data={"host": host},
                 headers={"Accept": "application/json"},
@@ -178,6 +189,7 @@ class URLhausProvider:
     # Payload / hash lookup
     # ------------------------------------------------------------------
 
+    @instrument("urlhaus", "payload_lookup")
     async def payload_lookup(self, sha256_hash: str | None = None, md5_hash: str | None = None) -> dict | None:
         """Lookup a malware payload by hash."""
         if not await self._check_rate_limit():
@@ -191,7 +203,8 @@ class URLhausProvider:
             else:
                 return None
 
-            resp = await self._client.post(
+            resp = await self._cb.call(
+                self._client.post,
                 f"{BASE_URL}/payload/",
                 data=body,
                 headers={"Accept": "application/json"},
@@ -233,12 +246,14 @@ class URLhausProvider:
     # Tag search
     # ------------------------------------------------------------------
 
+    @instrument("urlhaus", "tag_lookup")
     async def tag_lookup(self, tag: str) -> dict | None:
         """Search URLhaus by tag (e.g. 'emotet', 'qakbot')."""
         if not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.post(
+            resp = await self._cb.call(
+                self._client.post,
                 f"{BASE_URL}/tag/",
                 data={"tag": tag},
                 headers={"Accept": "application/json"},

@@ -11,6 +11,10 @@ from sqlalchemy.orm import Session
 from apps.api.config import get_settings
 from apps.api.threat_intel.base import TIResult
 from apps.api.threat_intel.cache import get_cached, set_cached
+from apps.api.threat_intel.observability import (
+    instrument,
+    record_result,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +86,7 @@ def get_provider_status() -> list[dict]:
     return all_providers
 
 
+@instrument("enrichment", "lookup_ip")
 async def _lookup_ip(ip: str, db: Session) -> TIResult | None:
     """Lookup une IP via tous les providers, avec cache."""
     providers = _get_providers()
@@ -92,6 +97,11 @@ async def _lookup_ip(ip: str, db: Session) -> TIResult | None:
     for p in providers:
         cached = get_cached(ip, p.name, db)
         if cached is not None:
+            # Compteur de cache hit par provider source.
+            try:
+                record_result(p.name, "cache_hit")
+            except Exception:
+                pass
             return cached
 
     # Query providers
@@ -150,6 +160,7 @@ def enrich_event_sync(event_id: str, db: Session) -> None:
         loop.close()
 
 
+@instrument("enrichment", "lookup_ip_manual")
 async def lookup_ip_manual(ip: str, db: Session) -> dict:
     """Lookup manuel d'une IP — retourne les resultats de tous les providers."""
     providers = _get_providers()
@@ -159,6 +170,10 @@ async def lookup_ip_manual(ip: str, db: Session) -> dict:
         # Check cache
         cached = get_cached(ip, provider.name, db)
         if cached:
+            try:
+                record_result(provider.name, "cache_hit")
+            except Exception:
+                pass
             results.append({
                 "source": cached.source,
                 "risk_score": cached.risk_score,

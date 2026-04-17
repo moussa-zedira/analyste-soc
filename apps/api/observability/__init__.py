@@ -22,6 +22,11 @@ from apps.api.observability.metrics import (
 )
 from apps.api.observability.tracing import setup_tracing
 
+# Force l'import des metriques Threat Intel pour qu'elles soient enregistrees
+# dans le default registry Prometheus (sinon elles n'apparaissent dans
+# /metrics qu'apres le premier appel a un provider).
+from apps.api.threat_intel import observability as _ti_observability  # noqa: F401
+
 __all__ = [
     "incidents_created_total",
     "incidents_transitioned_total",

@@ -8,6 +8,11 @@ from datetime import timedelta
 import httpx
 
 from apps.api.threat_intel.base import TIResult
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +28,7 @@ class AbuseIPDBProvider:
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key
         self._client = httpx.AsyncClient(timeout=10.0)
+        self._cb = get_circuit_breaker(self.name)
 
     async def _check_rate_limit(self) -> bool:
         """Verifie si on a encore du quota."""
@@ -53,6 +59,7 @@ class AbuseIPDBProvider:
         except Exception:
             pass
 
+    @instrument("abuseipdb", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
         """Interroge AbuseIPDB pour une IP."""
         if not self._api_key:
@@ -62,7 +69,8 @@ class AbuseIPDBProvider:
             return None
 
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 API_URL,
                 params={"ipAddress": ip, "maxAgeInDays": "90"},
                 headers={
@@ -88,6 +96,9 @@ class AbuseIPDBProvider:
                 total_reports=total_reports,
                 raw=data,
             )
+        except CircuitOpenError:
+            logger.warning("AbuseIPDB circuit open, skipping %s", ip)
+            return None
         except httpx.HTTPStatusError as e:
             logger.warning("AbuseIPDB HTTP error for %s: %s", ip, e.response.status_code)
             return None

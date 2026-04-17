@@ -7,6 +7,11 @@ import logging
 import httpx
 
 from apps.api.threat_intel.base import TIResult
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +30,7 @@ class VirusTotalProvider:
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key
         self._client = httpx.AsyncClient(timeout=15.0)
+        self._cb = get_circuit_breaker(self.name)
 
     # ------------------------------------------------------------------
     # Rate limiting
@@ -84,6 +90,7 @@ class VirusTotalProvider:
     # Public API — IP
     # ------------------------------------------------------------------
 
+    @instrument("virustotal", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
         """Lookup IP reputation on VirusTotal."""
         if not self._api_key:
@@ -91,7 +98,8 @@ class VirusTotalProvider:
         if not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/ip_addresses/{ip}",
                 headers=self._headers(),
             )
@@ -119,6 +127,9 @@ class VirusTotalProvider:
                 total_reports=stats.get("malicious", 0),
                 raw={"stats": stats, "reputation": reputation, "country": attrs.get("country")},
             )
+        except CircuitOpenError:
+            logger.warning("VirusTotal circuit open, skipping IP %s", ip)
+            return None
         except httpx.HTTPStatusError as e:
             logger.warning("VirusTotal HTTP error for IP %s: %s", ip, e.response.status_code)
             return None
@@ -130,11 +141,13 @@ class VirusTotalProvider:
     # Public API — Domain
     # ------------------------------------------------------------------
 
+    @instrument("virustotal", "check_domain")
     async def check_domain(self, domain: str) -> TIResult | None:
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/domains/{domain}",
                 headers=self._headers(),
             )
@@ -155,6 +168,9 @@ class VirusTotalProvider:
                 total_reports=stats.get("malicious", 0),
                 raw={"stats": stats, "registrar": attrs.get("registrar"), "creation_date": attrs.get("creation_date")},
             )
+        except CircuitOpenError:
+            logger.warning("VirusTotal circuit open, skipping domain %s", domain)
+            return None
         except httpx.HTTPStatusError as e:
             logger.warning("VirusTotal HTTP error for domain %s: %s", domain, e.response.status_code)
             return None
@@ -166,11 +182,13 @@ class VirusTotalProvider:
     # Public API — File hash
     # ------------------------------------------------------------------
 
+    @instrument("virustotal", "check_hash")
     async def check_hash(self, file_hash: str) -> TIResult | None:
         if not self._api_key or not await self._check_rate_limit():
             return None
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/files/{file_hash}",
                 headers=self._headers(),
             )
@@ -198,6 +216,9 @@ class VirusTotalProvider:
                     "size": attrs.get("size"),
                 },
             )
+        except CircuitOpenError:
+            logger.warning("VirusTotal circuit open, skipping hash %s", file_hash)
+            return None
         except httpx.HTTPStatusError as e:
             logger.warning("VirusTotal HTTP error for hash %s: %s", file_hash, e.response.status_code)
             return None
@@ -209,6 +230,7 @@ class VirusTotalProvider:
     # Public API — URL scan
     # ------------------------------------------------------------------
 
+    @instrument("virustotal", "check_url")
     async def check_url(self, url: str) -> TIResult | None:
         """Submit a URL for scanning and retrieve results."""
         if not self._api_key or not await self._check_rate_limit():
@@ -216,7 +238,8 @@ class VirusTotalProvider:
         try:
             import base64
             url_id = base64.urlsafe_b64encode(url.encode()).decode().rstrip("=")
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{BASE_URL}/urls/{url_id}",
                 headers=self._headers(),
             )
@@ -237,6 +260,9 @@ class VirusTotalProvider:
                 total_reports=stats.get("malicious", 0),
                 raw={"stats": stats, "url": attrs.get("url"), "last_http_response_code": attrs.get("last_http_response_code")},
             )
+        except CircuitOpenError:
+            logger.warning("VirusTotal circuit open, skipping URL")
+            return None
         except httpx.HTTPStatusError as e:
             logger.warning("VirusTotal HTTP error for URL: %s", e.response.status_code)
             return None

@@ -7,6 +7,11 @@ import logging
 import httpx
 
 from apps.api.threat_intel.base import TIResult
+from apps.api.threat_intel.observability import (
+    CircuitOpenError,
+    get_circuit_breaker,
+    instrument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +29,7 @@ class CIRCLProvider:
     def __init__(self, username: str = "", password: str = "") -> None:
         self._auth = (username, password) if username and password else None
         self._client = httpx.AsyncClient(timeout=15.0)
+        self._cb = get_circuit_breaker(self.name)
 
     # ------------------------------------------------------------------
     # Rate limiting
@@ -60,6 +66,7 @@ class CIRCLProvider:
     # Public API — IP via passive DNS
     # ------------------------------------------------------------------
 
+    @instrument("circl", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
         """Lookup IP via CIRCL Passive DNS."""
         result = await self.passive_dns(ip)
@@ -88,6 +95,7 @@ class CIRCLProvider:
     # Passive DNS
     # ------------------------------------------------------------------
 
+    @instrument("circl", "passive_dns")
     async def passive_dns(self, indicator: str) -> dict | None:
         """Query CIRCL Passive DNS for an IP or domain."""
         if not await self._check_rate_limit():
@@ -96,7 +104,8 @@ class CIRCLProvider:
             kwargs: dict = {"headers": {"Accept": "application/json"}}
             if self._auth:
                 kwargs["auth"] = self._auth
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{PDNS_URL}/{indicator}",
                 **kwargs,
             )
@@ -131,6 +140,7 @@ class CIRCLProvider:
     # Passive SSL
     # ------------------------------------------------------------------
 
+    @instrument("circl", "passive_ssl")
     async def passive_ssl(self, indicator: str) -> dict | None:
         """Query CIRCL Passive SSL for an IP (certificate history)."""
         if not await self._check_rate_limit():
@@ -139,7 +149,8 @@ class CIRCLProvider:
             kwargs: dict = {"headers": {"Accept": "application/json"}}
             if self._auth:
                 kwargs["auth"] = self._auth
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{PSSL_URL}/{indicator}",
                 **kwargs,
             )
@@ -169,6 +180,7 @@ class CIRCLProvider:
     # Hashlookup
     # ------------------------------------------------------------------
 
+    @instrument("circl", "hash_lookup")
     async def hash_lookup(self, file_hash: str) -> dict | None:
         """Lookup a file hash (MD5 or SHA-1 or SHA-256) in CIRCL hashlookup."""
         if not await self._check_rate_limit():
@@ -187,7 +199,8 @@ class CIRCLProvider:
             return None
 
         try:
-            resp = await self._client.get(
+            resp = await self._cb.call(
+                self._client.get,
                 f"{HASHLOOKUP_URL}/{endpoint}/{file_hash}",
                 headers={"Accept": "application/json"},
             )
