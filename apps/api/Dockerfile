@@ -58,7 +58,7 @@ COPY apps/ apps/
 COPY alembic.ini alembic.ini
 COPY alembic/ alembic/
 
-RUN mkdir -p /app/data /data/geoip /data/models
+RUN mkdir -p /app/data /data/geoip /data/models /data/rag
 
 EXPOSE 8000
 CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

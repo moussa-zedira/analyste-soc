@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -16,7 +16,8 @@ from apps.api.ai.llm_client import (
     llm_status,
     parse_json_response,
 )
-from apps.api.ai.rag import collect_corpus, rag_search, rag_summary
+from apps.api.ai.rag import collect_corpus, get_rag, rag_search, rag_summary
+from apps.api.security import require_admin
 from apps.api.ai.rule_generator import (
     RuleSeed,
     build_sigma_rule,
@@ -152,6 +153,82 @@ def rag_corpus_summary(
 ) -> dict[str, Any]:
     docs = collect_corpus(db, lookback_hours=lookback_hours)
     return rag_summary(docs)
+
+
+# ── RAG vectoriel (FAISS + sentence-transformers + MITRE/CVE/Sigma) ──
+
+
+class RagQueryRequest(BaseModel):
+    text: str
+    k: int = Field(5, ge=1, le=50)
+    filters: dict[str, Any] | None = None
+
+
+class RagRebuildRequest(BaseModel):
+    include_mitre: bool = True
+    include_nvd: bool = True
+    include_sigma: bool = True
+    include_db: bool = False
+    nvd_days: int = Field(30, ge=1, le=120)
+
+
+@router.get("/rag/stats")
+def rag_stats_route() -> dict[str, Any]:
+    """Stats de l'index FAISS persistant : nb docs, sources, taille, last_updated."""
+    return get_rag().stats()
+
+
+@router.post("/rag/query")
+def rag_query_route(req: RagQueryRequest) -> dict[str, Any]:
+    """Recherche semantique sur l'index FAISS (MITRE / CVE / Sigma / DB)."""
+    rag = get_rag()
+    results = rag.query(req.text, k=req.k, filters=req.filters)
+    return {
+        "query": req.text,
+        "k": req.k,
+        "filters": req.filters,
+        "results_count": len(results),
+        "results": results,
+    }
+
+
+def _rebuild_task(req: RagRebuildRequest) -> None:
+    """Tache background : reconstruit l'index FAISS depuis les sources externes.
+
+    Pour DB, on n'ouvre pas de session ici (la tache vit en dehors du request scope).
+    """
+    rag = get_rag()
+    rag.rebuild_from_sources(
+        db=None,
+        include_mitre=req.include_mitre,
+        include_nvd=req.include_nvd,
+        include_sigma=req.include_sigma,
+        include_db=False,  # DB ignoree en background pour eviter les sessions orphelines
+        nvd_days=req.nvd_days,
+    )
+
+
+@router.post("/rag/rebuild", dependencies=[Depends(require_admin)])
+def rag_rebuild_route(
+    req: RagRebuildRequest,
+    background_tasks: BackgroundTasks,
+) -> dict[str, Any]:
+    """Reconstruit l'index FAISS depuis MITRE/NVD/Sigma. Admin only.
+
+    Lance la tache en background (les telechargements peuvent prendre 5+ min).
+    """
+    background_tasks.add_task(_rebuild_task, req)
+    return {
+        "status": "scheduled",
+        "sources": {
+            "mitre": req.include_mitre,
+            "nvd": req.include_nvd,
+            "sigma": req.include_sigma,
+            "db": req.include_db,
+        },
+        "nvd_days": req.nvd_days,
+        "message": "Rebuild lance en background. GET /ai/rag/stats pour suivre l'avancement.",
+    }
 
 
 # ── Rule generator ───────────────────────────────────────────────────
