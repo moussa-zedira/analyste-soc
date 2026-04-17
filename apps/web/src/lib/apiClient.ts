@@ -63,6 +63,10 @@ import type {
   HeadlessAuthAnalysis,
   HeadlessCookie,
   HeadlessLive,
+  CampaignScenarioInfo,
+  CampaignState,
+  CampaignSummary,
+  CampaignEvent,
 } from "./types";
 
 // In the browser we MUST go through the server-side proxy (/api/proxy).
@@ -297,6 +301,59 @@ export function getMitreCoverage(opts?: RequestOptions): Promise<MitreCoverageRe
 /** Recupere une couche compatible MITRE ATT&CK Navigator (v4.5). */
 export function getMitreNavigator(opts?: RequestOptions): Promise<MitreNavigatorLayer> {
   return request<MitreNavigatorLayer>("/detection/mitre/navigator", undefined, opts);
+}
+
+// --- Red Team Campaign Engine (Vague 11) ---
+
+export function listCampaignScenarios(opts?: RequestOptions) {
+  return request<{ scenarios: CampaignScenarioInfo[] }>(
+    "/pentest/campaign/scenarios",
+    undefined,
+    opts,
+  );
+}
+
+export function listCampaignActions(opts?: RequestOptions) {
+  return request<{ actions: string[] }>("/pentest/campaign/actions", undefined, opts);
+}
+
+export function listCampaigns(opts?: RequestOptions) {
+  return request<{ campaigns: CampaignSummary[] }>("/pentest/campaign/", undefined, opts);
+}
+
+export function startCampaign(
+  scenario: string,
+  targetOverride?: string,
+  opts?: RequestOptions,
+) {
+  return request<{ campaign_id: string; scenario: string; target: string; stages: number }>(
+    "/pentest/campaign/start",
+    {
+      method: "POST",
+      body: JSON.stringify({ scenario, target_override: targetOverride }),
+    },
+    opts,
+  );
+}
+
+export function getCampaignState(id: string, opts?: RequestOptions) {
+  return request<CampaignState>(`/pentest/campaign/${id}`, undefined, opts);
+}
+
+export function getCampaignTimeline(id: string, limit = 200, opts?: RequestOptions) {
+  return request<{ campaign_id: string; timeline: CampaignEvent[]; count: number }>(
+    `/pentest/campaign/${id}/timeline?limit=${limit}`,
+    undefined,
+    opts,
+  );
+}
+
+export function cancelCampaign(id: string, opts?: RequestOptions) {
+  return request<{ campaign_id: string; status: string }>(
+    `/pentest/campaign/${id}/cancel`,
+    { method: "POST" },
+    opts,
+  );
 }
 
 // --- Chat ---

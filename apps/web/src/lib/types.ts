@@ -168,6 +168,82 @@ export interface MitreNavigatorLayer {
   gradient: { colors: string[]; minValue: number; maxValue: number };
 }
 
+// --- Red Team Campaign types (Vague 11) ---
+
+export interface CampaignScenarioInfo {
+  file?: string;
+  name?: string;
+  description?: string;
+  target?: string;
+  stages?: number;
+  tags?: string[];
+  mitre_tactics?: string[];
+  error?: string;
+}
+
+export type CampaignStageStatus =
+  | "pending"
+  | "running"
+  | "success"
+  | "failed"
+  | "skipped";
+
+export type CampaignStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface CampaignStageResult {
+  stage_id: string;
+  name: string;
+  action: string;
+  status: CampaignStageStatus;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_ms: number;
+  output: Record<string, unknown>;
+  error: string | null;
+  iocs: Record<string, unknown>[];
+}
+
+export interface CampaignEvent {
+  ts: string;
+  stage_id: string;
+  kind: string;
+  message: string;
+  data: Record<string, unknown>;
+}
+
+export interface CampaignState {
+  id: string;
+  scenario_name: string;
+  target: string;
+  status: CampaignStatus;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_ms: number;
+  progress: number;
+  current_stage: string | null;
+  stages: CampaignStageResult[];
+  timeline: CampaignEvent[];
+  iocs: Record<string, unknown>[];
+  summary: Record<string, unknown>;
+}
+
+export interface CampaignSummary {
+  id: string;
+  scenario_name: string;
+  target: string;
+  status: CampaignStatus;
+  progress: number;
+  current_stage: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  stages_total: number;
+}
+
 // --- Threat Score types ---
 
 export interface ThreatScoreEntry {

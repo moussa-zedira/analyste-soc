@@ -135,6 +135,8 @@ from apps.api.pentest.recon.vuln_scanner import router as pentest_vuln_scanner_r
 from apps.api.pentest.tools.brute import router as pentest_brute_router
 from apps.api.routes.orchestrator import router as orchestrator_router
 from apps.api.routes.orchestrator import ws_router as orchestrator_ws_router
+from apps.api.pentest.campaign.routes import router as campaign_router
+from apps.api.pentest.campaign.routes import ws_router as campaign_ws_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -607,6 +609,10 @@ def create_app() -> FastAPI:
     # ── Pentest Orchestrator ──
     app.include_router(orchestrator_router, tags=["Pentest Orchestrator"])
     app.include_router(orchestrator_ws_router, tags=["Orchestrator WebSocket"])
+
+    # ── Red Team Campaign Engine (Vague 11) ──
+    app.include_router(campaign_router, tags=["Red Team Campaign"])
+    app.include_router(campaign_ws_router, tags=["Red Team Campaign"])
 
     return app
 
