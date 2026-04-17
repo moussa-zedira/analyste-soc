@@ -136,7 +136,38 @@ class Settings(BaseSettings):
         return problems
 
 
+_FILE_BACKED_SECRETS: tuple[str, ...] = (
+    "API_KEY",
+    "JWT_SECRET_KEY",
+    "POSTGRES_PASSWORD",
+    "ABUSEIPDB_API_KEY",
+    "OTX_API_KEY",
+)
+
+
+def _load_file_backed_secrets() -> None:
+    """Convention Docker secrets : si VAR_FILE pointe sur un fichier, lit son contenu
+    et l'expose comme VAR. Permet d'utiliser ``secrets:`` dans docker-compose
+    sans coder en dur les valeurs dans .env.
+    """
+    import os
+    from pathlib import Path
+
+    for name in _FILE_BACKED_SECRETS:
+        file_var = f"{name}_FILE"
+        path = os.environ.get(file_var)
+        if not path:
+            continue
+        try:
+            value = Path(path).read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if value:
+            os.environ[name] = value
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Retourne une instance ``Settings`` mise en cache."""
+    _load_file_backed_secrets()
     return Settings()

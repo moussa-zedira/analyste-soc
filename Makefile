@@ -7,7 +7,8 @@
         lint lint-api lint-web format format-api format-web \
         typecheck test test-api test-integration docker-up docker-down docker-logs \
         monitoring-up monitoring-down monitoring-logs \
-        migrate migrate-create secrets-gen clean
+        migrate migrate-create secrets-gen secrets-init tls-certs \
+        prod-up prod-down backup backup-list restore clean
 
 PY ?= python
 NPM ?= npm
@@ -97,6 +98,29 @@ migrate-create:  ## Create a new Alembic migration (use M="message")
 # ── Secrets ──────────────────────────────────────────────────
 secrets-gen:  ## Generate strong random secrets for .env (prints to stdout)
 	@$(PY) -c "import secrets; print('API_KEY=' + secrets.token_urlsafe(32)); print('JWT_SECRET_KEY=' + secrets.token_urlsafe(48)); print('POSTGRES_PASSWORD=' + secrets.token_urlsafe(20))"
+
+secrets-init:  ## Initialize ./secrets/*.txt files for docker-compose secrets overlay
+	bash scripts/secrets-init.sh
+
+tls-certs:  ## Generate self-signed TLS certs (./certs/) for the TLS overlay
+	bash scripts/tls-certs.sh
+
+# ── Prod-like stack (secrets + TLS overlays) ─────────────────
+prod-up:  ## Bring up base + secrets + TLS overlays
+	docker compose -f docker-compose.yml -f docker-compose.secrets.yml -f docker-compose.tls.yml up -d --build
+
+prod-down:  ## Stop the prod-like stack
+	docker compose -f docker-compose.yml -f docker-compose.secrets.yml -f docker-compose.tls.yml down
+
+# ── Backup / restore Postgres ────────────────────────────────
+backup:  ## Dump Postgres into ./backups/cyberdef-*.dump (custom format)
+	bash scripts/backup.sh
+
+backup-list:  ## List existing backups
+	@ls -lh backups/cyberdef-*.dump 2>/dev/null || echo "no backups yet"
+
+restore:  ## Restore from a dump (use F=path/to/dump)
+	bash scripts/restore.sh "$(F)"
 
 # ── Cleanup ──────────────────────────────────────────────────
 clean:  ## Remove caches and build artifacts

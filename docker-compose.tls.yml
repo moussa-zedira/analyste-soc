@@ -1,0 +1,29 @@
+# Overlay TLS : nginx en frontal, termine HTTPS (443) et redirige HTTP (80).
+# Necessite des certificats dans ./certs/server.crt et ./certs/server.key.
+# Genere via : make tls-certs (self-signed, dev/staging uniquement).
+
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "--quiet", "--tries=1", "--spider", "https://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # On retire l'exposition publique des ports api/web : tout passe par nginx.
+  api:
+    ports: []
+  web:
+    ports: []
