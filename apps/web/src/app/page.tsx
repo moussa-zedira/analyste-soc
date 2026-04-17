@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { WidgetGrid, type WidgetRegistryEntry, type WidgetConfig } from "@/components/dashboard";
 import { runRules } from "@/lib/apiClient";
 import { useWebSocket, type WsMessage } from "@/lib/useWebSocket";
 import type { RulesRunResponse } from "@/lib/types";
+import { HudHeading, HudButton, HudBadge, HudCard } from "@/components/hud";
 
 /* ── Lazy widget imports ── */
 import KPIWidget from "@/components/dashboard/widgets/KPIWidget";
@@ -130,14 +131,13 @@ export default function DashboardPage() {
     >
       {/* HUD Header */}
       <motion.div variants={sectionVariants} className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
-            Command Center
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            THREAT MONITORING // REAL-TIME ANALYSIS
-          </p>
-        </div>
+        <HudHeading
+          level={1}
+          caret
+          subtitle="THREAT MONITORING // REAL-TIME ANALYSIS // SOC COMMAND"
+        >
+          Command Center
+        </HudHeading>
 
         {/* HUD readouts */}
         <div className="hidden lg:flex items-center gap-6">
@@ -165,46 +165,38 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Connection status */}
-          <div className="glass-panel flex items-center gap-2 px-3 py-1.5">
+          <HudBadge tone={connected ? "matrix" : "alert"} glow>
             <span className="relative flex h-2 w-2">
-              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${connected ? "animate-ping bg-cyan-glow" : "bg-red-500"}`} />
-              <span className={`relative inline-flex h-2 w-2 rounded-full ${connected ? "bg-cyan-glow" : "bg-red-500"}`} />
+              <span
+                className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  connected ? "animate-ping bg-matrix-green" : "bg-neon-pink"
+                }`}
+              />
+              <span
+                className={`relative inline-flex h-2 w-2 rounded-full ${
+                  connected ? "bg-matrix-green" : "bg-neon-pink"
+                }`}
+              />
             </span>
-            <span className="text-[10px] tracking-wider text-gray-500">
-              {connected ? "LINKED" : "OFFLINE"}
-            </span>
-          </div>
+            {connected ? "LINKED" : "OFFLINE"}
+          </HudBadge>
 
-          {/* Auto-refresh toggle */}
-          <button
+          <HudButton
+            size="sm"
+            variant={autoRefresh ? "primary" : "ghost"}
             onClick={() => setAutoRefresh((v) => !v)}
-            className={`rounded-md px-3 py-2 text-[10px] font-bold tracking-widest transition-all duration-300 ${
-              autoRefresh
-                ? "border border-cyan-glow/30 bg-cyan-glow/10 text-cyan-glow shadow-cyan-sm"
-                : "border border-gray-700 bg-space-mid/50 text-gray-500"
-            }`}
           >
             {autoRefresh ? "LIVE" : "PAUSED"}
-          </button>
+          </HudButton>
 
-          {/* Analyze button */}
-          <button
+          <HudButton
+            size="md"
+            variant="primary"
+            loading={running}
             onClick={handleAnalyze}
-            disabled={running}
-            className="group relative overflow-hidden rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-5 py-2.5 text-xs font-bold tracking-wider text-cyan-glow transition-all duration-300 hover:bg-cyan-glow/20 hover:shadow-cyan-md active:scale-95 disabled:opacity-50"
           >
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-cyan-glow/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-            {running ? (
-              <span className="flex items-center gap-2">
-                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                SCANNING...
-              </span>
-            ) : "ANALYZE"}
-          </button>
+            {running ? "SCANNING…" : "ANALYZE"}
+          </HudButton>
         </div>
       </motion.div>
 
@@ -212,24 +204,22 @@ export default function DashboardPage() {
       <div className="cyan-line" />
 
       {/* Alerts */}
-      {(runError) && (
-        <motion.div
-          variants={sectionVariants}
-          className="glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400"
-        >
-          <span className="mr-2 text-red-500">&#x25B2;</span>
-          {runError}
+      {runError && (
+        <motion.div variants={sectionVariants}>
+          <HudCard tone="alert" scanlines className="px-4 py-3 text-xs tracking-wide text-neon-pink">
+            <span className="mr-2">&#x25B2;</span>
+            {runError}
+          </HudCard>
         </motion.div>
       )}
 
       {runResult && (
-        <motion.div
-          variants={sectionVariants}
-          className="glass-panel border-cyan-glow/30 px-4 py-3 text-xs tracking-wide text-cyan-glow"
-        >
-          <span className="mr-2">&#x25C6;</span>
-          Analysis complete: {runResult.rules_evaluated} rules evaluated,{" "}
-          {runResult.incidents_created} incidents created.
+        <motion.div variants={sectionVariants}>
+          <HudCard className="px-4 py-3 text-xs tracking-wide text-cyan-glow">
+            <span className="mr-2">&#x25C6;</span>
+            Analysis complete: {runResult.rules_evaluated} rules evaluated,{" "}
+            {runResult.incidents_created} incidents created.
+          </HudCard>
         </motion.div>
       )}
 

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 
 /* Custom property for animated border rotation */
 @property --border-angle {
@@ -15,18 +15,31 @@
   body {
     background: #061320;
     color: #c8e6f0;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'IBM Plex Sans', 'JetBrains Mono', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01', 'tnum';
+  }
+
+  code, pre, kbd, samp, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
 
   *:focus-visible {
-    @apply outline-none ring-2 ring-cyan-glow/50 ring-offset-2 ring-offset-space-deep;
+    @apply outline-none ring-2 ring-cyan-glow/60 ring-offset-2 ring-offset-space-deep;
   }
 
   ::selection {
-    background: rgba(0, 229, 255, 0.2);
+    background: rgba(0, 229, 255, 0.25);
     color: #00E5FF;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -184,6 +197,146 @@
       linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
     background-size: 40px 40px;
+  }
+
+  /* ============================================================== */
+  /*  HUD/Cyberpunk additions — v2 design system                    */
+  /* ============================================================== */
+
+  /* CRT scanlines overlay (apply on top of any panel) */
+  .scanlines {
+    position: relative;
+  }
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 2px,
+      rgba(0, 229, 255, 0.04) 3px,
+      transparent 4px
+    );
+    mix-blend-mode: overlay;
+    opacity: 0.5;
+    z-index: 1;
+  }
+
+  /* Holographic gradient border (purple/cyan/pink shimmer) */
+  .holographic-border {
+    position: relative;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(#0a0e1a, #0a0e1a) padding-box,
+      linear-gradient(135deg, #00E5FF 0%, #A855F7 50%, #FF006E 100%) border-box;
+  }
+  .holographic-border-anim {
+    background-size: 200% 200%;
+    animation: holographic-shift 6s ease-in-out infinite;
+  }
+
+  /* Terminal blinking caret */
+  .terminal-caret::after {
+    content: '▊';
+    color: #00FF41;
+    margin-left: 2px;
+    animation: blink-caret 1.06s steps(2, start) infinite;
+  }
+
+  /* Glitch text effect */
+  .glitch-text {
+    position: relative;
+    display: inline-block;
+    animation: glitch 1.6s infinite;
+  }
+
+  /* Neon variants */
+  .glow-matrix {
+    color: #00FF41;
+    text-shadow: 0 0 6px rgba(0, 255, 65, 0.6), 0 0 16px rgba(0, 255, 65, 0.25);
+  }
+  .glow-pink {
+    color: #FF006E;
+    text-shadow: 0 0 6px rgba(255, 0, 110, 0.6), 0 0 16px rgba(255, 0, 110, 0.25);
+  }
+  .glow-warn {
+    color: #FF9500;
+    text-shadow: 0 0 6px rgba(255, 149, 0, 0.55), 0 0 14px rgba(255, 149, 0, 0.2);
+  }
+
+  /* Severity glow chips (auto via data-severity) */
+  [data-severity-glow="critical"] {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.45), inset 0 0 16px rgba(239, 68, 68, 0.08);
+  }
+  [data-severity-glow="high"] {
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.4), inset 0 0 16px rgba(249, 115, 22, 0.06);
+  }
+  [data-severity-glow="medium"] {
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.35), inset 0 0 14px rgba(234, 179, 8, 0.05);
+  }
+  [data-severity-glow="low"] {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3), inset 0 0 14px rgba(59, 130, 246, 0.05);
+  }
+
+  /* Ticker tape (for live alerts/streams) */
+  .ticker-tape {
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+  }
+  .ticker-tape > .ticker-track {
+    display: inline-flex;
+    gap: 3rem;
+    animation: ticker 30s linear infinite;
+    will-change: transform;
+  }
+  .ticker-tape:hover > .ticker-track {
+    animation-play-state: paused;
+  }
+
+  /* Holographic "panel-deep" — denser OLED variant */
+  .panel-deep {
+    background: linear-gradient(160deg, #0A0A0A 0%, #050505 100%);
+    border: 1px solid rgba(0, 229, 255, 0.18);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel-deep::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.55), transparent);
+  }
+
+  /* Tech corner brackets (LARGER variant for hero/focal panels) */
+  .hud-corners-lg {
+    position: relative;
+  }
+  .hud-corners-lg::before,
+  .hud-corners-lg::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-color: rgba(0, 229, 255, 0.7);
+    border-style: solid;
+    pointer-events: none;
+    filter: drop-shadow(0 0 3px rgba(0, 229, 255, 0.4));
+  }
+  .hud-corners-lg::before {
+    top: -1px; left: -1px;
+    border-width: 2px 0 0 2px;
+  }
+  .hud-corners-lg::after {
+    bottom: -1px; right: -1px;
+    border-width: 0 2px 2px 0;
+  }
+
+  /* Data grid divider (for tables) */
+  .grid-divider > * + * {
+    border-top: 1px solid rgba(0, 229, 255, 0.08);
   }
 }
 
