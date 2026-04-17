@@ -1,14 +1,21 @@
-"""Routes FastAPI : triage LLM, RAG, génération Sigma/Yara."""
+"""Routes FastAPI : triage LLM, RAG, generation Sigma/Yara, cost tracking."""
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api.ai.llm_client import call_llm, llm_status, parse_json_response
+from apps.api.ai.llm_client import (
+    MODEL_PRICING,
+    call,
+    get_daily_cost,
+    llm_status,
+    parse_json_response,
+)
 from apps.api.ai.rag import collect_corpus, rag_search, rag_summary
 from apps.api.ai.rule_generator import (
     RuleSeed,
@@ -21,7 +28,7 @@ from apps.api.ai.triage import (
     TriageInput,
     triage_event,
     triage_incident,
-    triage_input,
+    triage_input_async,
 )
 from apps.api.db.session import get_db
 
@@ -44,13 +51,21 @@ class LlmCallRequest(BaseModel):
 
 
 @router.post("/llm/call")
-def call_raw_llm(req: LlmCallRequest) -> dict[str, Any]:
-    resp = call_llm(req.prompt, system=req.system, max_tokens=req.max_tokens, prefer=req.prefer)
+async def call_raw_llm(req: LlmCallRequest) -> dict[str, Any]:
+    resp = await call(
+        req.prompt,
+        system=req.system,
+        max_tokens=req.max_tokens,
+        prefer=req.prefer,
+        operation="raw",
+    )
     return {
         "text": resp.text,
         "model": resp.model,
         "provider": resp.provider,
         "usage": resp.usage,
+        "latency_ms": resp.latency_ms,
+        "cost_usd": resp.cost_usd,
     }
 
 
@@ -70,7 +85,7 @@ class TriageInlineRequest(BaseModel):
 
 
 @router.post("/triage/inline")
-def triage_inline(req: TriageInlineRequest) -> dict[str, Any]:
+async def triage_inline(req: TriageInlineRequest) -> dict[str, Any]:
     t = TriageInput(
         kind="inline",
         title=req.title,
@@ -82,21 +97,21 @@ def triage_inline(req: TriageInlineRequest) -> dict[str, Any]:
         message=req.message,
         extra=req.extra,
     )
-    return triage_input(t, prefer=req.prefer)
+    return await triage_input_async(t, prefer=req.prefer)
 
 
 @router.post("/triage/event/{event_id}")
-def triage_event_route(event_id: str, prefer: str | None = None, db: Session = Depends(get_db)) -> dict[str, Any]:
+async def triage_event_route(event_id: str, prefer: str | None = None, db: Session = Depends(get_db)) -> dict[str, Any]:
     try:
-        return triage_event(db, event_id, prefer=prefer)
+        return await triage_event(db, event_id, prefer=prefer)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.post("/triage/incident/{incident_id}")
-def triage_incident_route(incident_id: str, prefer: str | None = None, db: Session = Depends(get_db)) -> dict[str, Any]:
+async def triage_incident_route(incident_id: str, prefer: str | None = None, db: Session = Depends(get_db)) -> dict[str, Any]:
     try:
-        return triage_incident(db, incident_id, prefer=prefer)
+        return await triage_incident(db, incident_id, prefer=prefer)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -220,3 +235,27 @@ def rules_from_event(
         prefer=prefer,
     )
     return rules_generate(body)
+
+
+# ── Cost tracking ────────────────────────────────────────────────────
+
+
+@router.get("/cost")
+def ai_cost() -> dict[str, Any]:
+    """Couts LLM : aujourd'hui + 7 derniers jours + pricing de reference."""
+    today = datetime.now(timezone.utc)
+    days: list[dict[str, Any]] = []
+    total_7d = 0.0
+    for i in range(7):
+        day = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        agg = get_daily_cost(day) or {"day": day, "total_usd": 0.0}
+        days.append(agg)
+        total_7d += float(agg.get("total_usd", 0.0) or 0.0)
+    return {
+        "today": days[0] if days else {},
+        "last_7_days": days,
+        "total_usd_7d": round(total_7d, 6),
+        "pricing_usd_per_1m_tokens": {
+            k: {"input": v[0], "output": v[1]} for k, v in MODEL_PRICING.items()
+        },
+    }

@@ -21,8 +21,10 @@ from apps.api.models.devsecops import ScanProject, ScanRun, ScanFinding, Quality
 from apps.api.models.pentest_audit import PentestAuditLog
 from apps.api.models.uba import UserBaseline
 from apps.api.models.case import Case, CaseEvidence, CaseTimelineEntry
+from apps.api.models.ai_cost import AiCostLog
 
 __all__ = [
+    "AiCostLog",
     "AlertChannel",
     "AlertRule",
     "AnomalyBaseline",
