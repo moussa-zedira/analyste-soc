@@ -1727,3 +1727,138 @@ export interface ComplianceGlobalReport {
   }>;
   reports: Record<string, ComplianceFrameworkReport>;
 }
+
+// ─── Vague 13 — Pentest avancé (BloodHound, K8s RBAC, Shellcode) ───────────
+
+// BloodHound
+export interface BloodHoundUser {
+  sid: string;
+  name: string;
+  domain: string;
+  enabled?: boolean;
+  pwd_last_set?: number | null;
+  last_logon?: number | null;
+  admin_count?: boolean;
+  spn?: string[];
+  asrep_roastable?: boolean;
+  unconstrained_delegation?: boolean;
+  member_of?: string[];
+  sessions_on?: string[];
+  aces?: Array<Record<string, unknown>>;
+}
+export interface BloodHoundComputer {
+  sid: string;
+  name: string;
+  domain: string;
+  enabled?: boolean;
+  operating_system?: string | null;
+  unconstrained_delegation?: boolean;
+  has_laps?: boolean;
+  sessions?: string[];
+  local_admins?: string[];
+  rdp_users?: string[];
+  member_of?: string[];
+  aces?: Array<Record<string, unknown>>;
+}
+export interface BloodHoundGroup {
+  sid: string;
+  name: string;
+  domain: string;
+  members?: Array<{ ObjectIdentifier: string; ObjectType: string }>;
+  member_of?: string[];
+  aces?: Array<Record<string, unknown>>;
+}
+export interface BloodHoundDomain {
+  sid: string;
+  name: string;
+  functional_level?: string;
+  trusts?: Array<Record<string, unknown>>;
+  aces?: Array<Record<string, unknown>>;
+}
+export interface BloodHoundExportRequest {
+  domain: BloodHoundDomain;
+  users?: BloodHoundUser[];
+  computers?: BloodHoundComputer[];
+  groups?: BloodHoundGroup[];
+}
+export interface BloodHoundCollection {
+  data: Array<Record<string, unknown>>;
+  meta: { methods: number; type: string; count: number; version: number };
+}
+export interface BloodHoundExportResponse {
+  export_id: string;
+  schema_version: number;
+  collections: Record<string, BloodHoundCollection>;
+  summary: Record<string, number>;
+}
+export interface BloodHoundSchemaInfo {
+  schema_version: number;
+  collections_supported: string[];
+  collections_emitted: string[];
+  spec: string;
+}
+
+// K8s RBAC
+export interface K8sFinding {
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  title: string;
+  detail: string;
+  resource_kind: string;
+  resource_name: string;
+  namespace: string | null;
+  evidence: Record<string, unknown>;
+  remediation: string;
+}
+export interface K8sAuditResult {
+  documents_parsed: number;
+  rbac_documents: number;
+  findings_count: number;
+  by_severity: Record<string, number>;
+  findings: K8sFinding[];
+}
+export interface K8sRbacChecks {
+  dangerous_verbs: Record<string, string>;
+  dangerous_resources: Record<string, string>;
+  checks: string[];
+}
+
+// Shellcode encoder
+export interface ShellcodeEncodeRequest {
+  payload: string;
+  input_encoding?: "hex" | "base64";
+  method: "xor_single" | "xor_multi" | "alphanumeric" | "alphanumeric_decode" | "rot13" | "reverse";
+  key?: string | null;
+  bad_bytes?: string[] | string | null;
+  auto_key?: boolean;
+}
+export interface ShellcodeOutput {
+  length: number;
+  hex: string;
+  escaped_hex: string;
+  base64: string;
+  bytes_summary: string;
+}
+export interface ShellcodeEncodeResponse {
+  method: string;
+  key_used: string | null;
+  input_size: number;
+  output: ShellcodeOutput;
+  bad_bytes_specified: number[];
+  bad_bytes_after_encoding: Array<{ offset: number; byte: number }>;
+  is_safe: boolean;
+}
+export interface ShellcodeBadByteCheck {
+  input_size: number;
+  bad_bytes_specified: number[];
+  occurrences: Array<{ offset: number; byte: number }>;
+  is_safe: boolean;
+}
+export interface ShellcodeNopSledResponse {
+  arch: string;
+  length: number;
+  output: ShellcodeOutput;
+}
+export interface ShellcodeMethods {
+  encoders: Array<{ name: string; description: string }>;
+  archs_for_nop_sled: string[];
+}

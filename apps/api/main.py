@@ -140,6 +140,9 @@ from apps.api.pentest.campaign.routes import ws_router as campaign_ws_router
 from apps.api.uba.routes import router as uba_router
 from apps.api.cases.routes import router as cases_router
 from apps.api.compliance.routes import router as compliance_router
+from apps.api.pentest.post_exploit.bloodhound_export import router as bloodhound_router
+from apps.api.pentest.recon.k8s_rbac import router as k8s_rbac_router
+from apps.api.pentest.exploitation.shellcode_encoder import router as shellcode_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -621,6 +624,11 @@ def create_app() -> FastAPI:
     app.include_router(uba_router, tags=["UEBA"])
     app.include_router(cases_router, tags=["Case Management"])
     app.include_router(compliance_router, tags=["Compliance"])
+
+    # ── Pentest avancé (Vague 13) ──
+    app.include_router(bloodhound_router, tags=["BloodHound Export"])
+    app.include_router(k8s_rbac_router, tags=["K8s Pentest"])
+    app.include_router(shellcode_router, tags=["Shellcode Encoder"])
 
     return app
 

@@ -78,6 +78,16 @@ import type {
   ComplianceFrameworkInfo,
   ComplianceFrameworkReport,
   ComplianceGlobalReport,
+  BloodHoundExportRequest,
+  BloodHoundExportResponse,
+  BloodHoundSchemaInfo,
+  K8sAuditResult,
+  K8sRbacChecks,
+  ShellcodeEncodeRequest,
+  ShellcodeEncodeResponse,
+  ShellcodeBadByteCheck,
+  ShellcodeNopSledResponse,
+  ShellcodeMethods,
 } from "./types";
 
 // In the browser we MUST go through the server-side proxy (/api/proxy).
@@ -2062,4 +2072,46 @@ export function complianceFrameworkReport(fid: string, opts?: RequestOptions): P
 }
 export function complianceGlobalReport(opts?: RequestOptions): Promise<ComplianceGlobalReport> {
   return request<ComplianceGlobalReport>(`/compliance/report`, undefined, opts);
+}
+
+// ─── Vague 13 — BloodHound ─────────────────────────────────────────────────
+export function bloodhoundExport(body: BloodHoundExportRequest, opts?: RequestOptions): Promise<BloodHoundExportResponse> {
+  return request<BloodHoundExportResponse>(`/pentest/bloodhound/export`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function bloodhoundExample(opts?: RequestOptions): Promise<BloodHoundExportResponse> {
+  return request<BloodHoundExportResponse>(`/pentest/bloodhound/example`, { method: "POST" }, opts);
+}
+export function bloodhoundSchema(opts?: RequestOptions): Promise<BloodHoundSchemaInfo> {
+  return request<BloodHoundSchemaInfo>(`/pentest/bloodhound/schema`, undefined, opts);
+}
+
+// ─── Vague 13 — K8s RBAC ───────────────────────────────────────────────────
+export function k8sRbacAudit(manifest: string, target_principal: string | null = null, opts?: RequestOptions): Promise<K8sAuditResult> {
+  return request<K8sAuditResult>(`/pentest/k8s/rbac/audit`, {
+    method: "POST",
+    body: JSON.stringify({ manifest, target_principal }),
+  }, opts);
+}
+export function k8sRbacChecks(opts?: RequestOptions): Promise<K8sRbacChecks> {
+  return request<K8sRbacChecks>(`/pentest/k8s/rbac/checks`, undefined, opts);
+}
+
+// ─── Vague 13 — Shellcode encoder ──────────────────────────────────────────
+export function shellcodeEncode(body: ShellcodeEncodeRequest, opts?: RequestOptions): Promise<ShellcodeEncodeResponse> {
+  return request<ShellcodeEncodeResponse>(`/pentest/shellcode/encode`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function shellcodeBadBytesCheck(payload: string, input_encoding: "hex" | "base64", bad_bytes: string[] | string | null, opts?: RequestOptions): Promise<ShellcodeBadByteCheck> {
+  return request<ShellcodeBadByteCheck>(`/pentest/shellcode/bad-bytes/check`, {
+    method: "POST",
+    body: JSON.stringify({ payload, input_encoding, bad_bytes }),
+  }, opts);
+}
+export function shellcodeNopSled(length: number, arch: string, opts?: RequestOptions): Promise<ShellcodeNopSledResponse> {
+  return request<ShellcodeNopSledResponse>(`/pentest/shellcode/nop-sled`, {
+    method: "POST",
+    body: JSON.stringify({ length, arch }),
+  }, opts);
+}
+export function shellcodeMethods(opts?: RequestOptions): Promise<ShellcodeMethods> {
+  return request<ShellcodeMethods>(`/pentest/shellcode/methods`, undefined, opts);
 }
