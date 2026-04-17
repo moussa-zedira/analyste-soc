@@ -20,6 +20,8 @@ import type {
   LogSourceStatus,
   MLDetectResponse,
   MLModelInfo,
+  MitreCoverageResponse,
+  MitreNavigatorLayer,
   MitreStatsResponse,
   RulesRunResponse,
   ScanHistoryEntry,
@@ -285,6 +287,16 @@ export function injectDemoData(opts?: RequestOptions): Promise<{ events_created:
 /** Recupere les statistiques de couverture MITRE ATT&CK. */
 export function getMitreStats(opts?: RequestOptions): Promise<MitreStatsResponse> {
   return request<MitreStatsResponse>("/stats/mitre", undefined, opts);
+}
+
+/** Recupere la couverture MITRE par tactique (regles vs techniques). */
+export function getMitreCoverage(opts?: RequestOptions): Promise<MitreCoverageResponse> {
+  return request<MitreCoverageResponse>("/detection/mitre/coverage", undefined, opts);
+}
+
+/** Recupere une couche compatible MITRE ATT&CK Navigator (v4.5). */
+export function getMitreNavigator(opts?: RequestOptions): Promise<MitreNavigatorLayer> {
+  return request<MitreNavigatorLayer>("/detection/mitre/navigator", undefined, opts);
 }
 
 // --- Chat ---

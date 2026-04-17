@@ -128,6 +128,46 @@ export interface MitreStatsResponse {
   total_mapped_incidents: number;
 }
 
+// --- MITRE coverage (Vague 8 endpoints) ---
+
+export interface MitreCoverageTechnique {
+  technique_id: string;
+  name: string;
+  rule_id: string;
+}
+
+export interface MitreCoverageTactic {
+  id: string;
+  name: string;
+  techniques: MitreCoverageTechnique[];
+}
+
+export interface MitreCoverageResponse {
+  tactics: MitreCoverageTactic[];
+  totals: {
+    techniques_known: number;
+    techniques_covered: number;
+    rules_mapped: number;
+  };
+}
+
+export interface MitreNavigatorTechnique {
+  techniqueID: string;
+  tactic: string;
+  score: number;
+  comment: string;
+  enabled: boolean;
+}
+
+export interface MitreNavigatorLayer {
+  name: string;
+  versions: { attack: string; navigator: string; layer: string };
+  domain: string;
+  description: string;
+  techniques: MitreNavigatorTechnique[];
+  gradient: { colors: string[]; minValue: number; maxValue: number };
+}
+
 // --- Threat Score types ---
 
 export interface ThreatScoreEntry {
