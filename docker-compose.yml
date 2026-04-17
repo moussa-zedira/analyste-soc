@@ -44,7 +44,9 @@ services:
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-480}
       ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
-      GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
+      GEOIP_DB_PATH: /data/geoip/GeoLite2-City.mmdb
+      ML_MODELS_DIR: /data/models
+      MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
       TRIAGE_ENABLED: ${TRIAGE_ENABLED:-true}
@@ -65,7 +67,8 @@ services:
       PHISHING_SMTP_TLS: ${PHISHING_SMTP_TLS:-true}
       PHISHING_CALLBACK_SERVER: ${PHISHING_CALLBACK_SERVER:-http://localhost:8000}
     volumes:
-      - geoip-data:/app/data
+      - geoip_data:/data/geoip
+      - ml_models:/data/models
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,13 +92,16 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       API_KEY: ${API_KEY:?API_KEY required in .env}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY required in .env}
-      GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
+      GEOIP_DB_PATH: /data/geoip/GeoLite2-City.mmdb
+      ML_MODELS_DIR: /data/models
+      MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-cyberdef-api}
       OTEL_TRACES_SAMPLER_RATIO: ${OTEL_TRACES_SAMPLER_RATIO:-1.0}
     volumes:
-      - geoip-data:/app/data
+      - geoip_data:/data/geoip
+      - ml_models:/data/models
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,9 +120,12 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       API_KEY: ${API_KEY:?API_KEY required in .env}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY required in .env}
-      GEOIP_DB_PATH: /app/data/GeoLite2-City.mmdb
+      GEOIP_DB_PATH: /data/geoip/GeoLite2-City.mmdb
+      ML_MODELS_DIR: /data/models
+      MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
     volumes:
-      - geoip-data:/app/data
+      - geoip_data:/data/geoip
+      - ml_models:/data/models
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,7 +162,7 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: http://api:8000
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://api:8000
       INTERNAL_API_BASE_URL: http://api:8000
@@ -178,4 +187,5 @@ services:
 
 volumes:
   pgdata:
-  geoip-data:
+  geoip_data:
+  ml_models:

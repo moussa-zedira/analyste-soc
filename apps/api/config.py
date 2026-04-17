@@ -51,7 +51,8 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
 
     # GeoIP
-    GEOIP_DB_PATH: str = "/app/data/GeoLite2-City.mmdb"
+    GEOIP_DB_PATH: str = "/data/geoip/GeoLite2-City.mmdb"
+    MAXMIND_LICENSE_KEY: str = ""
 
     # Observabilite — tracing OpenTelemetry (desactive si endpoint vide)
     OTEL_SERVICE_NAME: str = "cyberdef-api"

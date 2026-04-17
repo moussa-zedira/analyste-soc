@@ -9,10 +9,15 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from apps.api.db.session import get_db
-from apps.api.detection.ml_anomaly import get_model_info, train_and_detect
+from apps.api.detection.ml_anomaly import (
+    get_model_info,
+    retrain as retrain_anomaly,
+    train_and_detect,
+)
 from apps.api.detection.ml_classifier import (
     classify_incidents,
     get_classifier_info,
+    retrain as retrain_classifier,
 )
 from apps.api.security import require_api_key
 
@@ -100,3 +105,31 @@ def run_classification(db: Session = Depends(get_db)) -> dict:
 def classifier_info() -> dict:
     """Retourner les informations du classifieur NLP actuel."""
     return get_classifier_info()
+
+
+# ---------------------------------------------------------------------------
+# Forced retrain (persistence joblib) — POST /ml/retrain
+# ---------------------------------------------------------------------------
+
+
+class RetrainResponse(BaseModel):
+    """Reponse du re-entrainement force des deux modeles ML."""
+
+    anomaly: dict
+    classifier: dict
+
+
+@router.post("/retrain", response_model=RetrainResponse)
+def force_retrain(db: Session = Depends(get_db)) -> dict:
+    """Force le re-entrainement et la persistence des modeles ML (anomaly + classifier)."""
+    try:
+        anomaly_info = retrain_anomaly(db)
+    except Exception:
+        logger.exception("Anomaly retrain failed")
+        anomaly_info = {"status": "error"}
+    try:
+        classifier_info_out = retrain_classifier(db)
+    except Exception:
+        logger.exception("Classifier retrain failed")
+        classifier_info_out = {"status": "error"}
+    return {"anomaly": anomaly_info, "classifier": classifier_info_out}
