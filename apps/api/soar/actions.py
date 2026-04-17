@@ -222,115 +222,267 @@ async def check_tor_exit(params: dict, variables: dict, db: Session) -> dict:
 @register_action(
     "block_ip_firewall",
     category="containment",
-    description="Add IP to firewall blocklist",
+    description="Add IP to firewall blocklist (Panorama > iptables > log)",
     params_schema={"ip": "string", "direction": "string (inbound|outbound|both)", "duration_hours": "int"},
 )
 async def block_ip_firewall(params: dict, variables: dict, db: Session) -> dict:
     ip = params.get("ip", "")
     direction = params.get("direction", "both")
     duration = params.get("duration_hours", 24)
-    logger.info("SOAR: Blocking IP %s direction=%s duration=%dh", ip, direction, duration)
-    return {
+    base = {
         "action": "block_ip_firewall",
         "ip": ip,
         "direction": direction,
         "duration_hours": duration,
-        "applied": True,
-        "rule_id": f"soar-fw-{uuid.uuid4().hex[:8]}",
         "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    from apps.api.soar.connectors import PanoramaConnector, IPTablesConnector
+
+    for connector in (PanoramaConnector(), IPTablesConnector()):
+        if not connector.configured:
+            continue
+        try:
+            if connector.name == "palo_alto":
+                res = await connector.block_ip(ip)
+            else:
+                res = await connector.block_ip(ip, direction=direction)
+            if res.get("applied"):
+                return {**base, "applied": True, "connector": connector.name, "result": res}
+            logger.warning("SOAR connector %s not applied: %s", connector.name, res.get("reason"))
+        except Exception as exc:
+            logger.warning("SOAR connector %s failed: %s", connector.name, exc)
+
+    # Fallback : log only (aucun connector configure/disponible)
+    logger.info("SOAR: Blocking IP %s direction=%s duration=%dh (LOG-ONLY)", ip, direction, duration)
+    return {
+        **base,
+        "applied": False,
+        "reason": "no_connector_configured",
+        "rule_id": f"soar-fw-{uuid.uuid4().hex[:8]}",
+        "connector": "log-only",
     }
 
 
 @register_action(
     "isolate_host",
     category="containment",
-    description="Network isolation of a compromised host",
-    params_schema={"hostname": "string", "isolation_level": "string (full|partial)"},
+    description="Network isolation of a compromised host (Defender/Falcon)",
+    params_schema={
+        "hostname": "string",
+        "isolation_level": "string (full|partial)",
+        "device_id": "string (Defender device ID ou Falcon AID)",
+        "platform": "string (defender|falcon|auto)",
+    },
 )
 async def isolate_host(params: dict, variables: dict, db: Session) -> dict:
     hostname = params.get("hostname", "")
     level = params.get("isolation_level", "full")
-    logger.info("SOAR: Isolating host %s (level=%s)", hostname, level)
-    return {
+    device_id = params.get("device_id") or params.get("aid") or hostname
+    platform = (params.get("platform") or "auto").lower()
+
+    base = {
         "action": "isolate_host",
         "hostname": hostname,
         "isolation_level": level,
-        "isolated": True,
+        "device_id": device_id,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+    from apps.api.soar.connectors import DefenderConnector, FalconConnector
+
+    # Selection selon platform
+    if platform == "defender":
+        candidates = [DefenderConnector()]
+    elif platform == "falcon":
+        candidates = [FalconConnector()]
+    else:
+        candidates = [DefenderConnector(), FalconConnector()]
+
+    for connector in candidates:
+        if not connector.configured:
+            continue
+        try:
+            if connector.name == "ms_defender":
+                isolation_type = "Full" if level == "full" else "Selective"
+                res = await connector.isolate_device(device_id, isolation_type=isolation_type)
+            else:  # crowdstrike
+                res = await connector.contain_host(device_id)
+            if res.get("applied"):
+                return {**base, "isolated": True, "connector": connector.name, "result": res}
+            logger.warning("SOAR %s isolate failed: %s", connector.name, res)
+        except Exception as exc:
+            logger.warning("SOAR %s exception: %s", connector.name, exc)
+
+    logger.info("SOAR: Isolating host %s (level=%s) (LOG-ONLY)", hostname, level)
+    return {**base, "isolated": False, "reason": "no_connector_configured", "connector": "log-only"}
 
 
 @register_action(
     "disable_user",
     category="containment",
-    description="Disable user account (AD/local)",
-    params_schema={"username": "string", "reason": "string"},
+    description="Disable user account (LDAP/AD ou AWS DenyAll)",
+    params_schema={
+        "username": "string",
+        "reason": "string",
+        "platform": "string (ldap|aws|auto)",
+    },
 )
 async def disable_user(params: dict, variables: dict, db: Session) -> dict:
     username = params.get("username", "")
     reason = params.get("reason", "SOAR automated response")
-    logger.info("SOAR: Disabling user %s — %s", username, reason)
-    return {
+    platform = (params.get("platform") or "auto").lower()
+
+    base = {
         "action": "disable_user",
         "username": username,
         "reason": reason,
-        "disabled": True,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+    from apps.api.soar.connectors import LDAPConnector, AWSConnector
+
+    if platform == "ldap":
+        candidates = [LDAPConnector()]
+    elif platform == "aws":
+        candidates = [AWSConnector()]
+    else:
+        candidates = [LDAPConnector(), AWSConnector()]
+
+    for connector in candidates:
+        if not connector.configured:
+            continue
+        try:
+            if connector.name == "ldap_ad":
+                res = await connector.disable_user(username)
+            else:  # aws_iam
+                res = await connector.attach_deny_all_policy(username)
+            if res.get("applied"):
+                return {**base, "disabled": True, "connector": connector.name, "result": res}
+            logger.warning("SOAR %s disable_user failed: %s", connector.name, res)
+        except Exception as exc:
+            logger.warning("SOAR %s exception: %s", connector.name, exc)
+
+    logger.info("SOAR: Disabling user %s — %s (LOG-ONLY)", username, reason)
+    return {**base, "disabled": False, "reason_no_apply": "no_connector_configured", "connector": "log-only"}
 
 
 @register_action(
     "revoke_sessions",
     category="containment",
-    description="Force logout / revoke all user sessions",
-    params_schema={"username": "string"},
+    description="Force logout / revoke all user sessions (AWS STS ou LDAP password reset)",
+    params_schema={"username": "string", "platform": "string (aws|ldap|auto)"},
 )
 async def revoke_sessions(params: dict, variables: dict, db: Session) -> dict:
     username = params.get("username", "")
-    logger.info("SOAR: Revoking all sessions for %s", username)
-    return {
+    platform = (params.get("platform") or "auto").lower()
+
+    base = {
         "action": "revoke_sessions",
         "username": username,
-        "sessions_revoked": True,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+    from apps.api.soar.connectors import AWSConnector, LDAPConnector
+
+    if platform == "aws":
+        candidates = [AWSConnector()]
+    elif platform == "ldap":
+        candidates = [LDAPConnector()]
+    else:
+        candidates = [AWSConnector(), LDAPConnector()]
+
+    for connector in candidates:
+        if not connector.configured:
+            continue
+        try:
+            if connector.name == "aws_iam":
+                res = await connector.revoke_sts_sessions(username)
+            else:  # ldap : forcer un changement de password = invalider sessions
+                import secrets
+                temp_pwd = secrets.token_urlsafe(24) + "Aa1!"
+                res = await connector.reset_password(username, temp_pwd)
+                if res.get("applied"):
+                    res["note"] = "Password rotated — sessions invalidated"
+            if res.get("applied"):
+                return {**base, "sessions_revoked": True, "connector": connector.name, "result": res}
+        except Exception as exc:
+            logger.warning("SOAR %s revoke_sessions exception: %s", connector.name, exc)
+
+    logger.info("SOAR: Revoking all sessions for %s (LOG-ONLY)", username)
+    return {**base, "sessions_revoked": False, "reason": "no_connector_configured", "connector": "log-only"}
 
 
 @register_action(
     "quarantine_file",
     category="containment",
-    description="Move suspicious file to quarantine",
-    params_schema={"file_path": "string", "hostname": "string"},
+    description="Move suspicious file to quarantine (Defender StopAndQuarantineFile)",
+    params_schema={
+        "file_path": "string",
+        "hostname": "string",
+        "device_id": "string",
+        "sha1": "string (required for Defender)",
+    },
 )
 async def quarantine_file(params: dict, variables: dict, db: Session) -> dict:
     file_path = params.get("file_path", "")
     hostname = params.get("hostname", "")
-    logger.info("SOAR: Quarantining %s on %s", file_path, hostname)
-    return {
+    device_id = params.get("device_id") or hostname
+    sha1 = params.get("sha1", "")
+
+    base = {
         "action": "quarantine_file",
         "file_path": file_path,
         "hostname": hostname,
-        "quarantined": True,
+        "device_id": device_id,
+        "sha1": sha1,
         "quarantine_id": str(uuid.uuid4()),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+    from apps.api.soar.connectors import DefenderConnector
+
+    defender = DefenderConnector()
+    if defender.configured and sha1 and device_id:
+        try:
+            res = await defender.stop_and_quarantine_file(device_id, sha1)
+            if res.get("applied"):
+                return {**base, "quarantined": True, "connector": defender.name, "result": res}
+            logger.warning("SOAR Defender quarantine failed: %s", res)
+        except Exception as exc:
+            logger.warning("SOAR Defender exception: %s", exc)
+
+    logger.info("SOAR: Quarantining %s on %s (LOG-ONLY)", file_path, hostname)
+    return {**base, "quarantined": False, "reason": "no_connector_configured_or_missing_sha1", "connector": "log-only"}
 
 
 @register_action(
     "block_domain_dns",
     category="containment",
-    description="Add domain to DNS sinkhole",
+    description="Add domain to DNS sinkhole / Panorama FQDN address-group",
     params_schema={"domain": "string"},
 )
 async def block_domain_dns(params: dict, variables: dict, db: Session) -> dict:
     domain = params.get("domain", "")
-    logger.info("SOAR: DNS sinkhole for %s", domain)
-    return {
+    base = {
         "action": "block_domain_dns",
         "domain": domain,
-        "sinkholed": True,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+    from apps.api.soar.connectors import PanoramaConnector
+
+    panorama = PanoramaConnector()
+    if panorama.configured:
+        try:
+            res = await panorama.block_domain(domain)
+            if res.get("applied"):
+                return {**base, "sinkholed": True, "connector": panorama.name, "result": res}
+        except Exception as exc:
+            logger.warning("SOAR Panorama block_domain exception: %s", exc)
+
+    logger.info("SOAR: DNS sinkhole for %s (LOG-ONLY)", domain)
+    return {**base, "sinkholed": False, "reason": "no_connector_configured", "connector": "log-only"}
 
 
 @register_action(
@@ -800,22 +952,57 @@ async def check_url_sandbox(params: dict, variables: dict, db: Session) -> dict:
 @register_action(
     "kill_process",
     category="remediation",
-    description="Terminate a process on a remote host",
-    params_schema={"hostname": "string", "pid": "int", "process_name": "string"},
+    description="Terminate process via Defender Live Response ou Falcon RTR",
+    params_schema={
+        "hostname": "string",
+        "pid": "int",
+        "process_name": "string",
+        "device_id": "string",
+        "platform": "string (defender|falcon|auto)",
+    },
 )
 async def kill_process(params: dict, variables: dict, db: Session) -> dict:
     hostname = params.get("hostname", "")
     pid = params.get("pid", 0)
     process_name = params.get("process_name", "")
-    logger.info("SOAR: Kill process %s (PID %d) on %s", process_name, pid, hostname)
-    return {
+    device_id = params.get("device_id") or params.get("aid") or hostname
+    platform = (params.get("platform") or "auto").lower()
+
+    base = {
         "action": "kill_process",
         "hostname": hostname,
         "pid": pid,
         "process_name": process_name,
-        "killed": True,
+        "device_id": device_id,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+    from apps.api.soar.connectors import DefenderConnector, FalconConnector
+
+    if platform == "defender":
+        candidates = [DefenderConnector()]
+    elif platform == "falcon":
+        candidates = [FalconConnector()]
+    else:
+        candidates = [FalconConnector(), DefenderConnector()]
+
+    for connector in candidates:
+        if not connector.configured:
+            continue
+        try:
+            if connector.name == "crowdstrike":
+                cmd = f"-id {pid}" if pid else f"-name {process_name}"
+                res = await connector.run_rtr_command(device_id, "kill", f"kill {cmd}")
+            else:  # ms_defender
+                args = f"pid={pid}" if pid else f"name={process_name}"
+                res = await connector.run_script(device_id, "kill_process.ps1", args)
+            if res.get("applied"):
+                return {**base, "killed": True, "connector": connector.name, "result": res}
+        except Exception as exc:
+            logger.warning("SOAR %s kill_process exception: %s", connector.name, exc)
+
+    logger.info("SOAR: Kill process %s (PID %d) on %s (LOG-ONLY)", process_name, pid, hostname)
+    return {**base, "killed": False, "reason": "no_connector_configured", "connector": "log-only"}
 
 
 @register_action(
@@ -842,20 +1029,52 @@ async def remove_persistence(params: dict, variables: dict, db: Session) -> dict
 @register_action(
     "rotate_credentials",
     category="remediation",
-    description="Force password reset for user",
-    params_schema={"username": "string", "notify_user": "bool"},
+    description="Force password reset via LDAP/AD",
+    params_schema={"username": "string", "notify_user": "bool", "new_password": "string (optionnel)"},
 )
 async def rotate_credentials(params: dict, variables: dict, db: Session) -> dict:
+    import secrets
     username = params.get("username", "")
     notify = params.get("notify_user", True)
-    logger.info("SOAR: Credential rotation for %s", username)
-    return {
+    new_password = params.get("new_password") or (secrets.token_urlsafe(18) + "Aa1!")
+
+    base = {
         "action": "rotate_credentials",
         "username": username,
-        "rotated": True,
         "notify_user": notify,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+    from apps.api.soar.connectors import LDAPConnector
+
+    ldap = LDAPConnector()
+    if ldap.configured:
+        try:
+            res = await ldap.reset_password(username, new_password)
+            if res.get("applied"):
+                return {
+                    **base,
+                    "rotated": True,
+                    "connector": ldap.name,
+                    "new_password_length": len(new_password),
+                    "result": res,
+                }
+        except Exception as exc:
+            logger.warning("SOAR LDAP reset_password exception: %s", exc)
+
+    logger.info("SOAR: Credential rotation for %s (LOG-ONLY)", username)
+    return {**base, "rotated": False, "reason": "no_connector_configured", "connector": "log-only"}
+
+
+# Alias reset_user_password pour compatibilite avec les playbooks
+@register_action(
+    "reset_user_password",
+    category="remediation",
+    description="Alias de rotate_credentials (LDAP password reset)",
+    params_schema={"username": "string", "new_password": "string (optionnel)"},
+)
+async def reset_user_password(params: dict, variables: dict, db: Session) -> dict:
+    return await rotate_credentials(params, variables, db)
 
 
 @register_action(

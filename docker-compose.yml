@@ -66,9 +66,31 @@ services:
       PHISHING_SMTP_PASS: ${PHISHING_SMTP_PASS:-}
       PHISHING_SMTP_TLS: ${PHISHING_SMTP_TLS:-true}
       PHISHING_CALLBACK_SERVER: ${PHISHING_CALLBACK_SERVER:-http://localhost:8000}
+      # SOAR connectors (tous optionnels — fallback log-only si vides)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-}
+      LDAP_SERVER: ${LDAP_SERVER:-}
+      LDAP_BIND_DN: ${LDAP_BIND_DN:-}
+      LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD:-}
+      LDAP_BASE_DN: ${LDAP_BASE_DN:-}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:-}
+      FALCON_CLIENT_ID: ${FALCON_CLIENT_ID:-}
+      FALCON_CLIENT_SECRET: ${FALCON_CLIENT_SECRET:-}
+      FALCON_BASE_URL: ${FALCON_BASE_URL:-}
+      PANORAMA_HOST: ${PANORAMA_HOST:-}
+      PANORAMA_API_KEY: ${PANORAMA_API_KEY:-}
+      # GoPhish integration (optional — preview-only if not set)
+      GOPHISH_API_URL: ${GOPHISH_API_URL:-}
+      GOPHISH_API_KEY: ${GOPHISH_API_KEY:-}
+      # Pentest safety — whitelist CIDR (comma-separated, ex. "10.0.0.0/8,192.168.0.0/16")
+      PENTEST_ALLOWED_TARGETS: ${PENTEST_ALLOWED_TARGETS:-}
     volumes:
       - geoip_data:/data/geoip
       - ml_models:/data/models
+      - rag_data:/data/rag
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,9 +121,31 @@ services:
       OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-cyberdef-api}
       OTEL_TRACES_SAMPLER_RATIO: ${OTEL_TRACES_SAMPLER_RATIO:-1.0}
+      # SOAR connectors (worker execute les playbooks via Celery)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-}
+      LDAP_SERVER: ${LDAP_SERVER:-}
+      LDAP_BIND_DN: ${LDAP_BIND_DN:-}
+      LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD:-}
+      LDAP_BASE_DN: ${LDAP_BASE_DN:-}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:-}
+      FALCON_CLIENT_ID: ${FALCON_CLIENT_ID:-}
+      FALCON_CLIENT_SECRET: ${FALCON_CLIENT_SECRET:-}
+      FALCON_BASE_URL: ${FALCON_BASE_URL:-}
+      PANORAMA_HOST: ${PANORAMA_HOST:-}
+      PANORAMA_API_KEY: ${PANORAMA_API_KEY:-}
+      # GoPhish integration (optional — preview-only if not set)
+      GOPHISH_API_URL: ${GOPHISH_API_URL:-}
+      GOPHISH_API_KEY: ${GOPHISH_API_KEY:-}
+      # Pentest safety — whitelist CIDR (comma-separated, ex. "10.0.0.0/8,192.168.0.0/16")
+      PENTEST_ALLOWED_TARGETS: ${PENTEST_ALLOWED_TARGETS:-}
     volumes:
       - geoip_data:/data/geoip
       - ml_models:/data/models
+      - rag_data:/data/rag
     depends_on:
       postgres:
         condition: service_healthy
@@ -189,3 +233,4 @@ volumes:
   pgdata:
   geoip_data:
   ml_models:
+  rag_data:

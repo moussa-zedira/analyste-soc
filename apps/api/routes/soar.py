@@ -355,6 +355,27 @@ def list_available_actions():
 
 
 # ---------------------------------------------------------------------------
+# Endpoints: Connectors diagnostic
+# ---------------------------------------------------------------------------
+
+@router.get("/connectors")
+async def list_soar_connectors():
+    """Diagnostic : liste tous les connectors SOAR avec leur etat (configured + available)."""
+    from apps.api.soar.connectors import list_connectors
+
+    result = []
+    for c in list_connectors():
+        info = c.info()
+        try:
+            info["available"] = await c.available() if info["configured"] else False
+        except Exception as exc:
+            info["available"] = False
+            info["available_error"] = str(exc)[:200]
+        result.append(info)
+    return {"connectors": result, "count": len(result)}
+
+
+# ---------------------------------------------------------------------------
 # Endpoints: Executions
 # ---------------------------------------------------------------------------
 

@@ -45,6 +45,8 @@ opentelemetry-instrumentation-httpx>=0.48b0
 
 # Phase 4: Threat Intelligence + SIGMA
 pyyaml>=6.0
+pysigma>=0.11
+pysigma-backend-elasticsearch>=1.1
 
 # Phase 5: Pentest Lab
 curl_cffi>=0.7
@@ -61,3 +63,11 @@ aioftp>=0.22
 
 # Phase 7: Headless Browser Scanning
 playwright>=1.40
+
+# Phase 8: RAG vectoriel (FAISS + sentence-transformers + MITRE/CVE/Sigma KB)
+faiss-cpu>=1.7.4
+sentence-transformers>=2.7
+
+# Phase 9: SOAR Connectors reels (LDAP/AD + AWS IAM — autres via httpx)
+ldap3>=2.9
+boto3>=1.34
