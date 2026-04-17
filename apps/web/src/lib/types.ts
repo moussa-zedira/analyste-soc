@@ -1862,3 +1862,89 @@ export interface ShellcodeMethods {
   encoders: Array<{ name: string; description: string }>;
   archs_for_nop_sled: string[];
 }
+
+// ─── Vague 14 — AI native (Triage, RAG, Rule Generator) ─────────────────────
+
+export interface AiStatus {
+  anthropic_available: boolean;
+  openai_available: boolean;
+  default_provider: "anthropic" | "openai" | "stub";
+  anthropic_model: string;
+  openai_model: string;
+}
+
+export interface LlmCallRequest {
+  prompt: string;
+  system?: string;
+  max_tokens?: number;
+  prefer?: "anthropic" | "openai" | "stub";
+}
+export interface LlmCallResponse {
+  text: string;
+  model: string;
+  provider: string;
+  usage: { input_tokens: number; output_tokens: number };
+}
+
+export interface TriageResult {
+  triage: {
+    verdict: "true_positive" | "false_positive" | "needs_review";
+    confidence: number;
+    severity: "critical" | "high" | "medium" | "low" | "info";
+    summary: string;
+    recommended_actions: string[];
+    mitre_techniques: string[];
+    iocs: string[];
+    root_cause_hypothesis: string;
+    tags: string[];
+  };
+  llm: { provider: string; model: string; usage: { input_tokens: number; output_tokens: number } };
+  raw_text: string;
+}
+
+export interface RagSearchResult {
+  query: string;
+  corpus: { corpus_size: number; by_kind: Record<string, number>; approx_token_count: number };
+  results_count: number;
+  results: Array<{
+    id: string;
+    kind: string;
+    score: number;
+    text_preview: string;
+    metadata: Record<string, unknown>;
+  }>;
+}
+
+export interface RuleGenerateRequest {
+  title: string;
+  severity?: string;
+  event_type?: string;
+  src_ip?: string;
+  dst_ip?: string;
+  username?: string;
+  message?: string;
+  mitre_techniques?: string[];
+  description?: string;
+  enrich_with_llm?: boolean;
+  formats?: string[];
+  prefer?: string;
+}
+export interface RuleGenerateResponse {
+  seed: {
+    title: string;
+    severity?: string | null;
+    event_type?: string | null;
+    mitre_techniques?: string[];
+    description?: string | null;
+  };
+  rules: {
+    sigma?: { rule: Record<string, unknown>; yaml: string };
+    yara?: { text: string };
+  };
+  llm_enrichment?: {
+    provider: string;
+    model: string;
+    usage: { input_tokens: number; output_tokens: number };
+    raw_text: string;
+  };
+}

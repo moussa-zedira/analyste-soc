@@ -88,6 +88,13 @@ import type {
   ShellcodeBadByteCheck,
   ShellcodeNopSledResponse,
   ShellcodeMethods,
+  AiStatus,
+  LlmCallRequest,
+  LlmCallResponse,
+  TriageResult,
+  RagSearchResult,
+  RuleGenerateRequest,
+  RuleGenerateResponse,
 } from "./types";
 
 // In the browser we MUST go through the server-side proxy (/api/proxy).
@@ -2114,4 +2121,47 @@ export function shellcodeNopSled(length: number, arch: string, opts?: RequestOpt
 }
 export function shellcodeMethods(opts?: RequestOptions): Promise<ShellcodeMethods> {
   return request<ShellcodeMethods>(`/pentest/shellcode/methods`, undefined, opts);
+}
+
+// ─── Vague 14 — AI Native ──────────────────────────────────────────────────
+export function aiStatus(opts?: RequestOptions): Promise<AiStatus> {
+  return request<AiStatus>(`/ai/status`, undefined, opts);
+}
+export function aiLlmCall(body: LlmCallRequest, opts?: RequestOptions): Promise<LlmCallResponse> {
+  return request<LlmCallResponse>(`/ai/llm/call`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function aiTriageInline(body: {
+  title: string; severity?: string; src_ip?: string; dst_ip?: string;
+  username?: string; event_type?: string; message?: string; extra?: Record<string, unknown>;
+  prefer?: string;
+}, opts?: RequestOptions): Promise<TriageResult> {
+  return request<TriageResult>(`/ai/triage/inline`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function aiTriageEvent(eventId: string, prefer?: string, opts?: RequestOptions): Promise<TriageResult> {
+  const qs = prefer ? `?prefer=${encodeURIComponent(prefer)}` : "";
+  return request<TriageResult>(`/ai/triage/event/${encodeURIComponent(eventId)}${qs}`, { method: "POST" }, opts);
+}
+export function aiTriageIncident(incidentId: string, prefer?: string, opts?: RequestOptions): Promise<TriageResult> {
+  const qs = prefer ? `?prefer=${encodeURIComponent(prefer)}` : "";
+  return request<TriageResult>(`/ai/triage/incident/${encodeURIComponent(incidentId)}${qs}`, { method: "POST" }, opts);
+}
+export function aiRagSearch(body: {
+  query: string; top_k?: number; min_score?: number;
+  include_events?: boolean; include_incidents?: boolean; lookback_hours?: number;
+}, opts?: RequestOptions): Promise<RagSearchResult> {
+  return request<RagSearchResult>(`/ai/rag/search`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function aiRagCorpus(lookbackHours = 168, opts?: RequestOptions): Promise<{ corpus_size: number; by_kind: Record<string, number>; approx_token_count: number }> {
+  return request(`/ai/rag/corpus?lookback_hours=${lookbackHours}`, undefined, opts);
+}
+export function aiRulesGenerate(body: RuleGenerateRequest, opts?: RequestOptions): Promise<RuleGenerateResponse> {
+  return request<RuleGenerateResponse>(`/ai/rules/generate`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function aiRulesFromEvent(eventId: string, params: { enrich_with_llm?: boolean; formats?: string[]; prefer?: string } = {}, opts?: RequestOptions): Promise<RuleGenerateResponse> {
+  const sp = new URLSearchParams();
+  if (params.enrich_with_llm) sp.set("enrich_with_llm", "true");
+  if (params.prefer) sp.set("prefer", params.prefer);
+  (params.formats ?? []).forEach((f) => sp.append("formats", f));
+  const qs = sp.toString() ? `?${sp.toString()}` : "";
+  return request<RuleGenerateResponse>(`/ai/rules/from-event/${encodeURIComponent(eventId)}${qs}`, { method: "POST" }, opts);
 }

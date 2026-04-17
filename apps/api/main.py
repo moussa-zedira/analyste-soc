@@ -143,6 +143,7 @@ from apps.api.compliance.routes import router as compliance_router
 from apps.api.pentest.post_exploit.bloodhound_export import router as bloodhound_router
 from apps.api.pentest.recon.k8s_rbac import router as k8s_rbac_router
 from apps.api.pentest.exploitation.shellcode_encoder import router as shellcode_router
+from apps.api.ai.routes import router as ai_router
 from apps.api.security import require_api_key
 
 # Import all models so Base.metadata knows about them.
@@ -629,6 +630,9 @@ def create_app() -> FastAPI:
     app.include_router(bloodhound_router, tags=["BloodHound Export"])
     app.include_router(k8s_rbac_router, tags=["K8s Pentest"])
     app.include_router(shellcode_router, tags=["Shellcode Encoder"])
+
+    # ── AI Native (Vague 14) ──
+    app.include_router(ai_router, tags=["AI Native"])
 
     return app
 
