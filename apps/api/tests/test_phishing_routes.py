@@ -6,6 +6,9 @@ Couvre :
 - creation bloquee par status != active (409)
 - endpoint stop (bascule status=stopped + audit)
 - sync engine: dedup + recompte counts + kill-switch propagation
+
+Setup: ecrit directement via SessionLocal (vrai commit visible par l'app)
+plutot que via la fixture db_session qui utilise des savepoints.
 """
 
 from __future__ import annotations
@@ -19,12 +22,11 @@ pytestmark = pytest.mark.integration
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers — commits reels via SessionLocal
 # ---------------------------------------------------------------------------
 
 
 def _make_engagement(
-    db_session,
     *,
     status: str = "active",
     scope: list[str] | None = None,
@@ -32,7 +34,8 @@ def _make_engagement(
     kill_switch: bool = False,
     start_at: datetime | None = None,
     end_at: datetime | None = None,
-):
+) -> str:
+    from apps.api.db.session import SessionLocal
     from apps.api.models.engagement import Engagement
 
     now = datetime.now(timezone.utc)
@@ -51,18 +54,22 @@ def _make_engagement(
         notes="",
         mitre_tactics_authorized=[],
     )
-    db_session.add(eng)
-    db_session.commit()
-    return eng
+    db = SessionLocal()
+    try:
+        db.add(eng)
+        db.commit()
+        return eng.id
+    finally:
+        db.close()
 
 
 def _make_campaign(
-    db_session,
     *,
     engagement_id: str | None = None,
     status: str = "sending",
     gp_id: int | None = 42,
-):
+) -> str:
+    from apps.api.db.session import SessionLocal
     from apps.api.models.phishing import PhishingCampaign
 
     now = datetime.now(timezone.utc)
@@ -87,23 +94,45 @@ def _make_campaign(
         notes="",
         last_synced_at=None,
     )
-    db_session.add(c)
-    db_session.commit()
-    return c
+    db = SessionLocal()
+    try:
+        db.add(c)
+        db.commit()
+        return c.id
+    finally:
+        db.close()
 
 
-def _register_gophish_env(monkeypatch):
-    """Les env vars doivent etre presentes pour que _gophish_or_503 passe."""
-    import os
+def _make_target(campaign_id: str, email: str) -> str:
+    from apps.api.db.session import SessionLocal
+    from apps.api.models.phishing import PhishingTarget
 
+    t = PhishingTarget(
+        id=f"pt-{uuid.uuid4().hex[:8]}",
+        campaign_id=campaign_id,
+        email=email,
+        first_name="",
+        last_name="",
+        position="",
+        group_name="g",
+        last_status="pending",
+    )
+    db = SessionLocal()
+    try:
+        db.add(t)
+        db.commit()
+        return t.id
+    finally:
+        db.close()
+
+
+def _register_gophish_env(monkeypatch) -> None:
     monkeypatch.setenv("GOPHISH_API_URL", "https://gp.test")
     monkeypatch.setenv("GOPHISH_API_KEY", "test-key")
-    # Invalide le cache Settings pour que le lru_cache relise l'env.
     from apps.api.config import get_settings
 
     get_settings.cache_clear()
-    yield_settings = get_settings()
-    assert yield_settings.GOPHISH_API_URL == "https://gp.test"
+    assert get_settings().GOPHISH_API_URL == "https://gp.test"
 
 
 def _login_role(api_client, role: str) -> dict[str, str]:
@@ -129,10 +158,10 @@ def _login_role(api_client, role: str) -> dict[str, str]:
 
 
 def test_create_campaign_blocks_when_kill_switch_active(
-    api_client, db_session, monkeypatch
+    api_client, monkeypatch
 ):
     _register_gophish_env(monkeypatch)
-    eng = _make_engagement(db_session, kill_switch=True)
+    eng_id = _make_engagement(kill_switch=True)
     headers = _login_role(api_client, "lead")
 
     r = api_client.post(
@@ -140,7 +169,7 @@ def test_create_campaign_blocks_when_kill_switch_active(
         headers=headers,
         json={
             "name": "K1",
-            "engagement_id": eng.id,
+            "engagement_id": eng_id,
             "template_name": "T",
             "landing_url": "https://x.test/",
             "smtp_profile": "S",
@@ -158,10 +187,10 @@ def test_create_campaign_blocks_when_kill_switch_active(
 
 
 def test_create_campaign_blocks_when_status_not_active(
-    api_client, db_session, monkeypatch
+    api_client, monkeypatch
 ):
     _register_gophish_env(monkeypatch)
-    eng = _make_engagement(db_session, status="paused")
+    eng_id = _make_engagement(status="paused")
     headers = _login_role(api_client, "lead")
 
     r = api_client.post(
@@ -169,7 +198,7 @@ def test_create_campaign_blocks_when_status_not_active(
         headers=headers,
         json={
             "name": "P1",
-            "engagement_id": eng.id,
+            "engagement_id": eng_id,
             "template_name": "T",
             "landing_url": "https://x.test/",
             "smtp_profile": "S",
@@ -181,11 +210,9 @@ def test_create_campaign_blocks_when_status_not_active(
     assert r.status_code == 409
 
 
-def test_create_campaign_blocks_out_of_scope_emails(
-    api_client, db_session, monkeypatch
-):
+def test_create_campaign_blocks_out_of_scope_emails(api_client, monkeypatch):
     _register_gophish_env(monkeypatch)
-    eng = _make_engagement(db_session, scope=["acme.com"])
+    eng_id = _make_engagement(scope=["acme.com"])
     headers = _login_role(api_client, "lead")
 
     r = api_client.post(
@@ -193,7 +220,7 @@ def test_create_campaign_blocks_out_of_scope_emails(
         headers=headers,
         json={
             "name": "S1",
-            "engagement_id": eng.id,
+            "engagement_id": eng_id,
             "template_name": "T",
             "landing_url": "https://x.test/",
             "smtp_profile": "S",
@@ -211,11 +238,11 @@ def test_create_campaign_blocks_out_of_scope_emails(
 
 
 def test_create_campaign_blocks_when_before_start_date(
-    api_client, db_session, monkeypatch
+    api_client, monkeypatch
 ):
     _register_gophish_env(monkeypatch)
     future = datetime.now(timezone.utc) + timedelta(days=7)
-    eng = _make_engagement(db_session, start_at=future)
+    eng_id = _make_engagement(start_at=future)
     headers = _login_role(api_client, "lead")
 
     r = api_client.post(
@@ -223,7 +250,7 @@ def test_create_campaign_blocks_when_before_start_date(
         headers=headers,
         json={
             "name": "F1",
-            "engagement_id": eng.id,
+            "engagement_id": eng_id,
             "template_name": "T",
             "landing_url": "https://x.test/",
             "smtp_profile": "S",
@@ -241,8 +268,10 @@ def test_create_campaign_blocks_when_before_start_date(
 
 
 def test_stop_campaign_sets_status_stopped_and_audits(
-    api_client, db_session, monkeypatch
+    api_client, monkeypatch
 ):
+    from apps.api.db.session import SessionLocal
+    from apps.api.models.phishing import PhishingCampaign
     from apps.api.pentest.phishing import gophish_client as gc
 
     _register_gophish_env(monkeypatch)
@@ -252,37 +281,37 @@ def test_stop_campaign_sets_status_stopped_and_audits(
 
     monkeypatch.setattr(gc.GoPhishClient, "delete_campaign", _fake_delete)
 
-    eng = _make_engagement(db_session)
-    camp = _make_campaign(db_session, engagement_id=eng.id, status="sending")
+    eng_id = _make_engagement()
+    camp_id = _make_campaign(engagement_id=eng_id, status="sending")
     headers = _login_role(api_client, "lead")
 
     r = api_client.post(
-        f"/redteam/phishing/campaigns/{camp.id}/stop", headers=headers
+        f"/redteam/phishing/campaigns/{camp_id}/stop", headers=headers
     )
-    assert r.status_code == 200
-    assert r.json()["status"] == "stopped"
-    assert r.json()["gophish_deleted"] is True
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "stopped"
+    assert body["gophish_deleted"] is True
 
-    db_session.expire_all()
-    from apps.api.models.phishing import PhishingCampaign
+    db = SessionLocal()
+    try:
+        again = db.get(PhishingCampaign, camp_id)
+        assert again.status == "stopped"
+        assert again.completed_at is not None
+    finally:
+        db.close()
 
-    again = db_session.get(PhishingCampaign, camp.id)
-    assert again.status == "stopped"
-    assert again.completed_at is not None
 
-
-def test_stop_campaign_noop_when_already_completed(
-    api_client, db_session, monkeypatch
-):
+def test_stop_campaign_noop_when_already_completed(api_client, monkeypatch):
     _register_gophish_env(monkeypatch)
-    eng = _make_engagement(db_session)
-    camp = _make_campaign(db_session, engagement_id=eng.id, status="completed")
+    eng_id = _make_engagement()
+    camp_id = _make_campaign(engagement_id=eng_id, status="completed")
     headers = _login_role(api_client, "lead")
 
     r = api_client.post(
-        f"/redteam/phishing/campaigns/{camp.id}/stop", headers=headers
+        f"/redteam/phishing/campaigns/{camp_id}/stop", headers=headers
     )
-    assert r.status_code == 200
+    assert r.status_code == 200, r.text
     assert r.json()["status"] == "noop"
 
 
@@ -291,34 +320,19 @@ def test_stop_campaign_noop_when_already_completed(
 # ---------------------------------------------------------------------------
 
 
-def test_sync_campaign_dedups_events_and_recomputes_counts(
-    db_session, monkeypatch
-):
+def test_sync_campaign_dedups_events_and_recomputes_counts(monkeypatch):
     import asyncio
 
-    from apps.api.models.phishing import (
-        PhishingResult,
-        PhishingTarget,
-    )
+    from apps.api.db.session import SessionLocal
+    from apps.api.models.phishing import PhishingCampaign, PhishingResult
     from apps.api.pentest.phishing import gophish_client as gc
     from apps.api.pentest.phishing.sync import sync_campaign
 
     _register_gophish_env(monkeypatch)
 
-    eng = _make_engagement(db_session)
-    camp = _make_campaign(db_session, engagement_id=eng.id, gp_id=77)
-    t = PhishingTarget(
-        id=f"pt-{uuid.uuid4().hex[:6]}",
-        campaign_id=camp.id,
-        email="alice@acme.com",
-        first_name="A",
-        last_name="",
-        position="",
-        group_name="g",
-        last_status="pending",
-    )
-    db_session.add(t)
-    db_session.commit()
+    eng_id = _make_engagement()
+    camp_id = _make_campaign(engagement_id=eng_id, gp_id=77)
+    _make_target(camp_id, "alice@acme.com")
 
     timeline = [
         {
@@ -346,45 +360,48 @@ def test_sync_campaign_dedups_events_and_recomputes_counts(
 
     monkeypatch.setattr(gc.GoPhishClient, "get_campaign_results", _fake_results)
 
-    res1 = asyncio.run(sync_campaign(db_session, camp.id))
-    assert res1["status"] == "ok"
-    assert res1["new_events"] == 3
+    db = SessionLocal()
+    try:
+        res1 = asyncio.run(sync_campaign(db, camp_id))
+        assert res1["status"] == "ok"
+        assert res1["new_events"] == 3
 
-    # 2e sync: idempotent, 0 nouveau
-    res2 = asyncio.run(sync_campaign(db_session, camp.id))
-    assert res2["new_events"] == 0
+        res2 = asyncio.run(sync_campaign(db, camp_id))
+        assert res2["new_events"] == 0
+    finally:
+        db.close()
 
-    db_session.expire_all()
-    from apps.api.models.phishing import PhishingCampaign
+    db = SessionLocal()
+    try:
+        c = db.get(PhishingCampaign, camp_id)
+        assert c.sent_count == 1
+        assert c.opened_count == 1
+        assert c.clicked_count == 1
+        assert c.submitted_count == 0
 
-    c = db_session.get(PhishingCampaign, camp.id)
-    assert c.sent_count == 1
-    assert c.opened_count == 1
-    assert c.clicked_count == 1
-    assert c.submitted_count == 0
-
-    events = (
-        db_session.query(PhishingResult)
-        .filter_by(campaign_id=camp.id)
-        .all()
-    )
-    assert len(events) == 3
-    opened = [e for e in events if e.event_type == "email_opened"][0]
-    assert opened.ip_address == "1.2.3.4"
-    assert opened.user_agent == "ua/1"
+        events = (
+            db.query(PhishingResult).filter_by(campaign_id=camp_id).all()
+        )
+        assert len(events) == 3
+        opened = [e for e in events if e.event_type == "email_opened"][0]
+        assert opened.ip_address == "1.2.3.4"
+        assert opened.user_agent == "ua/1"
+    finally:
+        db.close()
 
 
-def test_sync_all_enforces_kill_switch(db_session, monkeypatch):
+def test_sync_all_enforces_kill_switch(monkeypatch):
     import asyncio
 
+    from apps.api.db.session import SessionLocal
     from apps.api.models.phishing import PhishingCampaign
     from apps.api.pentest.phishing import gophish_client as gc
     from apps.api.pentest.phishing.sync import sync_all_active_campaigns
 
     _register_gophish_env(monkeypatch)
 
-    eng = _make_engagement(db_session, kill_switch=True)
-    camp = _make_campaign(db_session, engagement_id=eng.id, status="sending")
+    eng_id = _make_engagement(kill_switch=True)
+    camp_id = _make_campaign(engagement_id=eng_id, status="sending", gp_id=88)
 
     deleted: list[int] = []
 
@@ -398,10 +415,18 @@ def test_sync_all_enforces_kill_switch(db_session, monkeypatch):
     monkeypatch.setattr(gc.GoPhishClient, "delete_campaign", _fake_delete)
     monkeypatch.setattr(gc.GoPhishClient, "get_campaign_results", _fake_results)
 
-    res = asyncio.run(sync_all_active_campaigns(db_session))
-    assert res["killed"] == 1
-    assert deleted == [camp.gophish_campaign_id]
+    db = SessionLocal()
+    try:
+        res = asyncio.run(sync_all_active_campaigns(db))
+    finally:
+        db.close()
 
-    db_session.expire_all()
-    c = db_session.get(PhishingCampaign, camp.id)
-    assert c.status == "stopped"
+    assert res["killed"] == 1
+    assert deleted == [88]
+
+    db = SessionLocal()
+    try:
+        c = db.get(PhishingCampaign, camp_id)
+        assert c.status == "stopped"
+    finally:
+        db.close()
