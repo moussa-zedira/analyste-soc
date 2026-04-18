@@ -73,6 +73,24 @@ async def async_dispatch_alert(incident_data: dict) -> list[dict[str, Any]]:
     db = SessionLocal()
     results: list[dict[str, Any]] = []
     try:
+        from apps.api.alerting.dedup import check_and_record
+
+        try:
+            suppress, fp_row = check_and_record(db, incident_data)
+        except Exception:
+            logger.exception("dedup_check_failed")
+            suppress, fp_row = False, None
+
+        if suppress:
+            logger.info(
+                "alert_deduped",
+                extra={"fingerprint": getattr(fp_row, "fingerprint", None),
+                       "count": getattr(fp_row, "count", None)},
+            )
+            return [{"status": "deduped",
+                     "fingerprint": getattr(fp_row, "fingerprint", None),
+                     "count": getattr(fp_row, "count", None)}]
+
         channels = db.query(AlertChannel).filter(AlertChannel.enabled.is_(True)).all()
         incident_severity = incident_data.get("severity", "low")
         incident_rank = SEVERITY_RANK.get(incident_severity, 0)

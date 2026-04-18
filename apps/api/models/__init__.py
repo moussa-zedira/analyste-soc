@@ -1,6 +1,7 @@
 """SQLAlchemy ORM models for the Cyber Defense Dashboard."""
 
 from apps.api.models.alert_config import AlertChannel, AlertRule
+from apps.api.models.alert_dedup import AlertFingerprint
 from apps.api.models.anomaly_baseline import AnomalyBaseline
 from apps.api.models.audit_log import AuditLog
 from apps.api.models.event import Event
@@ -32,6 +33,7 @@ from apps.api.models.compliance import (
 __all__ = [
     "AiCostLog",
     "AlertChannel",
+    "AlertFingerprint",
     "AlertRule",
     "AnomalyBaseline",
     "AuditLog",

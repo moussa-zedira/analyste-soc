@@ -399,3 +399,48 @@ def delete_rule(
         raise HTTPException(status_code=404, detail="Alert rule not found")
     db.delete(rule)
     db.commit()
+
+
+@router.get("/dedup/fingerprints")
+def list_fingerprints(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Liste les fingerprints d'alertes recentes (dedup)."""
+    from apps.api.alerting.dedup import list_recent
+
+    rows = list_recent(db, limit=limit)
+    return {
+        "count": len(rows),
+        "items": [
+            {
+                "fingerprint": r.fingerprint,
+                "rule_id": r.rule_id,
+                "entity_key": r.entity_key,
+                "severity": r.severity,
+                "first_seen": r.first_seen.isoformat() if r.first_seen else None,
+                "last_seen": r.last_seen.isoformat() if r.last_seen else None,
+                "count": r.count,
+                "suppressed_until": r.suppressed_until.isoformat() if r.suppressed_until else None,
+                "last_incident_id": r.last_incident_id,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.delete(
+    "/dedup/fingerprints/{fingerprint}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(RoleChecker("admin"))],
+)
+def reset_fingerprint(
+    fingerprint: str,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Annule la suppression d'un fingerprint (force le re-envoi)."""
+    from apps.api.alerting.dedup import reset_fingerprint as reset_fn
+
+    if not reset_fn(db, fingerprint):
+        raise HTTPException(status_code=404, detail="Fingerprint not found")
+    return {"status": "reset", "fingerprint": fingerprint}
