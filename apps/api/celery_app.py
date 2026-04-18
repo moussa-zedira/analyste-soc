@@ -16,7 +16,12 @@ celery = Celery(
     "siem",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["apps.api.tasks", "apps.api.soar.tasks", "apps.api.uba.tasks"],
+    include=[
+        "apps.api.tasks",
+        "apps.api.soar.tasks",
+        "apps.api.uba.tasks",
+        "apps.api.integrations.tasks",
+    ],
 )
 
 celery.conf.update(
@@ -103,5 +108,9 @@ celery.conf.beat_schedule = {
     "refresh-ti-cache-every-hour": {
         "task": "apps.api.tasks.task_refresh_ti_cache",
         "schedule": 3600.0,  # every 1 hour
+    },
+    "sync-outbound-tickets-every-hour": {
+        "task": "apps.api.integrations.tasks.sync_all_outbound_tickets_task",
+        "schedule": 3600.0,
     },
 }

@@ -634,6 +634,14 @@ def create_app() -> FastAPI:
     # ── AI Native (Vague 14) ──
     app.include_router(ai_router, tags=["AI Native"])
 
+    # ── SSO OIDC (V4.2) ──
+    from apps.api.routes.sso import router as sso_router
+    app.include_router(sso_router)
+
+    # ── Outbound Integrations (V4.1) — Jira/ServiceNow/Linear/GitHub ──
+    from apps.api.routes.integrations import router as integrations_router
+    app.include_router(integrations_router, tags=["Outbound Integrations"])
+
     return app
 
 

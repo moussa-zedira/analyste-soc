@@ -29,6 +29,8 @@ from apps.api.models.compliance import (
     ComplianceAttestation,
     ComplianceRemediation,
 )
+from apps.api.models.integrations import IncidentTicket, OutboundIntegration
+from apps.api.models.sso import SSOProvider, SSOSession
 
 __all__ = [
     "AiCostLog",
@@ -50,6 +52,8 @@ __all__ = [
     "IOCSighting",
     "Incident",
     "IncidentEvent",
+    "IncidentTicket",
+    "OutboundIntegration",
     "PentestAuditLog",
     "Playbook",
     "PlaybookExecution",
@@ -61,6 +65,8 @@ __all__ = [
     "ScanProject",
     "ScanResult",
     "ScanRun",
+    "SSOProvider",
+    "SSOSession",
     "STIXCollection",
     "STIXObject",
     "SigmaRule",

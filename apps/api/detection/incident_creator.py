@@ -149,21 +149,29 @@ def create_incident(db: Session, rule: Rule, match: RuleMatch) -> bool:
         })
 
         # Dispatch alerts via Celery (non-blocking)
+        incident_payload = {
+            "id": incident_id,
+            "title": incident.title,
+            "severity": incident.severity,
+            "description": incident.description,
+            "rule_id": rule.id,
+            "entity_key": entity_key,
+            "status": "open",
+            "created_at": now.isoformat(),
+        }
         try:
             from apps.api.tasks import task_send_alert
 
-            task_send_alert.delay({
-                "id": incident_id,
-                "title": incident.title,
-                "severity": incident.severity,
-                "description": incident.description,
-                "rule_id": rule.id,
-                "entity_key": entity_key,
-                "status": "open",
-                "created_at": now.isoformat(),
-            })
+            task_send_alert.delay(incident_payload)
         except Exception:
             logger.debug("Celery alert dispatch skipped (worker not available)")
+
+        try:
+            from apps.api.integrations.tasks import dispatch_incident_outbound_task
+
+            dispatch_incident_outbound_task.delay(incident_payload)
+        except Exception:
+            logger.debug("Celery outbound dispatch skipped (worker not available)")
     except Exception:
         logger.exception(
             "Failed to create incident: rule=%s key=%s",
