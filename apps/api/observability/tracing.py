@@ -95,6 +95,84 @@ def setup_tracing(app: "FastAPI") -> bool:
     return True
 
 
+def get_tracer(name: str = "cyberdef"):
+    """Retourne un tracer OTel. No-op si OTel desactive."""
+    try:
+        from opentelemetry import trace
+        return trace.get_tracer(name)
+    except ImportError:
+        return _NoopTracer()
+
+
+class _NoopSpan:
+    def __enter__(self): return self
+    def __exit__(self, *args): return False
+    def set_attribute(self, *args, **kwargs): pass
+    def set_status(self, *args, **kwargs): pass
+    def record_exception(self, *args, **kwargs): pass
+    def add_event(self, *args, **kwargs): pass
+
+
+class _NoopTracer:
+    def start_as_current_span(self, *args, **kwargs):
+        return _NoopSpan()
+
+
+def traced(name: str | None = None, *, attributes: dict | None = None):
+    """Decorateur span pour fonctions sync ou async.
+
+    Capture exceptions et marque le span en erreur. Le name par defaut
+    est `module.qualname` de la fonction.
+    """
+    import functools
+    import inspect
+
+    def decorator(fn):
+        span_name = name or f"{fn.__module__}.{fn.__qualname__}"
+        is_async = inspect.iscoroutinefunction(fn)
+
+        if is_async:
+            @functools.wraps(fn)
+            async def awrap(*args, **kwargs):
+                tracer = get_tracer()
+                with tracer.start_as_current_span(span_name) as span:
+                    if attributes:
+                        for k, v in attributes.items():
+                            span.set_attribute(k, v)
+                    try:
+                        return await fn(*args, **kwargs)
+                    except Exception as exc:
+                        try:
+                            span.record_exception(exc)
+                            from opentelemetry.trace import Status, StatusCode
+                            span.set_status(Status(StatusCode.ERROR, str(exc)))
+                        except Exception:
+                            pass
+                        raise
+            return awrap
+
+        @functools.wraps(fn)
+        def swrap(*args, **kwargs):
+            tracer = get_tracer()
+            with tracer.start_as_current_span(span_name) as span:
+                if attributes:
+                    for k, v in attributes.items():
+                        span.set_attribute(k, v)
+                try:
+                    return fn(*args, **kwargs)
+                except Exception as exc:
+                    try:
+                        span.record_exception(exc)
+                        from opentelemetry.trace import Status, StatusCode
+                        span.set_status(Status(StatusCode.ERROR, str(exc)))
+                    except Exception:
+                        pass
+                    raise
+        return swrap
+
+    return decorator
+
+
 def setup_celery_tracing() -> bool:
     """Variante worker : pas de FastAPI, juste Celery + SQLAlchemy + Redis."""
     global _INITIALISED

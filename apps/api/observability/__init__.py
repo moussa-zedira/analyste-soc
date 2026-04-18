@@ -20,7 +20,7 @@ from apps.api.observability.metrics import (
     record_audit_write,
     record_rule_match,
 )
-from apps.api.observability.tracing import setup_tracing
+from apps.api.observability.tracing import setup_tracing, get_tracer, traced
 
 # Force l'import des metriques Threat Intel pour qu'elles soient enregistrees
 # dans le default registry Prometheus (sinon elles n'apparaissent dans
@@ -42,4 +42,6 @@ __all__ = [
     "record_audit_write",
     "record_rule_match",
     "setup_tracing",
+    "get_tracer",
+    "traced",
 ]

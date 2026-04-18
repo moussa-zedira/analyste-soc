@@ -1,0 +1,34 @@
+# Stack tracing OpenTelemetry : jaeger all-in-one (collector + storage memoire + UI).
+# Usage : docker compose -f docker-compose.yml -f docker-compose.tracing.yml up -d
+# Acces :
+#   - Jaeger UI : http://localhost:16686
+#   - OTLP gRPC : jaeger:4317 (interne)
+#   - OTLP HTTP : jaeger:4318 (interne)
+#
+# Active automatiquement les traces sur api+worker via OTEL_EXPORTER_OTLP_ENDPOINT.
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE: memory
+      MEMORY_MAX_TRACES: "50000"
+    ports:
+      - "16686:16686"   # UI
+      - "4317:4317"     # OTLP gRPC (host -> conteneur, utile pour curl/agents externes)
+      - "4318:4318"     # OTLP HTTP
+
+  api:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_SERVICE_NAME: cyberdef-api
+      OTEL_TRACES_SAMPLER_RATIO: "1.0"
+
+  worker:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_SERVICE_NAME: cyberdef-worker
+      OTEL_TRACES_SAMPLER_RATIO: "1.0"
