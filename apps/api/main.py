@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -207,7 +208,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Seed built-in SIGMA rules pack
     _seed_builtin_sigma()
 
+    # ── V4.4 Operator Console: Sliver poller + redteam notifier ──
+    # Tolerant si Sliver non configure : le poller catche RuntimeError
+    # et passe en mode "sleep long".
+    redteam_listener_task = None
+    try:
+        from apps.api.pentest.c2_sliver.poller import sliver_poller
+        from apps.api.pentest.c2_sliver.notifier import redteam_event_listener
+
+        await sliver_poller.start()
+        redteam_listener_task = asyncio.create_task(
+            redteam_event_listener(), name="redteam_event_listener"
+        )
+        logger.info("v44_operator_console_background_started")
+    except Exception:
+        logger.exception("v44_operator_console_startup_failed")
+
     yield
+
+    # Shutdown V4.4
+    try:
+        from apps.api.pentest.c2_sliver.poller import sliver_poller as _poller
+
+        await _poller.stop()
+    except Exception:
+        logger.warning("v44_poller_shutdown_failed", exc_info=True)
+    if redteam_listener_task is not None:
+        redteam_listener_task.cancel()
 
 
 def _seed_default_admin() -> None:
@@ -664,6 +691,10 @@ def create_app() -> FastAPI:
     # ── Red Team MITRE Reporting (V4.3c) ──
     from apps.api.routes.redteam_reporting import router as redteam_reporting_router
     app.include_router(redteam_reporting_router)
+
+    # ── Red Team Operator Console WebSockets (V4.4) ──
+    from apps.api.routes.c2_ws import router as c2_ws_router
+    app.include_router(c2_ws_router)
 
     return app
 
