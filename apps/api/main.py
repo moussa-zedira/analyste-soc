@@ -661,6 +661,10 @@ def create_app() -> FastAPI:
     from apps.api.routes.engagements import router as engagements_router
     app.include_router(engagements_router)
 
+    # ── Red Team MITRE Reporting (V4.3c) ──
+    from apps.api.routes.redteam_reporting import router as redteam_reporting_router
+    app.include_router(redteam_reporting_router)
+
     return app
 
 
