@@ -104,6 +104,14 @@ class Settings(BaseSettings):
     SSO_REDIRECT_BASE_URL: str = "http://localhost:8000"
     SSO_STATE_TTL_SECONDS: int = 300
 
+    # Red Team — Sliver C2 (V4.3a)
+    SLIVER_OPERATOR_CFG: str = ""
+    SLIVER_DEFAULT_C2_URL: str = ""
+    SLIVER_BUILD_OUTPUT_DIR: str = "/data/sliver/builds"
+
+    # Red Team — Engagement audit log signing (V4.3b)
+    AUDIT_SIGNING_KEY: str = ""
+
     # Sentinelles refusees en production (anciens defaults compromis)
     _WEAK_API_KEYS = frozenset({
         "elite-secret-key", "change-me", "dev-insecure-key", "",

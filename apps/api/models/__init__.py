@@ -31,6 +31,11 @@ from apps.api.models.compliance import (
 )
 from apps.api.models.integrations import IncidentTicket, OutboundIntegration
 from apps.api.models.sso import SSOProvider, SSOSession
+from apps.api.models.sliver import (
+    SliverCommand,
+    SliverImplantBuild,
+    SliverSession,
+)
 
 __all__ = [
     "AiCostLog",
@@ -67,6 +72,9 @@ __all__ = [
     "ScanRun",
     "SSOProvider",
     "SSOSession",
+    "SliverCommand",
+    "SliverImplantBuild",
+    "SliverSession",
     "STIXCollection",
     "STIXObject",
     "SigmaRule",

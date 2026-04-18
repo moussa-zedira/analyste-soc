@@ -642,6 +642,10 @@ def create_app() -> FastAPI:
     from apps.api.routes.integrations import router as integrations_router
     app.include_router(integrations_router, tags=["Outbound Integrations"])
 
+    # ── Red Team Sliver C2 (V4.3a) ──
+    from apps.api.routes.c2 import router as c2_router
+    app.include_router(c2_router)
+
     return app
 
 

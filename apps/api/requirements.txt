@@ -71,3 +71,6 @@ sentence-transformers>=2.7
 # Phase 9: SOAR Connectors reels (LDAP/AD + AWS IAM — autres via httpx)
 ldap3>=2.9
 boto3>=1.34
+
+# Phase 10: Sliver C2 client wrapper
+sliver-py>=0.0.18

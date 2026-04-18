@@ -87,10 +87,17 @@ services:
       GOPHISH_API_KEY: ${GOPHISH_API_KEY:-}
       # Pentest safety — whitelist CIDR (comma-separated, ex. "10.0.0.0/8,192.168.0.0/16")
       PENTEST_ALLOWED_TARGETS: ${PENTEST_ALLOWED_TARGETS:-}
+      # Red Team — Sliver C2 (V4.3a) + audit signing (V4.3b)
+      SLIVER_OPERATOR_CFG: ${SLIVER_OPERATOR_CFG:-}
+      SLIVER_DEFAULT_C2_URL: ${SLIVER_DEFAULT_C2_URL:-}
+      SLIVER_BUILD_OUTPUT_DIR: ${SLIVER_BUILD_OUTPUT_DIR:-/data/sliver/builds}
+      AUDIT_SIGNING_KEY: ${AUDIT_SIGNING_KEY:-}
     volumes:
       - geoip_data:/data/geoip
       - ml_models:/data/models
       - rag_data:/data/rag
+      - sliver_configs:/data/sliver/configs
+      - sliver_builds:/data/sliver/builds
     depends_on:
       postgres:
         condition: service_healthy
@@ -142,10 +149,17 @@ services:
       GOPHISH_API_KEY: ${GOPHISH_API_KEY:-}
       # Pentest safety — whitelist CIDR (comma-separated, ex. "10.0.0.0/8,192.168.0.0/16")
       PENTEST_ALLOWED_TARGETS: ${PENTEST_ALLOWED_TARGETS:-}
+      # Red Team — Sliver C2 (V4.3a) + audit signing (V4.3b)
+      SLIVER_OPERATOR_CFG: ${SLIVER_OPERATOR_CFG:-}
+      SLIVER_DEFAULT_C2_URL: ${SLIVER_DEFAULT_C2_URL:-}
+      SLIVER_BUILD_OUTPUT_DIR: ${SLIVER_BUILD_OUTPUT_DIR:-/data/sliver/builds}
+      AUDIT_SIGNING_KEY: ${AUDIT_SIGNING_KEY:-}
     volumes:
       - geoip_data:/data/geoip
       - ml_models:/data/models
       - rag_data:/data/rag
+      - sliver_configs:/data/sliver/configs
+      - sliver_builds:/data/sliver/builds
     depends_on:
       postgres:
         condition: service_healthy
@@ -229,8 +243,26 @@ services:
   #     api:
   #       condition: service_healthy
 
+  # ── Sliver C2 server (V4.3a) — opt-in profile "redteam" ──
+  # Activation: `docker compose --profile redteam up -d sliver`
+  # Apres premier demarrage, generer un fichier .cfg operator a copier
+  # dans le container api, puis exporter SLIVER_OPERATOR_CFG dans .env.
+  sliver:
+    image: ghcr.io/bishopfox/sliver-server:latest
+    profiles: ["redteam"]
+    ports:
+      - "31337:31337"
+    volumes:
+      - sliver_data:/home/sliver/.sliver
+      - sliver_configs:/data/sliver/configs
+      - sliver_builds:/data/sliver/builds
+    restart: unless-stopped
+
 volumes:
   pgdata:
   geoip_data:
   ml_models:
   rag_data:
+  sliver_data:
+  sliver_configs:
+  sliver_builds:
