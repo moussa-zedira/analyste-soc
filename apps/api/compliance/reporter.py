@@ -8,8 +8,10 @@ Calcule pour chaque controle :
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from apps.api.compliance.frameworks import (
@@ -92,34 +94,145 @@ STATIC_EVIDENCE: dict[str, list[dict[str, str]]] = {
 }
 
 
-def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, str]]:
-    """Evidence statique + sondes runtime (count Sigma rules, IOCs, etc.)."""
-    evidence = list(STATIC_EVIDENCE.get(cap, []))
+def _metric(ref: str, value: float | int) -> dict[str, Any]:
+    return {"type": "metric", "ref": ref, "value": value}
+
+
+def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
+    """Evidence statique + sondes runtime (counts, metrics, dates)."""
+    evidence: list[dict[str, Any]] = list(STATIC_EVIDENCE.get(cap, []))
     if db is None:
         return evidence
+    cutoff_30d = datetime.now(timezone.utc) - timedelta(days=30)
     try:
         if cap == "sigma.rules":
             from apps.api.models.sigma_rule import SigmaRule
             n = db.query(SigmaRule).count()
-            evidence.append({"type": "runtime_count", "ref": f"sigma_rules={n}"})
+            evidence.append(_metric(f"sigma_rules={n}", n))
         elif cap == "ioc.feeds":
-            from apps.api.models.ioc import IOC
-            n = db.query(IOC).count()
-            evidence.append({"type": "runtime_count", "ref": f"iocs={n}"})
+            try:
+                from apps.api.models.ioc import IOC, ThreatFeed
+                n_active = db.query(IOC).filter(IOC.state == "active").count()
+                evidence.append(_metric(f"iocs_active={n_active}", n_active))
+                rows = (
+                    db.query(IOC.source, func.count(IOC.id))
+                    .filter(IOC.state == "active")
+                    .group_by(IOC.source)
+                    .all()
+                )
+                for src, cnt in rows:
+                    evidence.append(_metric(f"iocs[{src}]={cnt}", int(cnt)))
+                feeds_enabled = db.query(ThreatFeed).filter(ThreatFeed.enabled == True).count()
+                evidence.append(_metric(f"feeds_enabled={feeds_enabled}", feeds_enabled))
+            except Exception:
+                pass
         elif cap == "uba.profiling":
             from apps.api.models.uba import UserBaseline
             n = db.query(UserBaseline).count()
-            evidence.append({"type": "runtime_count", "ref": f"profiles={n}"})
+            evidence.append(_metric(f"profiles={n}", n))
         elif cap == "case_mgmt.sla":
             from apps.api.models.case import Case
-            n = db.query(Case).count()
-            evidence.append({"type": "runtime_count", "ref": f"cases={n}"})
+            total = db.query(Case).count()
+            evidence.append(_metric(f"cases_total={total}", total))
+            try:
+                closed = (
+                    db.query(Case)
+                    .filter(Case.status == "closed")
+                    .filter(Case.closed_at.isnot(None))
+                    .filter(Case.closed_at >= cutoff_30d)
+                    .all()
+                )
+                ttrs = [
+                    (c.closed_at - c.created_at).total_seconds() / 60.0
+                    for c in closed
+                    if c.created_at and c.closed_at
+                ]
+                if ttrs:
+                    mean_ttr = sum(ttrs) / len(ttrs)
+                    evidence.append(_metric(
+                        f"mean_ttr_minutes_30d={mean_ttr:.1f}",
+                        round(mean_ttr, 1),
+                    ))
+                evidence.append(_metric(f"cases_closed_30d={len(closed)}", len(closed)))
+            except Exception:
+                pass
         elif cap == "audit.immutable":
             from apps.api.models.pentest_audit import PentestAuditLog
             n = db.query(PentestAuditLog).count()
-            evidence.append({"type": "runtime_count", "ref": f"audit_entries={n}"})
+            evidence.append(_metric(f"audit_entries={n}", n))
+            try:
+                last = (
+                    db.query(PentestAuditLog)
+                    .order_by(PentestAuditLog.id.desc())
+                    .first()
+                )
+                if last is not None:
+                    ts_attr = getattr(last, "ts", None) or getattr(last, "created_at", None)
+                    if ts_attr is not None:
+                        evidence.append({
+                            "type": "metric",
+                            "ref": f"last_audit={ts_attr.isoformat()}",
+                            "value": ts_attr.isoformat(),
+                        })
+            except Exception:
+                pass
+        elif cap == "audit.user_actions":
+            try:
+                from apps.api.models.audit_log import AuditLog
+                n = db.query(AuditLog).count()
+                evidence.append(_metric(f"audit_user_entries={n}", n))
+                last = (
+                    db.query(AuditLog)
+                    .order_by(AuditLog.created_at.desc())
+                    .first()
+                )
+                if last is not None and last.created_at is not None:
+                    evidence.append({
+                        "type": "metric",
+                        "ref": f"last_user_action={last.created_at.isoformat()}",
+                        "value": last.created_at.isoformat(),
+                    })
+            except Exception:
+                pass
+        elif cap in {
+            "detection.brute_force",
+            "detection.malware",
+            "detection.exfil",
+            "detection.lateral",
+            "incident.playbook",
+        }:
+            try:
+                from apps.api.models.incident import Incident
+                resolved = (
+                    db.query(Incident)
+                    .filter(Incident.status.in_(["resolved", "closed"]))
+                    .filter(Incident.updated_at >= cutoff_30d)
+                    .count()
+                )
+                evidence.append(_metric(
+                    f"incidents_resolved_30d={resolved}",
+                    resolved,
+                ))
+            except Exception:
+                pass
+        elif cap == "vuln.scan":
+            try:
+                from apps.api.models.scan_history import ScanHistory
+                n = db.query(ScanHistory).count()
+                evidence.append(_metric(f"scans_total={n}", n))
+            except Exception:
+                pass
+            try:
+                from apps.api.models.devsecops import ScanRun
+                runs_30d = (
+                    db.query(ScanRun)
+                    .filter(ScanRun.created_at >= cutoff_30d)
+                    .count()
+                ) if hasattr(ScanRun, "created_at") else db.query(ScanRun).count()
+                evidence.append(_metric(f"devsecops_runs_30d={runs_30d}", runs_30d))
+            except Exception:
+                pass
     except Exception:
-        # Si la table n'existe pas (migrations pas appliquees), pas grave.
         pass
     return evidence
 

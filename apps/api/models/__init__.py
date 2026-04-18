@@ -23,6 +23,11 @@ from apps.api.models.pentest_audit import PentestAuditLog
 from apps.api.models.uba import UserBaseline
 from apps.api.models.case import Case, CaseEvidence, CaseTimelineEntry
 from apps.api.models.ai_cost import AiCostLog
+from apps.api.models.compliance import (
+    ComplianceAssessment,
+    ComplianceAttestation,
+    ComplianceRemediation,
+)
 
 __all__ = [
     "AiCostLog",
@@ -33,6 +38,9 @@ __all__ = [
     "Case",
     "CaseEvidence",
     "CaseTimelineEntry",
+    "ComplianceAssessment",
+    "ComplianceAttestation",
+    "ComplianceRemediation",
     "Event",
     "Finding",
     "IOC",
