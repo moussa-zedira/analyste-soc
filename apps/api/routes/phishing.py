@@ -30,6 +30,8 @@ from apps.api.models.phishing import (
 )
 from apps.api.models.user import User
 from apps.api.pentest.engagement.audit import record_operator_action
+from apps.api.pentest.engagement.guard import assert_engagement_allows
+from apps.api.pentest.engagement.scope import target_in_scope
 from apps.api.pentest.phishing.gophish_client import (
     GoPhishClient,
     GoPhishError,
@@ -200,23 +202,50 @@ async def create_campaign(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> CampaignOut:
-    """Cree group GoPhish (si targets fournis) + campagne GoPhish + persiste DB."""
+    """Cree group GoPhish (si targets fournis) + campagne GoPhish + persiste DB.
+
+    Si un engagement_id est fourni, applique les garde-fous V4.3b :
+    status=active + pas de kill-switch + fenetre temporelle + tous les
+    domaines de targets in-scope. Sinon 403/409/412/423 selon le motif.
+    """
     client = _gophish_or_503()
 
-    # Validation engagement
+    # Validation engagement + garde-fous (kill switch / status / dates)
     eng: Engagement | None = None
     if payload.engagement_id:
-        eng = db.get(Engagement, payload.engagement_id)
-        if eng is None:
-            raise HTTPException(
-                status_code=400, detail="Unknown engagement_id"
-            )
+        eng = await assert_engagement_allows(db, payload.engagement_id)
 
     if not payload.group_name and not payload.targets:
         raise HTTPException(
             status_code=400,
             detail="Either group_name or targets[] must be provided",
         )
+
+    # Scope check par domaine sur chaque email cible.
+    # GoPhish envoie des emails -> la "cible" pertinente pour le scope
+    # red team est le domaine (acme.com), compare aux entries autorises.
+    if eng is not None and payload.targets:
+        scope = list(eng.scope_targets or [])
+        excluded = list(eng.excluded_targets or [])
+        out_of_scope: list[str] = []
+        for t in payload.targets:
+            email = (t.email or "").strip()
+            if "@" not in email:
+                out_of_scope.append(email or "<empty>")
+                continue
+            domain = email.rsplit("@", 1)[-1].lower()
+            if not target_in_scope(domain, scope, excluded):
+                out_of_scope.append(email)
+        if out_of_scope:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "targets_out_of_scope",
+                    "engagement_id": payload.engagement_id,
+                    "emails": out_of_scope[:20],
+                    "total": len(out_of_scope),
+                },
+            )
 
     group_name = payload.group_name or f"{payload.name}__group"
 
@@ -417,6 +446,76 @@ async def trigger_sync(
     except Exception as exc:  # noqa: BLE001
         logger.exception("phishing_sync_route_failed")
         raise HTTPException(status_code=500, detail=f"Sync failed: {exc}")
+
+
+@router.post("/campaigns/{cid}/stop")
+async def stop_campaign(
+    cid: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    """Stoppe une campagne en cours: supprime cote GoPhish + status=stopped.
+
+    Accessible admin ou operator associe a l'engagement. Best-effort sur
+    la suppression GoPhish (si l'API est down, on met quand meme le status
+    local a 'stopped' pour eviter de re-sync une campagne fantome).
+    """
+    c = _get_campaign_or_404(db, cid)
+    if user.role not in ("admin", "lead"):
+        raise HTTPException(
+            status_code=403, detail="admin or lead role required"
+        )
+
+    if c.status in ("completed", "stopped", "failed"):
+        return {"status": "noop", "campaign_status": c.status}
+
+    gp_id = c.gophish_campaign_id
+    gp_deleted = False
+    gp_error: str | None = None
+    if gp_id:
+        try:
+            client = GoPhishClient()
+            await client.delete_campaign(gp_id)
+            gp_deleted = True
+        except GoPhishNotConfigured:
+            gp_error = "gophish_not_configured"
+        except GoPhishError as exc:
+            gp_error = str(exc)[:200]
+            logger.warning(
+                "phishing_stop_gophish_failed",
+                extra={"campaign_id": cid, "error": gp_error},
+            )
+
+    c.status = "stopped"
+    c.completed_at = datetime.now(timezone.utc)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("phishing_stop_commit_failed")
+        raise HTTPException(status_code=500, detail="Failed to stop campaign")
+
+    try:
+        record_operator_action(
+            db,
+            engagement_id=c.engagement_id,
+            user_id=user.id,
+            action_type="phishing_stop",
+            target=c.name,
+            command="",
+            result_summary=(
+                f"campaign={cid} gophish_deleted={gp_deleted} "
+                f"gophish_error={gp_error or 'none'}"
+            ),
+        )
+    except Exception:
+        logger.exception("phishing_stop_audit_failed")
+
+    return {
+        "status": "stopped",
+        "gophish_deleted": gp_deleted,
+        "gophish_error": gp_error,
+    }
 
 
 @router.delete("/campaigns/{cid}", status_code=204)

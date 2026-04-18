@@ -38,6 +38,7 @@ const STATUS_CLS: Record<string, string> = {
   sending: "border-blue-400/40 text-blue-300",
   "in-progress": "border-amber-400/40 text-amber-300",
   completed: "border-emerald-400/40 text-emerald-300",
+  stopped: "border-orange-400/40 text-orange-300",
   failed: "border-red-400/40 text-red-300",
 };
 

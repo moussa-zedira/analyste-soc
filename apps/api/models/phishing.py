@@ -45,7 +45,7 @@ class PhishingCampaign(Base):
     )
     status: Mapped[str] = mapped_column(
         Text, nullable=False, default="draft"
-    )  # draft | sending | in-progress | completed | failed
+    )  # draft | sending | in-progress | completed | stopped | failed
     template_name: Mapped[str] = mapped_column(
         Text, nullable=False, default=""
     )

@@ -73,6 +73,7 @@ const STATUS_CLS: Record<string, string> = {
   sending: "border-blue-400/40 text-blue-300",
   "in-progress": "border-amber-400/40 text-amber-300",
   completed: "border-emerald-400/40 text-emerald-300",
+  stopped: "border-orange-400/40 text-orange-300",
   failed: "border-red-400/40 text-red-300",
 };
 
@@ -100,6 +101,7 @@ export default function CampaignDetail({
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [stopping, setStopping] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -143,6 +145,20 @@ export default function CampaignDetail({
       await reload();
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function stopNow() {
+    if (!confirm("Stop this campaign? This deletes it on GoPhish.")) return;
+    setStopping(true);
+    try {
+      await fetch(
+        `/api/proxy/redteam/phishing/campaigns/${campaignId}/stop`,
+        { method: "POST", credentials: "include" },
+      );
+      await reload();
+    } finally {
+      setStopping(false);
     }
   }
 
@@ -196,13 +212,24 @@ export default function CampaignDetail({
             )}
           </div>
         </div>
-        <button
-          onClick={syncNow}
-          disabled={syncing}
-          className="rounded border border-cyan-glow/40 bg-cyan-glow/10 px-3 py-1.5 text-xs tracking-widest text-cyan-glow hover:bg-cyan-glow/20 disabled:opacity-40"
-        >
-          {syncing ? "SYNCING..." : "SYNC NOW"}
-        </button>
+        <div className="flex gap-2">
+          {["sending", "in-progress", "draft"].includes(campaign.status) && (
+            <button
+              onClick={stopNow}
+              disabled={stopping}
+              className="rounded border border-red-400/40 bg-red-500/10 px-3 py-1.5 text-xs tracking-widest text-red-300 hover:bg-red-500/20 disabled:opacity-40"
+            >
+              {stopping ? "STOPPING..." : "STOP"}
+            </button>
+          )}
+          <button
+            onClick={syncNow}
+            disabled={syncing}
+            className="rounded border border-cyan-glow/40 bg-cyan-glow/10 px-3 py-1.5 text-xs tracking-widest text-cyan-glow hover:bg-cyan-glow/20 disabled:opacity-40"
+          >
+            {syncing ? "SYNCING..." : "SYNC NOW"}
+          </button>
+        </div>
       </div>
 
       {/* Big counts */}
