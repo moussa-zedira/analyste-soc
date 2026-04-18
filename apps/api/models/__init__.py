@@ -47,6 +47,10 @@ from apps.api.models.phishing import (
     PhishingResult,
     PhishingTarget,
 )
+from apps.api.models.credential import (
+    ExfilTransfer,
+    HarvestedCredential,
+)
 
 __all__ = [
     "AiCostLog",
@@ -67,7 +71,9 @@ __all__ = [
     "Engagement",
     "EngagementMember",
     "Event",
+    "ExfilTransfer",
     "Finding",
+    "HarvestedCredential",
     "IOC",
     "IOCRelationship",
     "IOCSighting",
