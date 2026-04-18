@@ -297,6 +297,12 @@ export interface ChatResponse {
   conversation_id: string;
   response: string;
   context_used: string[];
+  provider?: string;
+  model?: string;
+  tokens_in?: number;
+  tokens_out?: number;
+  cost_usd?: number;
+  latency_ms?: number;
 }
 
 // --- Anomaly types ---

@@ -51,6 +51,7 @@ from apps.api.models.credential import (
     ExfilTransfer,
     HarvestedCredential,
 )
+from apps.api.models.chat_message import ChatMessage
 
 __all__ = [
     "AiCostLog",
@@ -65,6 +66,7 @@ __all__ = [
     "Case",
     "CaseEvidence",
     "CaseTimelineEntry",
+    "ChatMessage",
     "ComplianceAssessment",
     "ComplianceAttestation",
     "ComplianceRemediation",

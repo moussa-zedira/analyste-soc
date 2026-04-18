@@ -56,7 +56,12 @@ MODEL_PRICING: dict[str, tuple[float, float]] = {
     "gpt-4": (30.0, 60.0),
     "o1": (15.0, 60.0),
     "o1-mini": (3.0, 12.0),
+    # Ollama (local, gratuit — cout = 0)
+    "ollama": (0.0, 0.0),
 }
+
+# Ollama local (pas de cle API, cout nul)
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 
 @dataclass
@@ -335,6 +340,40 @@ async def _call_openai_async(
     )
 
 
+async def _call_ollama_async(
+    prompt: str, system: str | None, model: str, max_tokens: int, base_url: str
+) -> LlmResponse:
+    """Appel Ollama local (pas de cle API, cout nul)."""
+    msgs: list[dict[str, str]] = []
+    if system:
+        msgs.append({"role": "system", "content": system})
+    msgs.append({"role": "user", "content": prompt})
+    body = {
+        "model": model,
+        "messages": msgs,
+        "stream": False,
+        "options": {"num_predict": max_tokens},
+    }
+    t0 = time.perf_counter()
+    async with httpx.AsyncClient(timeout=120.0) as c:
+        r = await c.post(f"{base_url.rstrip('/')}/api/chat", json=body)
+        r.raise_for_status()
+        data = r.json()
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    text = data.get("message", {}).get("content", "")
+    tokens_in = data.get("prompt_eval_count", 0)
+    tokens_out = data.get("eval_count", 0)
+    return LlmResponse(
+        text=text,
+        model=data.get("model", model),
+        provider="ollama",
+        usage={"input_tokens": tokens_in, "output_tokens": tokens_out},
+        raw=data,
+        latency_ms=latency_ms,
+        cost_usd=0.0,
+    )
+
+
 async def _attempt_with_retry(
     provider: str,
     prompt: str,
@@ -353,6 +392,8 @@ async def _attempt_with_retry(
         try:
             if provider == "anthropic":
                 resp = await _call_anthropic_async(prompt, system, model, max_tokens, api_key)
+            elif provider == "ollama":
+                resp = await _call_ollama_async(prompt, system, model, max_tokens, api_key or DEFAULT_OLLAMA_URL)
             else:
                 resp = await _call_openai_async(prompt, system, model, max_tokens, api_key)
             _log_cost(
@@ -430,33 +471,50 @@ async def call(
     """
     anth_key = os.environ.get("ANTHROPIC_API_KEY")
     oai_key = os.environ.get("OPENAI_API_KEY")
+    ollama_enabled = os.environ.get("OLLAMA_ENABLED", "true").lower() in ("1", "true", "yes")
+    ollama_url = os.environ.get("OLLAMA_BASE_URL", DEFAULT_OLLAMA_URL)
+    ollama_model = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:32b")
 
     if prefer == "stub":
         return _stub_response(prompt, system)
 
     chosen = prefer
     if chosen is None:
-        chosen = "anthropic" if anth_key else ("openai" if oai_key else "stub")
+        if anth_key:
+            chosen = "anthropic"
+        elif oai_key:
+            chosen = "openai"
+        elif ollama_enabled:
+            chosen = "ollama"
+        else:
+            chosen = "stub"
 
     if chosen == "stub":
         return _stub_response(prompt, system)
-    if not anth_key and not oai_key:
+    if not anth_key and not oai_key and not ollama_enabled:
         return _stub_response(prompt, system)
 
-    # Liste des providers a essayer (primary puis fallback)
+    # Liste des providers a essayer (primary puis fallbacks)
     order: list[tuple[str, str | None, str]] = []
-    if chosen == "anthropic" and anth_key:
-        model = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
-        order.append(("anthropic", anth_key, model))
-        if oai_key:
+
+    def _append_fallbacks(exclude: str) -> None:
+        if exclude != "anthropic" and anth_key:
+            order.append(("anthropic", anth_key, os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")))
+        if exclude != "openai" and oai_key:
             order.append(("openai", oai_key, os.environ.get("OPENAI_MODEL", "gpt-4o-mini")))
+        if exclude != "ollama" and ollama_enabled:
+            order.append(("ollama", ollama_url, ollama_model))
+
+    if chosen == "anthropic" and anth_key:
+        order.append(("anthropic", anth_key, os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")))
+        _append_fallbacks("anthropic")
     elif chosen == "openai" and oai_key:
-        model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-        order.append(("openai", oai_key, model))
-        if anth_key:
-            order.append(("anthropic", anth_key, os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")))
+        order.append(("openai", oai_key, os.environ.get("OPENAI_MODEL", "gpt-4o-mini")))
+        _append_fallbacks("openai")
+    elif chosen == "ollama" and ollama_enabled:
+        order.append(("ollama", ollama_url, ollama_model))
+        _append_fallbacks("ollama")
     else:
-        # Cas degrade : pas de cle dispo
         return _stub_response(prompt, system)
 
     last_err: Exception | None = None
@@ -520,16 +578,19 @@ def call_llm(
 
 
 def llm_status() -> dict[str, Any]:
+    anth = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    oai = bool(os.environ.get("OPENAI_API_KEY"))
+    ollama_on = os.environ.get("OLLAMA_ENABLED", "true").lower() in ("1", "true", "yes")
+    default = "anthropic" if anth else ("openai" if oai else ("ollama" if ollama_on else "stub"))
     return {
-        "anthropic_available": bool(os.environ.get("ANTHROPIC_API_KEY")),
-        "openai_available": bool(os.environ.get("OPENAI_API_KEY")),
-        "default_provider": (
-            "anthropic" if os.environ.get("ANTHROPIC_API_KEY")
-            else "openai" if os.environ.get("OPENAI_API_KEY")
-            else "stub"
-        ),
-        "anthropic_model": os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001"),
+        "anthropic_available": anth,
+        "openai_available": oai,
+        "ollama_available": ollama_on,
+        "default_provider": default,
+        "anthropic_model": os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5"),
         "openai_model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        "ollama_model": os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:32b"),
+        "ollama_base_url": os.environ.get("OLLAMA_BASE_URL", DEFAULT_OLLAMA_URL),
         "retry_max": MAX_RETRIES,
         "backoff_schedule_s": list(BACKOFF_SCHEDULE),
         "pricing_models_known": len(MODEL_PRICING),

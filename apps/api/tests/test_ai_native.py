@@ -26,9 +26,10 @@ from apps.api.ai.triage import TriageInput, triage_input
 
 def test_llm_status_returns_provider_info():
     s = llm_status()
-    assert s["default_provider"] in ("anthropic", "openai", "stub")
+    assert s["default_provider"] in ("anthropic", "openai", "ollama", "stub")
     assert "anthropic_available" in s
     assert "openai_available" in s
+    assert "ollama_available" in s
 
 
 def test_call_llm_stub_returns_valid_json():

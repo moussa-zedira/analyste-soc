@@ -386,10 +386,12 @@ export function cancelCampaign(id: string, opts?: RequestOptions) {
 
 // --- Chat ---
 
-/** Envoie un message au chatbot SOC et retourne la reponse. */
+/** Envoie un message a l'assistant (pentest si engagement_id, sinon SOC). */
 export function sendChatMessage(
   message: string,
   conversationId?: string,
+  engagementId?: string,
+  preferProvider?: "anthropic" | "openai" | "ollama",
   opts?: RequestOptions,
 ): Promise<ChatResponse> {
   return request<ChatResponse>(
@@ -399,10 +401,44 @@ export function sendChatMessage(
       body: JSON.stringify({
         message,
         conversation_id: conversationId,
+        engagement_id: engagementId,
+        prefer_provider: preferProvider,
       }),
     },
-    { ...opts, timeout: 30_000 },
+    { ...opts, timeout: 120_000 },
   );
+}
+
+/** Liste les engagements red team (pour selecteur chat). */
+export function listEngagements(
+  opts?: RequestOptions,
+): Promise<{
+  engagements: Array<{
+    id: string;
+    name: string;
+    client_name: string;
+    status: string;
+    kill_switch_active: boolean;
+  }>;
+}> {
+  return request("/redteam/engagements", { method: "GET" }, opts);
+}
+
+/** Liste les conversations (optionnellement par engagement). */
+export function listConversations(
+  engagementId?: string,
+  opts?: RequestOptions,
+): Promise<{
+  conversations: Array<{
+    conversation_id: string;
+    started_at: string;
+    last_msg: string;
+    msg_count: number;
+    total_cost_usd: number;
+  }>;
+}> {
+  const qs = engagementId ? `?engagement_id=${encodeURIComponent(engagementId)}` : "";
+  return request(`/chat/conversations${qs}`, { method: "GET" }, opts);
 }
 
 // --- ML Detection ---
