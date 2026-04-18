@@ -696,6 +696,10 @@ def create_app() -> FastAPI:
     from apps.api.routes.c2_ws import router as c2_ws_router
     app.include_router(c2_ws_router)
 
+    # ── Red Team BloodHound dataset import + pivot (V4.5) ──
+    from apps.api.routes.bloodhound import router as bh_dataset_router
+    app.include_router(bh_dataset_router)
+
     return app
 
 

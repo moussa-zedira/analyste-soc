@@ -41,6 +41,7 @@ from apps.api.models.engagement import (
     EngagementMember,
     OperatorAuditLog,
 )
+from apps.api.models.bloodhound import BHDataset, BHEdge, BHNode
 
 __all__ = [
     "AiCostLog",
@@ -49,6 +50,9 @@ __all__ = [
     "AlertRule",
     "AnomalyBaseline",
     "AuditLog",
+    "BHDataset",
+    "BHEdge",
+    "BHNode",
     "Case",
     "CaseEvidence",
     "CaseTimelineEntry",

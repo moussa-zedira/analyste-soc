@@ -7,6 +7,7 @@ import SessionList from "./SessionList";
 import Terminal from "./Terminal";
 import QuickCommands from "./QuickCommands";
 import BeaconGraph from "./BeaconGraph";
+import BloodHoundPivot from "./BloodHoundPivot";
 
 export interface SliverSessionDTO {
   id: string;
@@ -113,18 +114,26 @@ export default function OperatorConsole() {
           </div>
         </div>
 
-        {/* RIGHT: graph */}
-        <div className="flex flex-col overflow-hidden rounded-md border border-cyan-glow/15 bg-space-dark/60">
-          <div className="border-b border-cyan-glow/10 px-3 py-2">
-            <p className="hud-label text-[10px] tracking-widest text-cyan-glow/60">
-              BEACON GRAPH
-            </p>
+        {/* RIGHT: graph + bloodhound pivot */}
+        <div className="flex flex-col gap-3 overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-hidden rounded-md border border-cyan-glow/15 bg-space-dark/60">
+            <div className="border-b border-cyan-glow/10 px-3 py-2">
+              <p className="hud-label text-[10px] tracking-widest text-cyan-glow/60">
+                BEACON GRAPH
+              </p>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <BeaconGraph
+                events={events}
+                selectedId={selectedSession?.id ?? null}
+                onSelect={setSelectedSession}
+              />
+            </div>
           </div>
-          <div className="flex-1 overflow-hidden">
-            <BeaconGraph
-              events={events}
-              selectedId={selectedSession?.id ?? null}
-              onSelect={setSelectedSession}
+          <div className="max-h-[40vh] overflow-y-auto">
+            <BloodHoundPivot
+              session={selectedSession}
+              engagementId={selectedEngagementId}
             />
           </div>
         </div>
