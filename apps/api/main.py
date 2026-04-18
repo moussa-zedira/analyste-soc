@@ -187,6 +187,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         Base.metadata.create_all(bind=engine)
         logger.info("database_initialised", method="create_all")
 
+    # Audit signing key warning (V4.3b)
+    if not settings.AUDIT_SIGNING_KEY:
+        logger.error(
+            "audit_signing_key_missing",
+            note=(
+                "AUDIT_SIGNING_KEY is empty: red team operator audit logs will "
+                "use a deterministic fallback key with NO real cryptographic "
+                "value. Set a strong random AUDIT_SIGNING_KEY in production."
+            ),
+        )
+
     # Create default admin account if no users exist
     _seed_default_admin()
 
@@ -645,6 +656,10 @@ def create_app() -> FastAPI:
     # ── Red Team Sliver C2 (V4.3a) ──
     from apps.api.routes.c2 import router as c2_router
     app.include_router(c2_router)
+
+    # ── Red Team Engagements (V4.3b) ──
+    from apps.api.routes.engagements import router as engagements_router
+    app.include_router(engagements_router)
 
     return app
 

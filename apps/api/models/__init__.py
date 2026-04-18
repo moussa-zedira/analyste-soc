@@ -36,6 +36,11 @@ from apps.api.models.sliver import (
     SliverImplantBuild,
     SliverSession,
 )
+from apps.api.models.engagement import (
+    Engagement,
+    EngagementMember,
+    OperatorAuditLog,
+)
 
 __all__ = [
     "AiCostLog",
@@ -50,6 +55,8 @@ __all__ = [
     "ComplianceAssessment",
     "ComplianceAttestation",
     "ComplianceRemediation",
+    "Engagement",
+    "EngagementMember",
     "Event",
     "Finding",
     "IOC",
@@ -58,6 +65,7 @@ __all__ = [
     "Incident",
     "IncidentEvent",
     "IncidentTicket",
+    "OperatorAuditLog",
     "OutboundIntegration",
     "PentestAuditLog",
     "Playbook",
