@@ -42,6 +42,11 @@ from apps.api.models.engagement import (
     OperatorAuditLog,
 )
 from apps.api.models.bloodhound import BHDataset, BHEdge, BHNode
+from apps.api.models.phishing import (
+    PhishingCampaign,
+    PhishingResult,
+    PhishingTarget,
+)
 
 __all__ = [
     "AiCostLog",
@@ -72,6 +77,9 @@ __all__ = [
     "OperatorAuditLog",
     "OutboundIntegration",
     "PentestAuditLog",
+    "PhishingCampaign",
+    "PhishingResult",
+    "PhishingTarget",
     "Playbook",
     "PlaybookExecution",
     "PlaybookStepResult",

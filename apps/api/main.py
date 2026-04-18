@@ -700,6 +700,10 @@ def create_app() -> FastAPI:
     from apps.api.routes.bloodhound import router as bh_dataset_router
     app.include_router(bh_dataset_router)
 
+    # ── Red Team GoPhish workflow enrichi (V4.6) ──
+    from apps.api.routes.phishing import router as redteam_phishing_router
+    app.include_router(redteam_phishing_router)
+
     return app
 
 

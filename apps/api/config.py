@@ -112,6 +112,10 @@ class Settings(BaseSettings):
     # Red Team — Engagement audit log signing (V4.3b)
     AUDIT_SIGNING_KEY: str = ""
 
+    # Red Team — GoPhish workflow (V4.6)
+    GOPHISH_API_URL: str = ""
+    GOPHISH_API_KEY: str = ""
+
     # Sentinelles refusees en production (anciens defaults compromis)
     _WEAK_API_KEYS = frozenset({
         "elite-secret-key", "change-me", "dev-insecure-key", "",

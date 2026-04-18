@@ -21,6 +21,7 @@ celery = Celery(
         "apps.api.soar.tasks",
         "apps.api.uba.tasks",
         "apps.api.integrations.tasks",
+        "apps.api.pentest.phishing.tasks",
     ],
 )
 
@@ -112,5 +113,9 @@ celery.conf.beat_schedule = {
     "sync-outbound-tickets-every-hour": {
         "task": "apps.api.integrations.tasks.sync_all_outbound_tickets_task",
         "schedule": 3600.0,
+    },
+    "sync-phishing-every-5-minutes": {
+        "task": "apps.api.pentest.phishing.tasks.sync_all_phishing_task",
+        "schedule": 300.0,
     },
 }
