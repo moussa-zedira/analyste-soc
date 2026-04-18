@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Integer, JSON, Text
+from sqlalchemy import DateTime, Float, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.db.base import Base
@@ -33,6 +33,11 @@ class UserBaseline(Base):
     # Score courant + meta
     current_score: Mapped[float] = mapped_column(Float, default=0.0)
     score_reasons: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Historique de score + cohorte (peer-group)
+    previous_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    score_history: Mapped[list] = mapped_column(JSON, default=list)
+    peer_group_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    peer_deviation: Mapped[float | None] = mapped_column(Float, nullable=True)
     first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)

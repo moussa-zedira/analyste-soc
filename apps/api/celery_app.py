@@ -16,7 +16,7 @@ celery = Celery(
     "siem",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["apps.api.tasks", "apps.api.soar.tasks"],
+    include=["apps.api.tasks", "apps.api.soar.tasks", "apps.api.uba.tasks"],
 )
 
 celery.conf.update(

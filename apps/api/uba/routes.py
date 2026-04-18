@@ -13,9 +13,11 @@ from apps.api.uba.engine import (
     HIGH_RISK_THRESHOLD,
     LOOKBACK_MIN,
     get_baseline,
+    get_baseline_history,
     list_baselines,
     update_baselines,
 )
+from apps.api.uba.peer_groups import compute_peer_stats
 
 router = APIRouter(prefix="/uba", tags=["UEBA"])
 
@@ -28,6 +30,21 @@ def refresh_baselines(
     """Recalcule les baselines a partir des evenements des N dernieres minutes."""
     since = datetime.now(timezone.utc) - timedelta(minutes=lookback_min)
     return update_baselines(db, since=since)
+
+
+@router.post("/recompute-all")
+def recompute_all(
+    lookback_hours: int = Query(24, ge=1, le=720),
+) -> dict[str, Any]:
+    """Enqueue une recomputation globale des baselines (offline, async)."""
+    from apps.api.uba.tasks import recompute_all_baselines_task
+
+    async_result = recompute_all_baselines_task.delay(lookback_hours=lookback_hours)
+    return {
+        "task_id": async_result.id,
+        "lookback_hours": lookback_hours,
+        "status": "enqueued",
+    }
 
 
 @router.get("/entities")
@@ -45,6 +62,24 @@ def list_entities(
     }
 
 
+@router.get("/entities/{entity_type}/{entity_key:path}/history")
+def get_entity_history(
+    entity_type: str,
+    entity_key: str,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Historique de score d'une entite (jusqu'a 168 points = 1 semaine)."""
+    h = get_baseline_history(db, entity_type, entity_key)
+    if h is None:
+        raise HTTPException(status_code=404, detail="entity not profiled")
+    return {
+        "entity_type": entity_type,
+        "entity_key": entity_key,
+        "history": h,
+        "points": len(h),
+    }
+
+
 @router.get("/entities/{entity_type}/{entity_key:path}")
 def get_entity_profile(
     entity_type: str,
@@ -56,6 +91,18 @@ def get_entity_profile(
     if not b:
         raise HTTPException(status_code=404, detail="entity not profiled")
     return b
+
+
+@router.get("/peer-groups")
+def list_peer_groups(db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Stats agregees par cohorte (pour visualisation et triage)."""
+    stats = compute_peer_stats(db)
+    groups = sorted(
+        stats.values(),
+        key=lambda s: s["members_count"],
+        reverse=True,
+    )
+    return {"groups": groups, "count": len(groups)}
 
 
 @router.get("/summary")
