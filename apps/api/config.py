@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     MISP_API_KEY: str = ""
     MISP_VERIFY_SSL: bool = True
 
+    # SSO OIDC
+    SSO_REDIRECT_BASE_URL: str = "http://localhost:8000"
+    SSO_STATE_TTL_SECONDS: int = 300
+
     # Sentinelles refusees en production (anciens defaults compromis)
     _WEAK_API_KEYS = frozenset({
         "elite-secret-key", "change-me", "dev-insecure-key", "",
