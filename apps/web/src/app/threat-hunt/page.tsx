@@ -90,7 +90,7 @@ export default function ThreatHuntPage() {
     const m = new Map<string, number>();
     for (const t of nav.data?.techniques ?? []) {
       const prev = m.get(t.techniqueID) ?? 0;
-      m.set(t.techniqueID, Math.max(prev, t.score));
+      m.set(t.techniqueID, Math.max(prev, t.score ?? 0));
     }
     return m;
   }, [nav.data]);
@@ -113,8 +113,8 @@ export default function ThreatHuntPage() {
 
   if (!cov.data || !nav.data) return null;
 
-  const tactics = cov.data.tactics.filter((t) => t.techniques.length > 0);
-  const gradient = nav.data.gradient.colors;
+  const tactics = (cov.data.tactics ?? []).filter((t) => (t.techniques?.length ?? 0) > 0);
+  const gradient = nav.data.gradient?.colors ?? ["#fdbb84", "#e34a33", "#b30000"];
 
   return (
     <PageTransition className="space-y-6">
@@ -132,13 +132,13 @@ export default function ThreatHuntPage() {
             <div className="glass-panel px-3 py-1.5 text-center">
               <p className="text-[9px] tracking-wider text-cyan-glow/40">TECHNIQUES</p>
               <p className="font-mono text-sm font-bold text-cyan-glow">
-                {cov.data.totals.techniques_covered} / {cov.data.totals.techniques_known}
+                {cov.data.totals?.techniques_covered ?? 0} / {cov.data.totals?.techniques_known ?? 0}
               </p>
             </div>
             <div className="glass-panel px-3 py-1.5 text-center">
               <p className="text-[9px] tracking-wider text-cyan-glow/40">RULES</p>
               <p className="font-mono text-sm font-bold text-cyan-glow">
-                {cov.data.totals.rules_mapped}
+                {cov.data.totals?.rules_mapped ?? 0}
               </p>
             </div>
             <button

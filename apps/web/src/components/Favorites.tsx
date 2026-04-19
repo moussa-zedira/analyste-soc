@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
@@ -149,7 +149,6 @@ export function FavoritesSidebar() {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);

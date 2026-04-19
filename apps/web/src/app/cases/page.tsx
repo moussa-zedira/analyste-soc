@@ -70,7 +70,7 @@ export default function CasesPage() {
         casesList({ ...filter, limit: 100 }),
       ]);
       setStats(s);
-      setCases(list.cases);
+      setCases(list?.cases ?? []);
     } catch (e: any) {
       setError(e?.message ?? "load error");
     }
@@ -85,8 +85,8 @@ export default function CasesPage() {
         casesGetTimeline(c.id),
         casesListEvidence(c.id),
       ]);
-      setTimeline(tl.timeline);
-      setEvidence(ev.evidence);
+      setTimeline(tl?.timeline ?? []);
+      setEvidence(ev?.evidence ?? []);
     } catch (e: any) {
       setError(e?.message ?? "load detail error");
     }
@@ -101,8 +101,8 @@ export default function CasesPage() {
         casesGetTimeline(fresh.id),
         casesListEvidence(fresh.id),
       ]);
-      setTimeline(tl.timeline);
-      setEvidence(ev.evidence);
+      setTimeline(tl?.timeline ?? []);
+      setEvidence(ev?.evidence ?? []);
       reload();
     } catch (e: any) {
       setError(e?.message ?? "refresh error");
@@ -257,7 +257,7 @@ export default function CasesPage() {
           <div className="glass-panel border border-cyan-glow/10 p-4">
             <p className="text-[9px] uppercase tracking-wider text-gray-500">By priority</p>
             <div className="mt-1 flex flex-wrap gap-1 text-[9px]">
-              {Object.entries(stats.by_priority).map(([k, v]) => (
+              {Object.entries(stats.by_priority ?? {}).map(([k, v]) => (
                 <span key={k} className={`rounded border px-2 py-0.5 ${PRIORITY_COLORS[k] ?? PRIORITY_COLORS.low}`}>
                   {k}: {v}
                 </span>
@@ -364,8 +364,8 @@ export default function CasesPage() {
                 <div>Created: <span className="text-gray-200">{selected.created_at ? new Date(selected.created_at).toLocaleString() : "—"}</span></div>
                 {selected.sla && (
                   <div>Resolution due: <span className="text-gray-200">
-                    {new Date(selected.sla.resolution_deadline).toLocaleString()}
-                    ({selected.sla.minutes_to_resolution.toFixed(0)} min)
+                    {selected.sla.resolution_deadline ? new Date(selected.sla.resolution_deadline).toLocaleString() : "-"}
+                    ({(selected.sla.minutes_to_resolution ?? 0).toFixed(0)} min)
                   </span></div>
                 )}
               </div>
@@ -408,7 +408,7 @@ export default function CasesPage() {
                           <span className="font-mono text-[8px] text-gray-500">{e.sha256?.slice(0, 12)}…</span>
                         </div>
                         <div className="text-[9px] text-gray-500">
-                          custody: {e.custody_chain.length} link(s) · {e.content_size}B
+                          custody: {e.custody_chain?.length ?? 0} link(s) · {e.content_size ?? 0}B
                         </div>
                       </div>
                     ))}

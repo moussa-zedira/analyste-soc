@@ -80,7 +80,7 @@ export default function CompliancePage() {
     }
   };
 
-  const controls = report?.controls.filter((c) => filter === "all" || c.status === filter) ?? [];
+  const controls = (report?.controls ?? []).filter((c) => filter === "all" || c.status === filter);
 
   return (
     <div className="space-y-6 p-6">
@@ -113,19 +113,19 @@ export default function CompliancePage() {
       {/* Framework selector */}
       {global && (
         <div className="grid grid-cols-5 gap-3">
-          {global.summary.map((f) => (
+          {(global.summary ?? []).map((f) => (
             <button key={f.id} onClick={() => selectFramework(f.id)}
                     className={`glass-panel flex flex-col items-center border p-3 transition-all ${
                       selectedFid === f.id
                         ? "border-cyan-glow/30 shadow-cyan-sm"
                         : "border-cyan-glow/10 hover:border-cyan-glow/20"
                     }`}>
-              <CircularProgress score={f.coverage_score} size={70} />
+              <CircularProgress score={f.coverage_score ?? 0} size={70} />
               <span className="mt-2 text-[10px] font-bold tracking-wider text-gray-300 truncate w-full text-center">
                 {f.name}
               </span>
               <span className="text-[8px] text-gray-600">
-                {f.by_status.covered ?? 0}/{f.controls_total} covered
+                {f.by_status?.covered ?? 0}/{f.controls_total ?? 0} covered
               </span>
             </button>
           ))}
@@ -138,23 +138,23 @@ export default function CompliancePage() {
           <div className="grid grid-cols-5 gap-4">
             <div className="glass-panel border border-cyan-glow/20 p-4">
               <p className="text-[9px] uppercase tracking-wider text-gray-500">Coverage</p>
-              <p className="mt-1 text-2xl font-bold text-cyan-glow">{report.summary.coverage_score.toFixed(1)}%</p>
+              <p className="mt-1 text-2xl font-bold text-cyan-glow">{(report.summary?.coverage_score ?? 0).toFixed(1)}%</p>
             </div>
             <div className="glass-panel border border-emerald-500/20 p-4">
               <p className="text-[9px] uppercase tracking-wider text-gray-500">Covered</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-300">{report.summary.by_status.covered ?? 0}</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-300">{report.summary?.by_status?.covered ?? 0}</p>
             </div>
             <div className="glass-panel border border-amber-500/20 p-4">
               <p className="text-[9px] uppercase tracking-wider text-gray-500">Partial</p>
-              <p className="mt-1 text-2xl font-bold text-amber-300">{report.summary.by_status.partial ?? 0}</p>
+              <p className="mt-1 text-2xl font-bold text-amber-300">{report.summary?.by_status?.partial ?? 0}</p>
             </div>
             <div className="glass-panel border border-red-500/20 p-4">
               <p className="text-[9px] uppercase tracking-wider text-gray-500">Uncovered</p>
-              <p className="mt-1 text-2xl font-bold text-red-400">{report.summary.by_status.uncovered ?? 0}</p>
+              <p className="mt-1 text-2xl font-bold text-red-400">{report.summary?.by_status?.uncovered ?? 0}</p>
             </div>
             <div className="glass-panel border border-gray-500/20 p-4">
               <p className="text-[9px] uppercase tracking-wider text-gray-500">Manual</p>
-              <p className="mt-1 text-2xl font-bold text-gray-400">{report.summary.by_status.manual ?? 0}</p>
+              <p className="mt-1 text-2xl font-bold text-gray-400">{report.summary?.by_status?.manual ?? 0}</p>
             </div>
           </div>
 
@@ -198,11 +198,11 @@ export default function CompliancePage() {
                     </div>
                     <p className="mt-1 text-[10px] text-gray-500">{ctrl.description}</p>
 
-                    {ctrl.covered_capabilities.length > 0 && (
+                    {(ctrl.covered_capabilities?.length ?? 0) > 0 && (
                       <div className="mt-2">
                         <span className="text-[8px] uppercase tracking-wider text-emerald-400/70">Covered capabilities:</span>
                         <div className="mt-1 flex flex-wrap gap-1">
-                          {ctrl.covered_capabilities.map((cap) => (
+                          {(ctrl.covered_capabilities ?? []).map((cap) => (
                             <span key={cap} className="rounded bg-emerald-500/5 px-2 py-0.5 text-[9px] text-emerald-300/80">
                               {cap}
                             </span>
@@ -211,11 +211,11 @@ export default function CompliancePage() {
                       </div>
                     )}
 
-                    {ctrl.missing_capabilities.length > 0 && (
+                    {(ctrl.missing_capabilities?.length ?? 0) > 0 && (
                       <div className="mt-2">
                         <span className="text-[8px] uppercase tracking-wider text-red-400/70">Missing capabilities:</span>
                         <div className="mt-1 flex flex-wrap gap-1">
-                          {ctrl.missing_capabilities.map((cap) => (
+                          {(ctrl.missing_capabilities ?? []).map((cap) => (
                             <span key={cap} className="rounded bg-red-500/5 px-2 py-0.5 text-[9px] text-red-300/80">
                               {cap}
                             </span>
@@ -230,14 +230,14 @@ export default function CompliancePage() {
                         View evidence
                       </summary>
                       <div className="mt-2 space-y-1">
-                        {Object.entries(ctrl.evidence).flatMap(([cap, evList]) =>
-                          evList.map((ev, i) => (
+                        {Object.entries(ctrl.evidence ?? {}).flatMap(([cap, evList]) =>
+                          (evList ?? []).map((ev, i) => (
                             <div key={`${cap}-${i}`} className="text-[9px] text-gray-500">
                               <span className="text-cyan-glow/50">[{ev.type}]</span> {ev.ref}
                             </div>
                           ))
                         )}
-                        {Object.values(ctrl.evidence).every((v) => v.length === 0) && (
+                        {Object.values(ctrl.evidence ?? {}).every((v) => (v ?? []).length === 0) && (
                           <p className="text-[9px] text-gray-600">no evidence collected</p>
                         )}
                       </div>

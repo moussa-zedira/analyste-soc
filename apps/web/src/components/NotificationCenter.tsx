@@ -82,8 +82,8 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<NotifType | "all">("all");
-  const [shake, setShake] = useState(false);
-  const { play, muted, setMuted } = useSoundAlert();
+  const [shake] = useState(false);
+  const { muted, setMuted } = useSoundAlert();
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -107,49 +107,24 @@ export function NotificationCenter() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // WebSocket listener for real-time notifications
+  // WebSocket listener for real-time notifications.
+  // NOTE: le backend n'expose pas d'endpoint /ws/events (les WS sont sur
+  // /ws/live, /pentest/campaign/{id}/ws, /ws/redteam/c2/events, etc.).
+  // On desactive l'auto-connect pour eviter une boucle de reconnection
+  // bruyante et des erreurs console permanentes. Quand un endpoint SOC
+  // generique sera disponible, reactiver ici en passant par
+  // /api/auth/ws-token pour l'auth (voir useRedteamEvents).
   useEffect(() => {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-    const wsUrl = apiBase.replace(/^http/, "ws") + "/ws/events";
-    let ws: WebSocket | null = null;
+    // no-op volontaire — pas d'endpoint /ws/events cote API.
+    return;
+  }, []);
 
-    function connect() {
-      try {
-        ws = new WebSocket(wsUrl);
-        ws.onmessage = (e) => {
-          try {
-            const data = JSON.parse(e.data);
-            const severity = data.severity?.toLowerCase() || "info";
-            let type: NotifType = "info";
-            if (severity === "critical") type = "incident";
-            else if (severity === "high") type = "warning";
-            else if (severity === "medium") type = "info";
-
-            const notif: Notification = {
-              id: crypto.randomUUID(),
-              type,
-              title: data.rule_name || data.event_type || "New Event",
-              message: `${data.source_ip || "unknown"} - ${data.description || data.event_type || ""}`.slice(0, 120),
-              timestamp: Date.now(),
-              read: false,
-            };
-
-            setNotifs((prev) => [notif, ...prev].slice(0, MAX_NOTIFS));
-            setShake(true);
-            setTimeout(() => setShake(false), 600);
-
-            if (severity === "critical" || severity === "high") {
-              play(severity as "critical" | "high");
-            }
-          } catch {}
-        };
-        ws.onclose = () => setTimeout(connect, 5000);
-      } catch {}
-    }
-
-    connect();
-    return () => { ws?.close(); };
-  }, [play]);
+  // Listen to the "toggle-notifications" event dispatched by KeyboardShortcuts (N key).
+  useEffect(() => {
+    const handler = () => setOpen((p) => !p);
+    window.addEventListener("toggle-notifications", handler);
+    return () => window.removeEventListener("toggle-notifications", handler);
+  }, []);
 
   const unreadCount = notifs.filter((n) => !n.read).length;
   const filtered = filter === "all" ? notifs : notifs.filter((n) => n.type === filter);

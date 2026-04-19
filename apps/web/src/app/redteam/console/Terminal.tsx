@@ -209,7 +209,7 @@ export default function Terminal({ session, engagementId, registerSend }: Props)
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-cyan-glow/10 px-3 py-1.5 text-[10px] tracking-widest">
         <span className="text-cyan-glow/70">
-          TERMINAL // {session.hostname || session.id.slice(0, 8)}
+          TERMINAL // {session.hostname || (session.id ?? "").slice(0, 8)}
         </span>
         <span
           className={`${
@@ -220,7 +220,7 @@ export default function Terminal({ session, engagementId, registerSend }: Props)
                 : "text-red-400"
           }`}
         >
-          {wsStatus.toUpperCase()}
+          {(wsStatus ?? "").toUpperCase()}
           {errMsg ? ` // ${errMsg}` : ""}
         </span>
       </div>

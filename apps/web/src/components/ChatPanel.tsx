@@ -48,17 +48,10 @@ export function ChatPanel() {
   const [error, setError] = useState<string | null>(null);
 
   const [engagements, setEngagements] = useState<Engagement[]>([]);
-  const [engagementId, setEngagementId] = useState<string | undefined>(() =>
-    typeof window !== "undefined"
-      ? localStorage.getItem("chat.engagement_id") ?? undefined
-      : undefined,
-  );
-  const [provider, setProvider] = useState<"anthropic" | "openai" | "ollama" | undefined>(() =>
-    typeof window !== "undefined"
-      ? (localStorage.getItem("chat.provider") as "anthropic" | "openai" | "ollama") ?? undefined
-      : undefined,
-  );
+  const [engagementId, setEngagementId] = useState<string | undefined>(undefined);
+  const [provider, setProvider] = useState<"anthropic" | "openai" | "ollama" | undefined>(undefined);
   const [lastProviderUsed, setLastProviderUsed] = useState<string | undefined>();
+  const [hydrated, setHydrated] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -66,22 +59,49 @@ export function ChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Lit le localStorage cote client uniquement (evite hydration mismatch)
+  useEffect(() => {
+    try {
+      const eng = localStorage.getItem("chat.engagement_id");
+      if (eng) setEngagementId(eng);
+      const prov = localStorage.getItem("chat.provider") as
+        | "anthropic"
+        | "openai"
+        | "ollama"
+        | null;
+      if (prov) setProvider(prov);
+    } catch {
+      /* ignore */
+    }
+    setHydrated(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     listEngagements()
-      .then((r) => setEngagements(r.engagements ?? []))
+      .then((arr) => setEngagements(Array.isArray(arr) ? arr : []))
       .catch(() => setEngagements([]));
   }, [open]);
 
   useEffect(() => {
-    if (engagementId) localStorage.setItem("chat.engagement_id", engagementId);
-    else localStorage.removeItem("chat.engagement_id");
-  }, [engagementId]);
+    if (!hydrated) return;
+    try {
+      if (engagementId) localStorage.setItem("chat.engagement_id", engagementId);
+      else localStorage.removeItem("chat.engagement_id");
+    } catch {
+      /* ignore */
+    }
+  }, [engagementId, hydrated]);
 
   useEffect(() => {
-    if (provider) localStorage.setItem("chat.provider", provider);
-    else localStorage.removeItem("chat.provider");
-  }, [provider]);
+    if (!hydrated) return;
+    try {
+      if (provider) localStorage.setItem("chat.provider", provider);
+      else localStorage.removeItem("chat.provider");
+    } catch {
+      /* ignore */
+    }
+  }, [provider, hydrated]);
 
   const activeEng = engagements.find((e) => e.id === engagementId);
   const quickActions = engagementId ? PENTEST_QUICK : SOC_QUICK;

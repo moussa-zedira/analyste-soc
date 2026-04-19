@@ -157,7 +157,7 @@ export default function PhishingCampaigns() {
             STATUS_CLS[c.status] ?? "border-cyan-glow/40 text-cyan-glow/80"
           }`}
         >
-          {c.status.toUpperCase()}
+          {(c.status ?? "").toUpperCase()}
         </span>
       ),
       sortValue: (c) => c.status,

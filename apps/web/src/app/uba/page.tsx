@@ -46,7 +46,7 @@ export default function UbaPage() {
         ubaListEntities(minScore, 200),
       ]);
       setSummary(s);
-      setEntities(list.entities);
+      setEntities(list?.entities ?? []);
     } catch (e: any) {
       setError(e?.message ?? "load error");
     } finally {
@@ -123,7 +123,7 @@ export default function UbaPage() {
             <p className="mt-1 text-2xl font-bold text-red-400">{summary.high_risk_count}</p>
             <p className="mt-1 text-[9px] text-gray-500">≥ {summary.high_risk_threshold}</p>
           </div>
-          {Object.entries(summary.by_type).slice(0, 2).map(([t, n]) => (
+          {Object.entries(summary.by_type ?? {}).slice(0, 2).map(([t, n]) => (
             <div key={t} className="glass-panel border border-cyan-glow/10 p-4">
               <p className="text-[9px] uppercase tracking-wider text-gray-500">{t}</p>
               <p className="mt-1 text-2xl font-bold text-gray-200">{n}</p>
@@ -182,12 +182,12 @@ export default function UbaPage() {
                     <td className="px-2 py-2 font-mono text-gray-200">{e.entity_key}</td>
                     <td className="px-2 py-2 text-right text-gray-400">{e.total_events}</td>
                     <td className="px-2 py-2 text-right">
-                      <span className={`font-bold ${scoreColor(e.current_score)}`}>
-                        {e.current_score.toFixed(1)}
+                      <span className={`font-bold ${scoreColor(e.current_score ?? 0)}`}>
+                        {(e.current_score ?? 0).toFixed(1)}
                       </span>
                       <div className="mt-1 h-1 w-16 ml-auto rounded-full bg-gray-800">
-                        <div className={`h-1 rounded-full ${scoreBar(e.current_score)}`}
-                             style={{ width: `${Math.min(e.current_score, 100)}%` }} />
+                        <div className={`h-1 rounded-full ${scoreBar(e.current_score ?? 0)}`}
+                             style={{ width: `${Math.min(e.current_score ?? 0, 100)}%` }} />
                       </div>
                     </td>
                     <td className="px-2 py-2 text-gray-500">
@@ -211,8 +211,8 @@ export default function UbaPage() {
             <div className="space-y-3">
               <div>
                 <h3 className="text-sm font-bold text-cyan-glow">{selected.entity_type}: {selected.entity_key}</h3>
-                <p className={`text-2xl font-bold ${scoreColor(selected.current_score)}`}>
-                  {selected.current_score.toFixed(1)}
+                <p className={`text-2xl font-bold ${scoreColor(selected.current_score ?? 0)}`}>
+                  {(selected.current_score ?? 0).toFixed(1)}
                   {selected.high_risk && (
                     <span className="ml-2 text-[10px] uppercase tracking-wider text-red-400">HIGH RISK</span>
                   )}

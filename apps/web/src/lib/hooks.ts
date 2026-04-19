@@ -111,14 +111,29 @@ type Theme = "light" | "dark";
 
 /** Hook de gestion du theme clair/sombre avec persistance dans localStorage. */
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
-    return (localStorage.getItem("theme") as Theme) ?? "dark";
-  });
+  // IMPORTANT : on initialise toujours a "dark" pour que le premier render
+  // (SSR et CSR) soit identique, puis on lit le localStorage cote client
+  // dans un useEffect afin d'eviter un hydration mismatch.
+  const [theme, setThemeState] = useState<Theme>("dark");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("theme") as Theme | null;
+      if (saved === "light" || saved === "dark") {
+        setThemeState(saved);
+      }
+    } catch {
+      /* storage indisponible (Safari private, etc.) : on reste sur dark */
+    }
+  }, []);
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
-    localStorage.setItem("theme", t);
+    try {
+      localStorage.setItem("theme", t);
+    } catch {
+      /* ignore */
+    }
     if (t === "dark") {
       document.documentElement.classList.add("dark");
     } else {

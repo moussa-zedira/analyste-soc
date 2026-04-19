@@ -412,15 +412,15 @@ export function sendChatMessage(
 /** Liste les engagements red team (pour selecteur chat). */
 export function listEngagements(
   opts?: RequestOptions,
-): Promise<{
-  engagements: Array<{
+): Promise<
+  Array<{
     id: string;
     name: string;
     client_name: string;
     status: string;
     kill_switch_active: boolean;
-  }>;
-}> {
+  }>
+> {
   return request("/redteam/engagements", { method: "GET" }, opts);
 }
 

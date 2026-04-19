@@ -150,7 +150,7 @@ export default function SessionList({ events, selectedId, onSelect }: Props) {
                     }`}
                   />
                   <span className="truncate font-mono">
-                    {s.hostname || s.id.slice(0, 8)}
+                    {s.hostname || (s.id ?? "").slice(0, 8)}
                   </span>
                 </div>
                 <span className="rounded bg-space-dark/80 px-1.5 py-0.5 text-[9px] tracking-widest text-cyan-glow/60">

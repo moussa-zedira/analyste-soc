@@ -352,7 +352,7 @@ export default function ReconPage() {
                   <KV label="CMS" value={result.tech_stack.cms} />
                   <KV label="CDN" value={result.tech_stack.cdn} />
                   <KV label="Langage" value={result.tech_stack.language} />
-                  {result.tech_stack.detected.length > 0 && (
+                  {(result.tech_stack.detected?.length ?? 0) > 0 && (
                     <div className="pt-2">
                       <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Technologies detectees</p>
                       <div className="flex flex-wrap gap-1">
@@ -362,7 +362,7 @@ export default function ReconPage() {
                       </div>
                     </div>
                   )}
-                  {result.tech_stack.cookies.length > 0 && (
+                  {(result.tech_stack.cookies?.length ?? 0) > 0 && (
                     <div className="pt-2">
                       <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Cookies</p>
                       <div className="flex flex-wrap gap-1">
@@ -399,9 +399,9 @@ export default function ReconPage() {
                       </span>
                     </div>
                   )}
-                  {result.ssl_cert.san.length > 0 && (
+                  {(result.ssl_cert.san?.length ?? 0) > 0 && (
                     <div className="pt-2">
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">SAN ({result.ssl_cert.san.length})</p>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">SAN ({result.ssl_cert.san?.length})</p>
                       <div className="max-h-24 overflow-y-auto space-y-0.5">
                         {result.ssl_cert.san.map((s) => (
                           <p key={s} className="text-[10px] font-mono text-gray-400">{s}</p>
@@ -458,15 +458,15 @@ export default function ReconPage() {
             )}
 
             {/* Open Ports */}
-            {result.open_ports.length > 0 && (
-              <ModuleCard title="PORTS OUVERTS" icon="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.07-9.07l-1.757 1.757a4.5 4.5 0 010 6.364l-4.5 4.5a4.5 4.5 0 01-6.364 0" count={result.open_ports.length}>
+            {(result.open_ports?.length ?? 0) > 0 && (
+              <ModuleCard title="PORTS OUVERTS" icon="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.07-9.07l-1.757 1.757a4.5 4.5 0 010 6.364l-4.5 4.5a4.5 4.5 0 01-6.364 0" count={result.open_ports?.length ?? 0}>
                 <div className="space-y-0.5">
                   <div className="grid grid-cols-3 gap-2 pb-1 border-b border-cyan-glow/20 mb-1">
                     <span className="text-[9px] font-bold text-gray-500 tracking-wider">PORT</span>
                     <span className="text-[9px] font-bold text-gray-500 tracking-wider">SERVICE</span>
                     <span className="text-[9px] font-bold text-gray-500 tracking-wider">ETAT</span>
                   </div>
-                  {result.open_ports.map((p) => (
+                  {result.open_ports?.map((p) => (
                     <div key={p.port} className="grid grid-cols-3 gap-2 py-0.5">
                       <span className="text-xs font-mono text-cyan-glow">{p.port}</span>
                       <span className="text-[10px] font-mono text-gray-400">{p.service}</span>
@@ -499,10 +499,10 @@ export default function ReconPage() {
             )}
 
             {/* Emails Found */}
-            {result.emails_found.length > 0 && (
-              <ModuleCard title="EMAILS TROUVES" icon="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" count={result.emails_found.length}>
+            {(result.emails_found?.length ?? 0) > 0 && (
+              <ModuleCard title="EMAILS TROUVES" icon="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" count={result.emails_found?.length ?? 0}>
                 <div className="space-y-1">
-                  {result.emails_found.map((email) => (
+                  {result.emails_found?.map((email) => (
                     <div key={email} className="flex items-center justify-between py-1 border-b border-white/5">
                       <span className="text-[10px] font-mono text-cyan-glow/80">{email}</span>
                       <CopyBtn text={email} />
@@ -516,20 +516,20 @@ export default function ReconPage() {
             {result.robots_sitemap && (
               <ModuleCard title="ROBOTS.TXT & SITEMAP" icon="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776">
                 <div className="space-y-3">
-                  {result.robots_sitemap.disallowed.length > 0 && (
+                  {(result.robots_sitemap.disallowed?.length ?? 0) > 0 && (
                     <div>
-                      <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Chemins bloques ({result.robots_sitemap.disallowed.length})</p>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Chemins bloques ({result.robots_sitemap.disallowed?.length})</p>
                       <div className="flex flex-wrap gap-1">
-                        {result.robots_sitemap.disallowed.map((p) => (
+                        {result.robots_sitemap.disallowed?.map((p) => (
                           <Badge key={p} text={p} color="red" />
                         ))}
                       </div>
                     </div>
                   )}
-                  {result.robots_sitemap.sitemaps.length > 0 && (
+                  {(result.robots_sitemap.sitemaps?.length ?? 0) > 0 && (
                     <div>
                       <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Sitemaps</p>
-                      {result.robots_sitemap.sitemaps.map((s) => (
+                      {result.robots_sitemap.sitemaps?.map((s) => (
                         <p key={s} className="text-[10px] font-mono text-cyan-glow/70 break-all">{s}</p>
                       ))}
                     </div>
@@ -546,10 +546,10 @@ export default function ReconPage() {
           </div>
 
           {/* Google Dorks — full width */}
-          {result.google_dorks.length > 0 && (
-            <ModuleCard title="GOOGLE DORKS" icon="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" count={result.google_dorks.length} defaultOpen={false}>
+          {(result.google_dorks?.length ?? 0) > 0 && (
+            <ModuleCard title="GOOGLE DORKS" icon="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" count={result.google_dorks?.length ?? 0} defaultOpen={false}>
               <div className="space-y-2">
-                {result.google_dorks.map((dork, i) => (
+                {result.google_dorks?.map((dork, i) => (
                   <div key={i} className="flex items-start justify-between gap-2 py-1.5 border-b border-white/5">
                     <div className="flex-1 min-w-0">
                       <p className="text-[10px] text-gray-400 mb-0.5">{dork.label}</p>
@@ -563,10 +563,10 @@ export default function ReconPage() {
           )}
 
           {/* Errors */}
-          {result.errors.length > 0 && (
-            <ModuleCard title="ERREURS" icon="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" count={result.errors.length}>
+          {(result.errors?.length ?? 0) > 0 && (
+            <ModuleCard title="ERREURS" icon="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" count={result.errors?.length ?? 0}>
               <div className="space-y-1">
-                {result.errors.map((e, i) => (
+                {result.errors?.map((e, i) => (
                   <p key={i} className="text-[10px] font-mono text-red-400/80">[!] {e}</p>
                 ))}
               </div>

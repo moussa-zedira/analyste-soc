@@ -96,8 +96,13 @@ function mockActivityLog() {
 /* ---------- page ---------- */
 
 export default function ProfilePage() {
-  const username = getLocalStorage("username", "operator");
-  const role = getLocalStorage("user_role", "analyst");
+  // Read localStorage lazily on mount to avoid SSR/CSR hydration mismatch
+  const [username, setUsername] = useState("operator");
+  const [role, setRole] = useState("analyst");
+  useEffect(() => {
+    setUsername(getLocalStorage("username", "operator"));
+    setRole(getLocalStorage("user_role", "analyst"));
+  }, []);
   const stats = useMemo(mockStats, []);
   const activities = useMemo(mockActivityLog, []);
 

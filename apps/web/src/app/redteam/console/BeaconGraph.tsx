@@ -110,7 +110,7 @@ export default function BeaconGraph({ events, selectedId, onSelect }: Props) {
       central,
       ...sessions.map((s) => ({
         id: s.id,
-        label: s.hostname || s.id.slice(0, 8),
+        label: s.hostname || (s.id ?? "").slice(0, 8),
         os: s.os,
         active: !!s.active,
         raw: s,

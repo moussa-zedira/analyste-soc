@@ -73,8 +73,8 @@ async def build_implant(body: ImplantBuildRequest):
     try:
         cfg = ImplantConfig(**body.model_dump())
         result = _build(cfg)
-        return {"source_code": result.source_code, "language": result.language, "build_cmd": result.build_cmd,
-                "sha256": result.sha256, "estimated_size": result.estimated_size, "evasion_score": result.evasion_score}
+        return {"source_code": result.source_code, "language": result.language, "build_cmd": result.build_command,
+                "sha256": result.sha256, "estimated_size": result.estimated_size_kb, "evasion_score": result.evasion_score}
     except Exception as exc:
         raise HTTPException(500, f"Build failed: {exc}")
 

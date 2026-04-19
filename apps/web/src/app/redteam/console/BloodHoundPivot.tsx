@@ -198,47 +198,52 @@ function PivotContent({
       </p>
     );
   }
+  const pathsHost = result.paths_from_host_to_high_value ?? [];
+  const pathsUser = result.paths_from_user_to_high_value ?? [];
+  const localAdmins = result.local_admins_on_host ?? [];
+  const loggedUsers = result.logged_users_on_host ?? [];
   return (
     <div className="flex flex-col gap-3 text-[11px]">
       <div>
         <p className="mb-1 text-cyan-glow/60">
           PATHS FROM HOST → HIGH VALUE (
-          {result.paths_from_host_to_high_value.length})
+          {pathsHost.length})
         </p>
-        <PathList paths={result.paths_from_host_to_high_value} />
+        <PathList paths={pathsHost} />
       </div>
       {result.user && (
         <div>
           <p className="mb-1 text-cyan-glow/60">
             PATHS FROM USER ({result.user.name}) → HIGH VALUE (
-            {result.paths_from_user_to_high_value.length})
+            {pathsUser.length})
           </p>
-          <PathList paths={result.paths_from_user_to_high_value} />
+          <PathList paths={pathsUser} />
         </div>
       )}
       <div>
         <p className="mb-1 text-cyan-glow/60">
-          LOCAL ADMINS ON HOST ({result.local_admins_on_host.length})
+          LOCAL ADMINS ON HOST ({localAdmins.length})
         </p>
-        <NodeChipList nodes={result.local_admins_on_host} />
+        <NodeChipList nodes={localAdmins} />
       </div>
       <div>
         <p className="mb-1 text-cyan-glow/60">
-          LOGGED USERS ON HOST ({result.logged_users_on_host.length})
+          LOGGED USERS ON HOST ({loggedUsers.length})
         </p>
-        <NodeChipList nodes={result.logged_users_on_host} />
+        <NodeChipList nodes={loggedUsers} />
       </div>
     </div>
   );
 }
 
 function PathList({ paths }: { paths: AttackPath[] }) {
-  if (!paths.length) {
+  const list = paths ?? [];
+  if (!list.length) {
     return <p className="text-cyan-glow/30">none</p>;
   }
   return (
     <ul className="flex flex-col gap-1">
-      {paths.map((p, i) => (
+      {list.map((p, i) => (
         <li
           key={i}
           className="rounded border border-cyan-glow/10 bg-black/30 p-2"
@@ -250,7 +255,7 @@ function PathList({ paths }: { paths: AttackPath[] }) {
             </span>
           </div>
           <div className="mt-1 flex flex-wrap gap-1">
-            {p.edges.map((e, j) => (
+            {(p.edges ?? []).map((e, j) => (
               <span
                 key={j}
                 className="rounded border border-cyan-glow/10 bg-cyan-glow/5 px-1 text-[9px] text-cyan-glow/70"
@@ -272,12 +277,13 @@ function PathList({ paths }: { paths: AttackPath[] }) {
 }
 
 function NodeChipList({ nodes }: { nodes: NodeRef[] }) {
-  if (!nodes.length) {
+  const list = nodes ?? [];
+  if (!list.length) {
     return <p className="text-cyan-glow/30 text-[11px]">none</p>;
   }
   return (
     <div className="flex flex-wrap gap-1">
-      {nodes.map((n) => (
+      {list.map((n) => (
         <span
           key={n.sid}
           className="rounded border border-cyan-glow/15 bg-black/30 px-2 py-0.5 text-[10px] text-cyan-glow/80"
@@ -297,7 +303,7 @@ function NodeChipList({ nodes }: { nodes: NodeRef[] }) {
 function copyPathAsNote(p: AttackPath) {
   const lines = [
     `BloodHound path -> ${p.target.name} (${p.target.object_type}) in ${p.hops} hops`,
-    ...p.edges.map((e, i) => `  ${i + 1}. ${e.from} --[${e.type}]--> ${e.to}`),
+    ...(p.edges ?? []).map((e, i) => `  ${i + 1}. ${e.from} --[${e.type}]--> ${e.to}`),
   ];
   const text = lines.join("\n");
   if (typeof navigator !== "undefined" && navigator.clipboard) {

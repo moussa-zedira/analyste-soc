@@ -400,7 +400,7 @@ export default function ScannerPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-[10px] tracking-wider text-gray-600">{result.scan_duration_ms}ms</span>
-                <span className="text-[10px] tracking-wider text-gray-600">{result.open_ports.length} ports</span>
+                <span className="text-[10px] tracking-wider text-gray-600">{result.open_ports?.length ?? 0} ports</span>
                 {result.id && (
                   <a href={getScanPdfUrl(result.id)} target="_blank" rel="noopener noreferrer"
                     className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-3 py-1.5 text-[9px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20 transition-colors">
@@ -416,7 +416,7 @@ export default function ScannerPage() {
                 <div className="flex flex-col items-center gap-4">
                   <ScoreGauge score={result.security_score} />
                   <div className="w-full space-y-1">
-                    {result.score_details.map((d, i) => (
+                    {(result.score_details ?? []).map((d, i) => (
                       <div key={i} className="flex items-center gap-2 text-[11px]">
                         <span className={d.passed ? "text-emerald-400" : "text-red-400"}>{d.passed ? "\u2713" : "\u2717"}</span>
                         <span className="text-gray-400 flex-1">{d.check}</span>
@@ -455,10 +455,10 @@ export default function ScannerPage() {
             </div>
 
             {/* Port scan */}
-            <PortScanCard ports={result.open_ports} portsScanned={result.ports_scanned} delay={0.2} />
+            <PortScanCard ports={result.open_ports ?? []} portsScanned={result.ports_scanned} delay={0.2} />
 
             {/* CVE */}
-            <CveCard cves={result.cves} delay={0.25} />
+            <CveCard cves={result.cves ?? []} delay={0.25} />
 
             {/* Reputation */}
             {result.reputation && <ReputationCard rep={result.reputation} delay={0.3} />}
@@ -544,11 +544,11 @@ export default function ScannerPage() {
             </div>
 
             {/* Errors */}
-            {result.errors.length > 0 && (
+            {(result.errors?.length ?? 0) > 0 && (
               <Card title="Scan Errors" icon="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
                 className="border-red-500/20" delay={0.6}>
                 <div className="space-y-1.5">
-                  {result.errors.map((err, i) => (
+                  {(result.errors ?? []).map((err, i) => (
                     <div key={i} className="flex items-start gap-2 text-[11px] text-red-400">
                       <span className="mt-0.5 text-red-500">&#x25B2;</span>
                       <span className="font-mono">{err}</span>

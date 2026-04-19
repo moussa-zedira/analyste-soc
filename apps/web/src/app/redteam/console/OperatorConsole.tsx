@@ -58,7 +58,7 @@ export default function OperatorConsole() {
               OPERATOR CONSOLE
             </h1>
             <p className="text-[10px] tracking-wider text-cyan-glow/40">
-              SLIVER C2 // {status.toUpperCase()}{" "}
+              SLIVER C2 // {(status ?? "").toUpperCase()}{" "}
               {lastError ? `// ${lastError}` : ""}
             </p>
           </div>

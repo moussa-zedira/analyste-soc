@@ -21,19 +21,26 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   useEffect(() => {
     if (!enabled) return;
+    if (typeof window === "undefined") return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl =
       process.env.NEXT_PUBLIC_WS_URL ??
       `${protocol}//${window.location.hostname}:8000/ws/live`;
 
-    let ws: WebSocket;
-    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
 
     function connect() {
       if (disposed) return;
-      ws = new WebSocket(wsUrl);
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch {
+        // URL invalide / sandbox / storage — retente dans 3s
+        if (!disposed) reconnectTimer = setTimeout(connect, 3000);
+        return;
+      }
 
       ws.onopen = () => setConnected(true);
       ws.onclose = () => {
@@ -42,7 +49,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           reconnectTimer = setTimeout(connect, 3000);
         }
       };
-      ws.onerror = () => ws.close();
+      ws.onerror = () => {
+        try {
+          ws?.close();
+        } catch {
+          /* ignore */
+        }
+      };
       ws.onmessage = (event) => {
         try {
           const msg: WsMessage = JSON.parse(event.data);
@@ -57,8 +70,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     return () => {
       disposed = true;
-      clearTimeout(reconnectTimer);
-      ws?.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      try {
+        ws?.close();
+      } catch {
+        /* ignore */
+      }
     };
   }, [enabled]);
 

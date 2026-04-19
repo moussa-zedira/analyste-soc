@@ -220,7 +220,7 @@ export default function IncidentDetailPage() {
             </Field>
             <Field label="Dedup hash">
               <span className="font-mono text-xs text-gray-500">
-                {incident.dedup_hash.slice(0, 16)}...
+                {incident.dedup_hash ? `${incident.dedup_hash.slice(0, 16)}...` : "-"}
               </span>
             </Field>
           </dl>

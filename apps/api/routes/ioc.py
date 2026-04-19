@@ -120,12 +120,19 @@ def list_all(
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
-    iocs = list_iocs(
+    result = list_iocs(
         db, ioc_type=type, state=state, tlp=tlp, source=source,
         confidence_min=confidence_min, confidence_max=confidence_max,
         search=search, limit=limit, offset=offset,
     )
-    return {"iocs": [_ioc_to_dict(i) for i in iocs], "count": len(iocs)}
+    # list_iocs peut renvoyer (items, total) ou directement items ;
+    # on normalise pour supporter les deux variantes.
+    if isinstance(result, tuple) and len(result) == 2:
+        iocs, total = result
+    else:
+        iocs = list(result)
+        total = len(iocs)
+    return {"iocs": [_ioc_to_dict(i) for i in iocs], "count": total}
 
 
 @router.get("/types")
@@ -230,8 +237,7 @@ def bulk(body: BulkImport, db: Session = Depends(get_db)):
             count = bulk_import_csv(db, body.data, source=body.source,
                                     default_confidence=body.default_confidence, default_tlp=body.default_tlp)
         else:
-            count = bulk_import_text(db, body.data, source=body.source,
-                                     default_confidence=body.default_confidence, default_tlp=body.default_tlp)
+            count = bulk_import_text(db, body.data, source=body.source)
         return {"status": "imported", "count": count}
     except Exception as exc:
         raise HTTPException(400, str(exc))

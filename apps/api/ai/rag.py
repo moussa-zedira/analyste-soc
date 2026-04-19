@@ -254,15 +254,39 @@ class FaissRAG:
                 logger.warning("Cannot read manifest: %s", exc)
 
         if self.docs_path.exists():
+            # NB: splitlines() coupe sur \n mais AUSSI sur \r, \v, \f, U+2028,
+            # U+2029 — certains textes de CVE/MITRE contiennent ces separateurs
+            # Unicode, ce qui faisait exploser une ligne JSON en plein milieu
+            # d'une string et skippait silencieusement TOUT l'index derriere.
+            # On lit donc le fichier ligne par ligne (le file iterator respecte
+            # uniquement le "\n" reel) et on tolere les lignes individuellement
+            # invalides en les skippant avec log WARNING.
+            self._docs = []
+            n_ok = 0
+            n_err = 0
             try:
-                self._docs = [
-                    json.loads(line)
-                    for line in self.docs_path.read_text(encoding="utf-8").splitlines()
-                    if line.strip()
-                ]
+                with self.docs_path.open("r", encoding="utf-8") as fh:
+                    for lineno, line in enumerate(fh, start=1):
+                        line = line.rstrip("\r\n")
+                        if not line.strip():
+                            continue
+                        try:
+                            self._docs.append(json.loads(line))
+                            n_ok += 1
+                        except json.JSONDecodeError as je:
+                            n_err += 1
+                            if n_err <= 3:
+                                logger.warning(
+                                    "rag_docs_parse_skip line=%d err=%s",
+                                    lineno, je,
+                                )
             except Exception as exc:
                 logger.warning("Cannot read docs.jsonl: %s", exc)
                 self._docs = []
+            if n_err:
+                logger.warning(
+                    "rag_docs_load ok=%d skipped=%d", n_ok, n_err
+                )
 
         if self.index_path.exists():
             try:

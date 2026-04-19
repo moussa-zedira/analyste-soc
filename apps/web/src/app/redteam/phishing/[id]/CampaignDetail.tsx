@@ -198,7 +198,7 @@ export default function CampaignDetail({
                 "border-cyan-glow/40 text-cyan-glow/80"
               }`}
             >
-              {campaign.status.toUpperCase()}
+              {(campaign.status ?? "").toUpperCase()}
             </span>
             <span>TEMPLATE: {campaign.template_name}</span>
             <span>MITRE: {campaign.mitre_technique}</span>
@@ -298,7 +298,8 @@ function Stat({
 }
 
 function Funnel({ stats }: { stats: Stats }) {
-  const max = Math.max(...stats.funnel.map((f) => f.count), 1);
+  const funnel = stats.funnel ?? [];
+  const max = Math.max(...funnel.map((f) => f.count), 1);
   const colors: Record<string, string> = {
     sent: "bg-cyan-glow/40",
     opened: "bg-emerald-400/50",
@@ -311,7 +312,7 @@ function Funnel({ stats }: { stats: Stats }) {
         FUNNEL
       </h3>
       <div className="flex flex-col gap-2">
-        {stats.funnel.map((f) => {
+        {funnel.map((f) => {
           const pct = (f.count / max) * 100;
           return (
             <div key={f.stage} className="flex items-center gap-3">
@@ -378,7 +379,7 @@ function TargetsTable({ targets }: { targets: Target[] }) {
                     EVENT_CLS[t.last_status] ?? "text-cyan-glow/70"
                   }`}
                 >
-                  {t.last_status.toUpperCase()}
+                  {(t.last_status ?? "").toUpperCase()}
                 </span>
               </td>
               <td className="px-3 py-2 text-emerald-300/80">
@@ -423,7 +424,7 @@ function Timeline({ results }: { results: ResultEvent[] }) {
                 EVENT_CLS[r.event_type] ?? "text-cyan-glow/80"
               }`}
             >
-              {r.event_type.toUpperCase()}
+              {(r.event_type ?? "").toUpperCase()}
             </span>
             <span className="font-mono text-[11px] text-cyan-glow/60">
               {new Date(r.ts).toLocaleString()}
@@ -459,11 +460,11 @@ function StatsPanel({ stats }: { stats: Stats }) {
         <h3 className="mb-3 text-[11px] tracking-widest text-cyan-glow/70">
           TOP CLICKERS
         </h3>
-        {stats.top_clickers.length === 0 ? (
+        {(stats.top_clickers?.length ?? 0) === 0 ? (
           <p className="text-xs text-cyan-glow/60">No clicks yet.</p>
         ) : (
           <ul className="flex flex-col gap-1 text-xs">
-            {stats.top_clickers.map((c) => (
+            {(stats.top_clickers ?? []).map((c) => (
               <li
                 key={c.id}
                 className="flex items-center justify-between border-b border-cyan-glow/10 pb-1"

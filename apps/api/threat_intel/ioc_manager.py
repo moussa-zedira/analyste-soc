@@ -148,6 +148,7 @@ def list_iocs(
     ioc_type: str | None = None,
     state: str | None = None,
     confidence_min: int | None = None,
+    confidence_max: int | None = None,
     tlp: str | None = None,
     source: str | None = None,
     tag: str | None = None,
@@ -164,6 +165,8 @@ def list_iocs(
         q = q.filter(IOC.state == state)
     if confidence_min is not None:
         q = q.filter(IOC.confidence >= confidence_min)
+    if confidence_max is not None:
+        q = q.filter(IOC.confidence <= confidence_max)
     if tlp:
         q = q.filter(IOC.tlp == tlp.upper())
     if source:

@@ -175,13 +175,34 @@ class RoleChecker:
     Utilisation : Depends(RoleChecker("lead"))
     """
 
-    def __init__(self, min_role: str) -> None:
-        """Initialise le vérificateur avec le rôle minimum requis."""
+    def __init__(self, min_role) -> None:
+        """Initialise le vérificateur avec le rôle minimum requis.
+
+        Accepte une chaîne (ex: "admin") ou une liste de rôles autorisés
+        (ex: ["admin", "analyst"]). Dans le cas d'une liste, l'utilisateur
+        est autorisé dès qu'il possède au moins l'un des rôles indiqués.
+        """
         self.min_role = min_role
 
     def __call__(self, user: User = Depends(get_current_user)) -> User:
         """Vérifie le rôle de l'utilisateur et lève 403 si insuffisant."""
         user_level = ROLE_HIERARCHY.get(user.role, 0)
+        if isinstance(self.min_role, (list, tuple, set, frozenset)):
+            allowed_roles = list(self.min_role)
+            if not allowed_roles:
+                return user
+            # Autorise si le user a au moins l'un des rôles listés,
+            # ou un rôle de niveau supérieur ou égal au plus faible listé.
+            min_required = min(
+                (ROLE_HIERARCHY.get(r, 0) for r in allowed_roles),
+                default=0,
+            )
+            if user.role in allowed_roles or user_level >= min_required:
+                return user
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"One of roles {allowed_roles} required",
+            )
         required_level = ROLE_HIERARCHY.get(self.min_role, 0)
         if user_level < required_level:
             raise HTTPException(

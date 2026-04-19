@@ -235,7 +235,7 @@ export default function AiTriagePage() {
                 <HudCard className="p-2 text-[10px]">
                   <div className="hud-label">Confidence</div>
                   <div className="text-lg font-bold text-cyan-glow tabular-nums">
-                    {(result.triage.confidence * 100).toFixed(0)}%
+                    {((result.triage.confidence ?? 0) * 100).toFixed(0)}%
                   </div>
                 </HudCard>
               </div>
@@ -253,7 +253,7 @@ export default function AiTriagePage() {
               <div>
                 <div className="hud-label mb-1">Recommended Actions</div>
                 <ul className="list-disc pl-5 text-xs text-cyan-glow space-y-1">
-                  {result.triage.recommended_actions.map((a, i) => (
+                  {(result.triage.recommended_actions ?? []).map((a, i) => (
                     <li key={i}>{a}</li>
                   ))}
                 </ul>
@@ -263,12 +263,12 @@ export default function AiTriagePage() {
                 <div>
                   <div className="hud-label mb-1">MITRE ATT&CK</div>
                   <div className="flex flex-wrap gap-1">
-                    {result.triage.mitre_techniques.map((t, i) => (
+                    {(result.triage.mitre_techniques ?? []).map((t, i) => (
                       <HudBadge key={i} tone="purple" mono>
                         {t}
                       </HudBadge>
                     ))}
-                    {!result.triage.mitre_techniques.length && (
+                    {!(result.triage.mitre_techniques?.length ?? 0) && (
                       <span className="text-[10px] text-cyan-glow/40">none</span>
                     )}
                   </div>
@@ -276,12 +276,12 @@ export default function AiTriagePage() {
                 <div>
                   <div className="hud-label mb-1">IOCs</div>
                   <div className="flex flex-wrap gap-1">
-                    {result.triage.iocs.map((t, i) => (
+                    {(result.triage.iocs ?? []).map((t, i) => (
                       <HudBadge key={i} tone="warn" mono>
                         {t}
                       </HudBadge>
                     ))}
-                    {!result.triage.iocs.length && (
+                    {!(result.triage.iocs?.length ?? 0) && (
                       <span className="text-[10px] text-cyan-glow/40">none</span>
                     )}
                   </div>
@@ -289,8 +289,8 @@ export default function AiTriagePage() {
               </div>
 
               <div className="text-[10px] text-cyan-glow/40 font-mono">
-                Provider: {result.llm.provider} • Model: {result.llm.model} • Tokens:{" "}
-                {result.llm.usage.input_tokens}/{result.llm.usage.output_tokens}
+                Provider: {result.llm?.provider ?? "-"} • Model: {result.llm?.model ?? "-"} • Tokens:{" "}
+                {result.llm?.usage?.input_tokens ?? 0}/{result.llm?.usage?.output_tokens ?? 0}
               </div>
             </>
           )}

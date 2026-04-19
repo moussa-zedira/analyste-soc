@@ -175,8 +175,8 @@ export default function DatasetView({ datasetId }: { datasetId: string }) {
 }
 
 function OverviewPanel({ detail }: { detail: DatasetDetail }) {
-  const types = Object.entries(detail.stats.nodes_by_type);
-  const edges = Object.entries(detail.stats.edges_by_type).sort(
+  const types = Object.entries(detail.stats?.nodes_by_type ?? {});
+  const edges = Object.entries(detail.stats?.edges_by_type ?? {}).sort(
     (a, b) => b[1] - a[1],
   );
   return (
@@ -197,7 +197,7 @@ function OverviewPanel({ detail }: { detail: DatasetDetail }) {
           ))}
           <li className="mt-2 flex justify-between rounded bg-cyan-glow/10 px-2 py-1 text-cyan-glow">
             <span>HIGH VALUE</span>
-            <span className="font-mono">{detail.stats.high_value_count}</span>
+            <span className="font-mono">{detail.stats?.high_value_count ?? 0}</span>
           </li>
         </ul>
       </section>
@@ -222,7 +222,7 @@ function OverviewPanel({ detail }: { detail: DatasetDetail }) {
           TOP 10 HIGH VALUE
         </h3>
         <ul className="text-sm">
-          {detail.top_high_value.map((n) => (
+          {(detail.top_high_value ?? []).map((n) => (
             <li
               key={n.sid}
               className="flex justify-between border-b border-cyan-glow/10 py-1"
