@@ -1,7 +1,6 @@
-version: "3.9"
-
 # All secrets are loaded from .env (NOT committed to git).
 # See .env.example for required variables.
+# (Compose v2 n'utilise plus la cle `version`.)
 
 services:
   # ── Infrastructure ──────────────────────────────────────
