@@ -112,6 +112,18 @@ const API_KEY = IS_BROWSER ? "" : (process.env.INTERNAL_API_KEY ?? "");
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
+/**
+ * Generic JSON envelope returned by backend endpoints not yet strictly typed.
+ * Aliased to `any` intentionally: many pentest endpoints return heterogeneous
+ * shapes consumed dynamically by pages (e.g. `r?.listeners`, `s.job_id`), and
+ * downstream pages sometimes set typed state from the result. A stricter
+ * `Record<string, unknown>` would force dozens of page-side casts without
+ * adding real safety. Prefer a concrete interface when the contract stabilizes.
+ * TODO: narrow per-endpoint as backend contracts stabilize.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ApiJson = any;
+
 function buildQuery(params: Record<string, string | number | undefined>): string {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -1067,18 +1079,18 @@ import type {
   TemplateScanResult,
 } from "./types";
 
-export const createSession = (data: { name: string; target: string; auth?: any }) =>
+export const createSession = (data: { name: string; target: string; auth?: Record<string, unknown> }) =>
   request<ScanSession>("/pentest/sessions/", { method: "POST", body: JSON.stringify(data) });
 export const listSessions = () => request<ScanSession[]>("/pentest/sessions/");
 export const getSession = (id: string) => request<ScanSession>(`/pentest/sessions/${id}`);
 export const deleteSession = (id: string) => request<void>(`/pentest/sessions/${id}`, { method: "DELETE" });
-export const updateSessionAuth = (id: string, auth: any) =>
+export const updateSessionAuth = (id: string, auth: Record<string, unknown>) =>
   request<ScanSession>(`/pentest/sessions/${id}/auth`, { method: "PATCH", body: JSON.stringify(auth) });
 export const getSessionFindings = (id: string) => request<SessionFinding[]>(`/pentest/sessions/${id}/findings`);
 export const getSessionChain = (id: string) => request<ChainSuggestion[]>(`/pentest/sessions/${id}/chain`);
 export const getSessionHistory = (id: string, page?: number) =>
   request<{ entries: HttpHistoryEntry[]; total: number }>(`/pentest/sessions/${id}/history?page=${page || 1}`);
-export const exportSession = (id: string) => request<any>(`/pentest/sessions/${id}/export`);
+export const exportSession = (id: string) => request<ApiJson>(`/pentest/sessions/${id}/export`);
 
 // === NVD CVE ===
 export const searchNvdCves = (keyword: string, max?: number) =>
@@ -1089,7 +1101,7 @@ export const searchNvdProduct = (vendor: string, product: string, version: strin
 
 // === Templates ===
 export const listTemplates = () => request<PentestTemplate[]>("/pentest/templates/");
-export const getTemplate = (id: string) => request<any>(`/pentest/templates/${id}`);
+export const getTemplate = (id: string) => request<ApiJson>(`/pentest/templates/${id}`);
 export const runTemplateScan = (data: { target: string; template_ids?: string[]; tags?: string[]; severity?: string[] }) =>
   request<{ results: TemplateScanResult[]; total_matched: number; duration_ms: number }>("/pentest/templates/scan", { method: "POST", body: JSON.stringify(data) });
 export const getTemplateTags = () => request<string[]>("/pentest/templates/tags");
@@ -1302,7 +1314,7 @@ export function quickDeepScan(body: Record<string, unknown>, opts?: RequestOptio
 
 /** Recupere le statut d'un scan profond en cours. */
 export async function getDeepScanStatus(scanId: string, opts?: RequestOptions): Promise<DeepScanStatus & { result?: DeepScanResult }> {
-  const raw = await request<any>(`/pentest/deep/status/${encodeURIComponent(scanId)}`, undefined, opts);
+  const raw = await request<ApiJson>(`/pentest/deep/status/${encodeURIComponent(scanId)}`, undefined, opts);
   const mapped: DeepScanStatus & { result?: DeepScanResult } = {
     scan_id: raw.scan_id,
     phase: raw.phase,
@@ -1321,7 +1333,7 @@ export async function getDeepScanStatus(scanId: string, opts?: RequestOptions): 
 export async function listDeepScans(opts?: RequestOptions): Promise<DeepScanEntry[]> {
   const res = await request<{ scans: DeepScanEntry[] } | DeepScanEntry[]>("/pentest/deep/scans", undefined, opts);
   if (Array.isArray(res)) return res;
-  return (res.scans || []).map((s: any) => ({ ...s, date: s.date || s.created_at || "" }));
+  return (res.scans || []).map((s: DeepScanEntry & { created_at?: string }) => ({ ...s, date: s.date || s.created_at || "" }));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1329,25 +1341,25 @@ export async function listDeepScans(opts?: RequestOptions): Promise<DeepScanEntr
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function blindExtractTime(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/blind/extract/time", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/blind/extract/time", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function blindExtractBoolean(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/blind/extract/boolean", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/blind/extract/boolean", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function blindExtractSchema(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/blind/extract/schema", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/blind/extract/schema", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function blindCalibrate(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/blind/calibrate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/blind/calibrate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function blindJobStatus(jobId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/blind/status/${encodeURIComponent(jobId)}`, undefined, opts);
+  return request<ApiJson>(`/pentest/blind/status/${encodeURIComponent(jobId)}`, undefined, opts);
 }
 export function blindListJobs(opts?: RequestOptions) {
-  return request<any>("/pentest/blind/jobs", undefined, opts);
+  return request<ApiJson>("/pentest/blind/jobs", undefined, opts);
 }
 export function blindGetPayloads(dbms: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/blind/payloads/${encodeURIComponent(dbms)}`, undefined, opts);
+  return request<ApiJson>(`/pentest/blind/payloads/${encodeURIComponent(dbms)}`, undefined, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1355,25 +1367,25 @@ export function blindGetPayloads(dbms: string, opts?: RequestOptions) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function oobCreateListener(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/oob/listener", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/oob/listener", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function oobGeneratePayloads(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/oob/payloads", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/oob/payloads", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function oobGetListener(token: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/oob/listener/${encodeURIComponent(token)}`, undefined, opts);
+  return request<ApiJson>(`/pentest/oob/listener/${encodeURIComponent(token)}`, undefined, opts);
 }
 export function oobListListeners(opts?: RequestOptions) {
-  return request<any>("/pentest/oob/listeners", undefined, opts);
+  return request<ApiJson>("/pentest/oob/listeners", undefined, opts);
 }
 export function oobDeleteListener(token: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/oob/listener/${encodeURIComponent(token)}`, { method: "DELETE" }, opts);
+  return request<ApiJson>(`/pentest/oob/listener/${encodeURIComponent(token)}`, { method: "DELETE" }, opts);
 }
 export function oobGetCallbacks(limit?: number, opts?: RequestOptions) {
-  return request<any>(`/pentest/oob/callbacks${limit ? `?limit=${limit}` : ""}`, undefined, opts);
+  return request<ApiJson>(`/pentest/oob/callbacks${limit ? `?limit=${limit}` : ""}`, undefined, opts);
 }
 export function oobPollListener(token: string, timeout?: number, opts?: RequestOptions) {
-  return request<any>(`/pentest/oob/poll/${encodeURIComponent(token)}${timeout ? `?timeout=${timeout}` : ""}`, { method: "POST" }, opts);
+  return request<ApiJson>(`/pentest/oob/poll/${encodeURIComponent(token)}${timeout ? `?timeout=${timeout}` : ""}`, { method: "POST" }, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1381,22 +1393,22 @@ export function oobPollListener(token: string, timeout?: number, opts?: RequestO
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function ssrfFullTest(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/ssrf/test", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/ssrf/test", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function ssrfCloudMetadata(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/ssrf/cloud-metadata", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/ssrf/cloud-metadata", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function ssrfIpBypass(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/ssrf/ip-bypass", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/ssrf/ip-bypass", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function ssrfGopher(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/ssrf/gopher", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/ssrf/gopher", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function ssrfPortScan(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/ssrf/port-scan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/ssrf/port-scan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function ssrfCheatsheet(opts?: RequestOptions) {
-  return request<any>("/pentest/ssrf/cheatsheet", undefined, opts);
+  return request<ApiJson>("/pentest/ssrf/cheatsheet", undefined, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1404,16 +1416,16 @@ export function ssrfCheatsheet(opts?: RequestOptions) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function subdomainScan(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/subdomain/scan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/subdomain/scan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function subdomainQuick(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/subdomain/quick", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/subdomain/quick", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function subdomainJobStatus(jobId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/subdomain/status/${encodeURIComponent(jobId)}`, undefined, opts);
+  return request<ApiJson>(`/pentest/subdomain/status/${encodeURIComponent(jobId)}`, undefined, opts);
 }
 export function subdomainListJobs(opts?: RequestOptions) {
-  return request<any>("/pentest/subdomain/jobs", undefined, opts);
+  return request<ApiJson>("/pentest/subdomain/jobs", undefined, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1421,22 +1433,22 @@ export function subdomainListJobs(opts?: RequestOptions) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function wafBypassTest(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/waf-bypass/test", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/waf-bypass/test", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function wafFingerprint(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/waf-bypass/fingerprint", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/waf-bypass/fingerprint", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function wafPolyglots(data?: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/waf-bypass/polyglots", { method: "POST", body: JSON.stringify(data || {}), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/waf-bypass/polyglots", { method: "POST", body: JSON.stringify(data || {}), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function wafEncode(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/waf-bypass/encode", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/waf-bypass/encode", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function wafGetPayloads(waf: string, vulnType: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/waf-bypass/payloads/${encodeURIComponent(waf)}/${encodeURIComponent(vulnType)}`, undefined, opts);
+  return request<ApiJson>(`/pentest/waf-bypass/payloads/${encodeURIComponent(waf)}/${encodeURIComponent(vulnType)}`, undefined, opts);
 }
 export function wafCheatsheet(opts?: RequestOptions) {
-  return request<any>("/pentest/waf-bypass/cheatsheet", undefined, opts);
+  return request<ApiJson>("/pentest/waf-bypass/cheatsheet", undefined, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1444,25 +1456,25 @@ export function wafCheatsheet(opts?: RequestOptions) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function exfilPlan(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/exfil/plan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/exfil/plan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function exfilDNS(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/exfil/dns", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/exfil/dns", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function exfilHTTP(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/exfil/http", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/exfil/http", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function exfilICMP(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/exfil/icmp", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/exfil/icmp", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function exfilStego(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/exfil/stego", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/exfil/stego", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function exfilChunked(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/exfil/chunked", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/exfil/chunked", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function exfilTechniques(opts?: RequestOptions) {
-  return request<any>("/pentest/exfil/techniques", undefined, opts);
+  return request<ApiJson>("/pentest/exfil/techniques", undefined, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1470,22 +1482,22 @@ export function exfilTechniques(opts?: RequestOptions) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function persistWebshell(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/persist/webshell", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/persist/webshell", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function persistBackdoor(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/persist/backdoor", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/persist/backdoor", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function persistDropper(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/persist/dropper", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/persist/dropper", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function persistCron(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/persist/cron", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/persist/cron", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function persistSSHKey(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/persist/ssh-key", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/persist/ssh-key", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function persistTechniques(opts?: RequestOptions) {
-  return request<any>("/pentest/persist/techniques", undefined, opts);
+  return request<ApiJson>("/pentest/persist/techniques", undefined, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1493,25 +1505,25 @@ export function persistTechniques(opts?: RequestOptions) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function antiforensicsCleanLogs(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/antiforensics/clean-logs", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/antiforensics/clean-logs", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function antiforensicsTimestomp(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/antiforensics/timestomp", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/antiforensics/timestomp", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function antiforensicsCleanHistory(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/antiforensics/clean-history", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/antiforensics/clean-history", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function antiforensicsShred(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/antiforensics/shred", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/antiforensics/shred", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function antiforensicsEvidenceCheck(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/antiforensics/evidence-check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/antiforensics/evidence-check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function antiforensicsCleanupPlan(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/antiforensics/cleanup-plan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/antiforensics/cleanup-plan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function antiforensicsTechniques(opts?: RequestOptions) {
-  return request<any>("/pentest/antiforensics/techniques", undefined, opts);
+  return request<ApiJson>("/pentest/antiforensics/techniques", undefined, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1519,13 +1531,13 @@ export function antiforensicsTechniques(opts?: RequestOptions) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function killchainPlan(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/killchain/plan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/killchain/plan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function killchainPhase(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/killchain/phase", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/killchain/phase", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function killchainTemplates(opts?: RequestOptions) {
-  return request<any>("/pentest/killchain/templates", undefined, opts);
+  return request<ApiJson>("/pentest/killchain/templates", undefined, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1533,40 +1545,40 @@ export function killchainTemplates(opts?: RequestOptions) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function shellStartListener(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/shell/listener/start", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/shell/listener/start", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function shellStopListener(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/shell/listener/stop", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/shell/listener/stop", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function shellListListeners(opts?: RequestOptions) {
-  return request<any>("/pentest/shell/listeners", undefined, opts);
+  return request<ApiJson>("/pentest/shell/listeners", undefined, opts);
 }
 export function shellListSessions(opts?: RequestOptions) {
-  return request<any>("/pentest/shell/sessions", undefined, opts);
+  return request<ApiJson>("/pentest/shell/sessions", undefined, opts);
 }
 export function shellGetSession(sessionId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}`, undefined, opts);
+  return request<ApiJson>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}`, undefined, opts);
 }
 export function shellExec(sessionId: string, data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}/exec`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}/exec`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function shellUpload(sessionId: string, data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}/upload`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}/upload`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function shellDownload(sessionId: string, data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}/download`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}/download`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function shellUpgrade(sessionId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}/upgrade`, { method: "POST" }, opts);
+  return request<ApiJson>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}/upgrade`, { method: "POST" }, opts);
 }
 export function shellKillSession(sessionId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }, opts);
+  return request<ApiJson>(`/pentest/shell/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }, opts);
 }
 export function shellGetPayloads(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/shell/payloads", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/shell/payloads", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function shellGeneratePayload(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/shell/payloads/generate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/shell/payloads/generate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1574,43 +1586,43 @@ export function shellGeneratePayload(data: Record<string, unknown>, opts?: Reque
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function chainStart(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/chain/start", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/chain/start", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function chainList(opts?: RequestOptions) {
-  return request<any>("/pentest/chain/chains", undefined, opts);
+  return request<ApiJson>("/pentest/chain/chains", undefined, opts);
 }
 export function chainGet(chainId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}`, undefined, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}`, undefined, opts);
 }
 export function chainDelete(chainId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}`, { method: "DELETE" }, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}`, { method: "DELETE" }, opts);
 }
 export function chainAddFinding(chainId: string, data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/finding`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/finding`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function chainAddCredential(chainId: string, data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/credential`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/credential`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function chainSuggestions(chainId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/suggestions`, undefined, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/suggestions`, undefined, opts);
 }
 export function chainExecute(chainId: string, data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/execute`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/execute`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function chainAutoAdvance(chainId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/auto-advance`, { method: "POST" }, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/auto-advance`, { method: "POST" }, opts);
 }
 export function chainLog(chainId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/log`, undefined, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/log`, undefined, opts);
 }
 export function chainReport(chainId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/report`, undefined, opts);
+  return request<ApiJson>(`/pentest/chain/chains/${encodeURIComponent(chainId)}/report`, undefined, opts);
 }
 export function chainRules(opts?: RequestOptions) {
-  return request<any>("/pentest/chain/rules", undefined, opts);
+  return request<ApiJson>("/pentest/chain/rules", undefined, opts);
 }
 export function chainAddRule(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/chain/rules", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/chain/rules", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1618,271 +1630,271 @@ export function chainAddRule(data: Record<string, unknown>, opts?: RequestOption
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function sqliDetect(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/detect", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/sqli/detect", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function sqliExtract(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/extract", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/sqli/extract", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function sqliSchema(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/schema", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/sqli/schema", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function sqliDump(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/dump", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/sqli/dump", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function sqliPrivileges(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/privileges", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/sqli/privileges", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function sqliFileRead(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/file-read", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/sqli/file-read", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function sqliOsCmd(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/os-cmd", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/sqli/os-cmd", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function sqliJobs(opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/jobs", undefined, opts);
+  return request<ApiJson>("/pentest/sqli/jobs", undefined, opts);
 }
 export function sqliJobStatus(jobId: string, opts?: RequestOptions) {
-  return request<any>(`/pentest/sqli/jobs/${encodeURIComponent(jobId)}`, undefined, opts);
+  return request<ApiJson>(`/pentest/sqli/jobs/${encodeURIComponent(jobId)}`, undefined, opts);
 }
 export function sqliTampers(opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/tampers", undefined, opts);
+  return request<ApiJson>("/pentest/sqli/tampers", undefined, opts);
 }
 export function sqliTestTamper(data: Record<string, unknown>, opts?: RequestOptions) {
-  return request<any>("/pentest/sqli/test-tamper", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
+  return request<ApiJson>("/pentest/sqli/test-tamper", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SESSION MANAGER
 // ═══════════════════════════════════════════════════════════════════════════
-export function sessMgrCreate(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/sessions-mgr/create", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function sessMgrLogin(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/sessions-mgr/login", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function sessMgrProbe(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/sessions-mgr/probe", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function sessMgrDetectAuth(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/sessions-mgr/detect-auth", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function sessMgrRequest(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/sessions-mgr/request", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function sessMgrList(opts?: RequestOptions) { return request<any>("/pentest/sessions-mgr/sessions", undefined, opts); }
-export function sessMgrGet(id: string, opts?: RequestOptions) { return request<any>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}`, undefined, opts); }
-export function sessMgrUpdateCookies(id: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<any>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}/cookies`, { method: "PUT", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function sessMgrRefresh(id: string, opts?: RequestOptions) { return request<any>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}/refresh`, { method: "POST" }, opts); }
-export function sessMgrDelete(id: string, opts?: RequestOptions) { return request<any>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
-export function sessMgrExport(id: string, opts?: RequestOptions) { return request<any>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}/export`, undefined, opts); }
+export function sessMgrCreate(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/sessions-mgr/create", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function sessMgrLogin(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/sessions-mgr/login", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function sessMgrProbe(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/sessions-mgr/probe", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function sessMgrDetectAuth(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/sessions-mgr/detect-auth", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function sessMgrRequest(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/sessions-mgr/request", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function sessMgrList(opts?: RequestOptions) { return request<ApiJson>("/pentest/sessions-mgr/sessions", undefined, opts); }
+export function sessMgrGet(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}`, undefined, opts); }
+export function sessMgrUpdateCookies(id: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}/cookies`, { method: "PUT", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function sessMgrRefresh(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}/refresh`, { method: "POST" }, opts); }
+export function sessMgrDelete(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
+export function sessMgrExport(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/sessions-mgr/sessions/${encodeURIComponent(id)}/export`, undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PRIVILEGE ESCALATION
 // ═══════════════════════════════════════════════════════════════════════════
-export function privescScan(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/privesc/scan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function privescSuid(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/privesc/suid", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function privescSudo(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/privesc/sudo", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function privescKernel(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/privesc/kernel", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function privescCron(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/privesc/cron", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function privescWindows(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/privesc/windows-check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function privescGtfobins(binary: string, opts?: RequestOptions) { return request<any>(`/pentest/privesc/gtfobins/${encodeURIComponent(binary)}`, undefined, opts); }
-export function privescTechniques(opts?: RequestOptions) { return request<any>("/pentest/privesc/techniques", undefined, opts); }
+export function privescScan(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/privesc/scan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function privescSuid(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/privesc/suid", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function privescSudo(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/privesc/sudo", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function privescKernel(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/privesc/kernel", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function privescCron(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/privesc/cron", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function privescWindows(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/privesc/windows-check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function privescGtfobins(binary: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/privesc/gtfobins/${encodeURIComponent(binary)}`, undefined, opts); }
+export function privescTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/privesc/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CREDENTIAL AUDITOR
 // ═══════════════════════════════════════════════════════════════════════════
-export function credsScan(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/creds/scan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function credsLinuxFiles(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/creds/linux-files", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function credsWindowsFiles(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/creds/windows-files", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function credsParse(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/creds/parse", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function credsSSHKeys(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/creds/ssh-keys", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function credsBrowser(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/creds/browser", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function credsCloud(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/creds/cloud", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function credsValidate(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/creds/validate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function credsTechniques(opts?: RequestOptions) { return request<any>("/pentest/creds/techniques", undefined, opts); }
+export function credsScan(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/scan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function credsLinuxFiles(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/linux-files", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function credsWindowsFiles(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/windows-files", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function credsParse(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/parse", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function credsSSHKeys(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/ssh-keys", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function credsBrowser(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/browser", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function credsCloud(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/cloud", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function credsValidate(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/validate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function credsTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/creds/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // LATERAL MOVEMENT
 // ═══════════════════════════════════════════════════════════════════════════
-export function lateralSpray(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/spray", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralPtH(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/pth", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralPtT(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/ptt", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralPsexec(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/psexec", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralWmi(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/wmi", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralWinrm(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/winrm", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralSSHPivot(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/ssh-pivot", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralPivotPlan(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/pivot-plan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralDeploy(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/deploy", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralDiscover(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/discover", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralChisel(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lateral/chisel", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lateralTechniques(opts?: RequestOptions) { return request<any>("/pentest/lateral/techniques", undefined, opts); }
+export function lateralSpray(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/spray", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralPtH(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/pth", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralPtT(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/ptt", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralPsexec(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/psexec", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralWmi(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/wmi", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralWinrm(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/winrm", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralSSHPivot(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/ssh-pivot", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralPivotPlan(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/pivot-plan", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralDeploy(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/deploy", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralDiscover(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/discover", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralChisel(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/chisel", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lateralTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/lateral/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // XSS ENGINE
 // ═══════════════════════════════════════════════════════════════════════════
-export function xssConfirm(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/xss-engine/confirm", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function xssDetectContext(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/xss-engine/detect-context", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function xssStealCookie(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/xss-engine/steal-cookie", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function xssHijack(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/xss-engine/hijack", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function xssKeylogger(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/xss-engine/keylogger", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function xssPhishing(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/xss-engine/phishing", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function xssHook(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/xss-engine/hook", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function xssPayloads(context: string, opts?: RequestOptions) { return request<any>(`/pentest/xss-engine/payloads/${encodeURIComponent(context)}`, undefined, opts); }
+export function xssConfirm(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/xss-engine/confirm", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function xssDetectContext(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/xss-engine/detect-context", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function xssStealCookie(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/xss-engine/steal-cookie", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function xssHijack(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/xss-engine/hijack", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function xssKeylogger(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/xss-engine/keylogger", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function xssPhishing(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/xss-engine/phishing", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function xssHook(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/xss-engine/hook", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function xssPayloads(context: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/xss-engine/payloads/${encodeURIComponent(context)}`, undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // LFI TO RCE
 // ═══════════════════════════════════════════════════════════════════════════
-export function lfiConfirm(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lfi-rce/confirm", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lfiRead(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lfi-rce/read", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lfiLogPoison(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lfi-rce/log-poison", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lfiWrapper(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lfi-rce/wrapper", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lfiProc(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lfi-rce/proc", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lfiSessionInclude(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lfi-rce/session-include", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lfiAutoChain(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/lfi-rce/auto-chain", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function lfiTechniques(opts?: RequestOptions) { return request<any>("/pentest/lfi-rce/techniques", undefined, opts); }
+export function lfiConfirm(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lfi-rce/confirm", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lfiRead(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lfi-rce/read", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lfiLogPoison(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lfi-rce/log-poison", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lfiWrapper(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lfi-rce/wrapper", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lfiProc(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lfi-rce/proc", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lfiSessionInclude(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lfi-rce/session-include", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lfiAutoChain(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/lfi-rce/auto-chain", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function lfiTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/lfi-rce/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PROTOCOL EXPLOITER
 // ═══════════════════════════════════════════════════════════════════════════
-export function protocolSmbEnum(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/smb/enumerate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolSmbVulns(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/smb/check-vulns", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolLdapEnum(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/ldap/enumerate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolLdapInject(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/ldap/inject", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolRdpCheck(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/rdp/check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolFtpCheck(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/ftp/check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolSnmpEnum(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/snmp/enumerate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolDnsCheck(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/dns/check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolSmtpEnum(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/protocols/smtp/enumerate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function protocolTechniques(opts?: RequestOptions) { return request<any>("/pentest/protocols/techniques", undefined, opts); }
+export function protocolSmbEnum(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/smb/enumerate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolSmbVulns(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/smb/check-vulns", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolLdapEnum(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/ldap/enumerate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolLdapInject(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/ldap/inject", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolRdpCheck(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/rdp/check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolFtpCheck(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/ftp/check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolSnmpEnum(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/snmp/enumerate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolDnsCheck(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/dns/check", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolSmtpEnum(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/smtp/enumerate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function protocolTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/protocols/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXECUTION BRIDGE
 // ═══════════════════════════════════════════════════════════════════════════
-export function bridgeExecute(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/bridge/execute", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function bridgeBatch(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/bridge/batch", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function bridgeScript(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/bridge/script", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function bridgeModule(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/bridge/module", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function bridgeSessions(opts?: RequestOptions) { return request<any>("/pentest/bridge/sessions", undefined, opts); }
-export function bridgeHistory(opts?: RequestOptions) { return request<any>("/pentest/bridge/history", undefined, opts); }
-export function bridgeClearHistory(opts?: RequestOptions) { return request<any>("/pentest/bridge/history", { method: "DELETE" }, opts); }
-export function bridgeCreateTunnel(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/bridge/tunnel", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function bridgeDeleteTunnel(id: string, opts?: RequestOptions) { return request<any>(`/pentest/bridge/tunnel/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
-export function bridgeListTunnels(opts?: RequestOptions) { return request<any>("/pentest/bridge/tunnels", undefined, opts); }
-export function bridgeUpload(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/bridge/upload", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function bridgeDownload(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/bridge/download", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function bridgeExecute(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/execute", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function bridgeBatch(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/batch", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function bridgeScript(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/script", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function bridgeModule(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/module", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function bridgeSessions(opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/sessions", undefined, opts); }
+export function bridgeHistory(opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/history", undefined, opts); }
+export function bridgeClearHistory(opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/history", { method: "DELETE" }, opts); }
+export function bridgeCreateTunnel(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/tunnel", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function bridgeDeleteTunnel(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/bridge/tunnel/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
+export function bridgeListTunnels(opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/tunnels", undefined, opts); }
+export function bridgeUpload(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/upload", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function bridgeDownload(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/bridge/download", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // C2 SERVER
 // ═══════════════════════════════════════════════════════════════════════════
-export function c2CreateListener(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/c2/listeners", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function c2ListListeners(opts?: RequestOptions) { return request<any>("/pentest/c2/listeners", undefined, opts); }
-export function c2DeleteListener(id: string, opts?: RequestOptions) { return request<any>(`/pentest/c2/listeners/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
-export function c2ListAgents(opts?: RequestOptions) { return request<any>("/pentest/c2/agents", undefined, opts); }
-export function c2GetAgent(id: string, opts?: RequestOptions) { return request<any>(`/pentest/c2/agents/${encodeURIComponent(id)}`, undefined, opts); }
-export function c2SendTask(agentId: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<any>(`/pentest/c2/agents/${encodeURIComponent(agentId)}/task`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function c2AgentTasks(agentId: string, opts?: RequestOptions) { return request<any>(`/pentest/c2/agents/${encodeURIComponent(agentId)}/tasks`, undefined, opts); }
-export function c2AgentShell(agentId: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<any>(`/pentest/c2/agents/${encodeURIComponent(agentId)}/shell`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function c2KillAgent(id: string, opts?: RequestOptions) { return request<any>(`/pentest/c2/agents/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
-export function c2AgentSleep(agentId: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<any>(`/pentest/c2/agents/${encodeURIComponent(agentId)}/sleep`, { method: "PATCH", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function c2Dashboard(opts?: RequestOptions) { return request<any>("/pentest/c2/dashboard", undefined, opts); }
-export function c2GenerateImplant(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/c2/implants/generate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function c2ListProfiles(opts?: RequestOptions) { return request<any>("/pentest/c2/profiles", undefined, opts); }
-export function c2EventLog(limit?: number, opts?: RequestOptions) { return request<any>(`/pentest/c2/log${limit ? `?limit=${limit}` : ""}`, undefined, opts); }
+export function c2CreateListener(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/listeners", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function c2ListListeners(opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/listeners", undefined, opts); }
+export function c2DeleteListener(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/listeners/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
+export function c2ListAgents(opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/agents", undefined, opts); }
+export function c2GetAgent(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/agents/${encodeURIComponent(id)}`, undefined, opts); }
+export function c2SendTask(agentId: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/agents/${encodeURIComponent(agentId)}/task`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function c2AgentTasks(agentId: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/agents/${encodeURIComponent(agentId)}/tasks`, undefined, opts); }
+export function c2AgentShell(agentId: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/agents/${encodeURIComponent(agentId)}/shell`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function c2KillAgent(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/agents/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
+export function c2AgentSleep(agentId: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/agents/${encodeURIComponent(agentId)}/sleep`, { method: "PATCH", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function c2Dashboard(opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/dashboard", undefined, opts); }
+export function c2GenerateImplant(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/implants/generate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function c2ListProfiles(opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/profiles", undefined, opts); }
+export function c2EventLog(limit?: number, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/log${limit ? `?limit=${limit}` : ""}`, undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HTTP PROXY
 // ═══════════════════════════════════════════════════════════════════════════
-export function proxyStart(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/proxy/start", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function proxyStop(opts?: RequestOptions) { return request<any>("/pentest/proxy/stop", { method: "POST" }, opts); }
-export function proxyStatus(opts?: RequestOptions) { return request<any>("/pentest/proxy/status", undefined, opts); }
-export function proxyHistory(params?: string, opts?: RequestOptions) { return request<any>(`/pentest/proxy/history${params ? `?${params}` : ""}`, undefined, opts); }
-export function proxyHistoryDetail(id: string, opts?: RequestOptions) { return request<any>(`/pentest/proxy/history/${encodeURIComponent(id)}`, undefined, opts); }
-export function proxyClearHistory(opts?: RequestOptions) { return request<any>("/pentest/proxy/history", { method: "DELETE" }, opts); }
-export function proxyReplay(id: string, data?: Record<string, unknown>, opts?: RequestOptions) { return request<any>(`/pentest/proxy/replay/${encodeURIComponent(id)}`, { method: "POST", body: data ? JSON.stringify(data) : undefined, headers: { "Content-Type": "application/json" } }, opts); }
-export function proxySend(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/proxy/send", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function proxySetScope(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/proxy/scope", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function proxyGetScope(opts?: RequestOptions) { return request<any>("/pentest/proxy/scope", undefined, opts); }
-export function proxyToggleIntercept(opts?: RequestOptions) { return request<any>("/pentest/proxy/intercept/toggle", { method: "POST" }, opts); }
-export function proxySetInterceptRules(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/proxy/intercept/rules", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function proxyInterceptQueue(opts?: RequestOptions) { return request<any>("/pentest/proxy/intercept/queue", undefined, opts); }
-export function proxyForward(id: string, data?: Record<string, unknown>, opts?: RequestOptions) { return request<any>(`/pentest/proxy/intercept/forward/${encodeURIComponent(id)}`, { method: "POST", body: data ? JSON.stringify(data) : undefined, headers: { "Content-Type": "application/json" } }, opts); }
-export function proxyDrop(id: string, opts?: RequestOptions) { return request<any>(`/pentest/proxy/intercept/drop/${encodeURIComponent(id)}`, { method: "POST" }, opts); }
-export function proxySetMatchReplace(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/proxy/match-replace", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function proxyGetMatchReplace(opts?: RequestOptions) { return request<any>("/pentest/proxy/match-replace", undefined, opts); }
-export function proxySitemap(opts?: RequestOptions) { return request<any>("/pentest/proxy/sitemap", undefined, opts); }
-export function proxyCompare(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/proxy/compare", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function proxyHighlight(id: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<any>(`/pentest/proxy/highlight/${encodeURIComponent(id)}`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function proxyExport(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/proxy/export", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function proxyStats(opts?: RequestOptions) { return request<any>("/pentest/proxy/stats", undefined, opts); }
+export function proxyStart(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/start", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function proxyStop(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/stop", { method: "POST" }, opts); }
+export function proxyStatus(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/status", undefined, opts); }
+export function proxyHistory(params?: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/proxy/history${params ? `?${params}` : ""}`, undefined, opts); }
+export function proxyHistoryDetail(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/proxy/history/${encodeURIComponent(id)}`, undefined, opts); }
+export function proxyClearHistory(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/history", { method: "DELETE" }, opts); }
+export function proxyReplay(id: string, data?: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/proxy/replay/${encodeURIComponent(id)}`, { method: "POST", body: data ? JSON.stringify(data) : undefined, headers: { "Content-Type": "application/json" } }, opts); }
+export function proxySend(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/send", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function proxySetScope(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/scope", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function proxyGetScope(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/scope", undefined, opts); }
+export function proxyToggleIntercept(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/intercept/toggle", { method: "POST" }, opts); }
+export function proxySetInterceptRules(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/intercept/rules", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function proxyInterceptQueue(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/intercept/queue", undefined, opts); }
+export function proxyForward(id: string, data?: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/proxy/intercept/forward/${encodeURIComponent(id)}`, { method: "POST", body: data ? JSON.stringify(data) : undefined, headers: { "Content-Type": "application/json" } }, opts); }
+export function proxyDrop(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/proxy/intercept/drop/${encodeURIComponent(id)}`, { method: "POST" }, opts); }
+export function proxySetMatchReplace(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/match-replace", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function proxyGetMatchReplace(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/match-replace", undefined, opts); }
+export function proxySitemap(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/sitemap", undefined, opts); }
+export function proxyCompare(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/compare", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function proxyHighlight(id: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/proxy/highlight/${encodeURIComponent(id)}`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function proxyExport(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/export", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function proxyStats(opts?: RequestOptions) { return request<ApiJson>("/pentest/proxy/stats", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AV/EDR EVASION
 // ═══════════════════════════════════════════════════════════════════════════
-export function evasionEncode(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/evasion/encode", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function evasionShellcode(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/evasion/shellcode", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function evasionAmsi(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/evasion/amsi-bypass", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function evasionLoader(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/evasion/loader", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function evasionProcessInject(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/evasion/process-inject", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function evasionUnhook(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/evasion/unhook", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function evasionSignatures(opts?: RequestOptions) { return request<any>("/pentest/evasion/signatures", undefined, opts); }
-export function evasionObfuscate(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/evasion/obfuscate-script", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function evasionSandbox(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/evasion/sandbox-detect", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function evasionTechniques(opts?: RequestOptions) { return request<any>("/pentest/evasion/techniques", undefined, opts); }
+export function evasionEncode(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/encode", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function evasionShellcode(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/shellcode", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function evasionAmsi(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/amsi-bypass", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function evasionLoader(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/loader", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function evasionProcessInject(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/process-inject", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function evasionUnhook(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/unhook", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function evasionSignatures(opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/signatures", undefined, opts); }
+export function evasionObfuscate(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/obfuscate-script", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function evasionSandbox(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/sandbox-detect", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function evasionTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/evasion/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // FUZZER
 // ═══════════════════════════════════════════════════════════════════════════
-export function fuzzerParams(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/fuzzer/params", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function fuzzerHeaders(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/fuzzer/headers", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function fuzzerDirectories(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/fuzzer/directories", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function fuzzerVhost(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/fuzzer/vhost", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function fuzzerAuth(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/fuzzer/auth", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function fuzzerMutate(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/fuzzer/mutate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function fuzzerApiDiscover(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/fuzzer/api-discover", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function fuzzerRace(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/fuzzer/race", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function fuzzerJobs(opts?: RequestOptions) { return request<any>("/pentest/fuzzer/jobs", undefined, opts); }
-export function fuzzerJobDetail(id: string, opts?: RequestOptions) { return request<any>(`/pentest/fuzzer/jobs/${encodeURIComponent(id)}`, undefined, opts); }
-export function fuzzerDeleteJob(id: string, opts?: RequestOptions) { return request<any>(`/pentest/fuzzer/jobs/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
-export function fuzzerWordlists(opts?: RequestOptions) { return request<any>("/pentest/fuzzer/wordlists", undefined, opts); }
-export function fuzzerTechniques(opts?: RequestOptions) { return request<any>("/pentest/fuzzer/techniques", undefined, opts); }
+export function fuzzerParams(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/params", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function fuzzerHeaders(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/headers", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function fuzzerDirectories(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/directories", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function fuzzerVhost(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/vhost", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function fuzzerAuth(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/auth", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function fuzzerMutate(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/mutate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function fuzzerApiDiscover(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/api-discover", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function fuzzerRace(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/race", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function fuzzerJobs(opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/jobs", undefined, opts); }
+export function fuzzerJobDetail(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/fuzzer/jobs/${encodeURIComponent(id)}`, undefined, opts); }
+export function fuzzerDeleteJob(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/fuzzer/jobs/${encodeURIComponent(id)}`, { method: "DELETE" }, opts); }
+export function fuzzerWordlists(opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/wordlists", undefined, opts); }
+export function fuzzerTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/fuzzer/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NETWORK SCANNER
 // ═══════════════════════════════════════════════════════════════════════════
-export function netscanTcp(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/tcp", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanSyn(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/syn", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanUdp(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/udp", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanBanner(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/banner", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanSweep(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/sweep", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanOsDetect(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/os-detect", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanSsl(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/ssl", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanTraceroute(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/traceroute", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanDns(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/netscan/dns", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function netscanJobs(opts?: RequestOptions) { return request<any>("/pentest/netscan/jobs", undefined, opts); }
-export function netscanJobDetail(id: string, opts?: RequestOptions) { return request<any>(`/pentest/netscan/jobs/${encodeURIComponent(id)}`, undefined, opts); }
-export function netscanCommonPorts(opts?: RequestOptions) { return request<any>("/pentest/netscan/common-ports", undefined, opts); }
-export function netscanTechniques(opts?: RequestOptions) { return request<any>("/pentest/netscan/techniques", undefined, opts); }
+export function netscanTcp(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/tcp", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanSyn(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/syn", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanUdp(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/udp", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanBanner(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/banner", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanSweep(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/sweep", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanOsDetect(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/os-detect", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanSsl(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/ssl", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanTraceroute(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/traceroute", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanDns(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/dns", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function netscanJobs(opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/jobs", undefined, opts); }
+export function netscanJobDetail(id: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/netscan/jobs/${encodeURIComponent(id)}`, undefined, opts); }
+export function netscanCommonPorts(opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/common-ports", undefined, opts); }
+export function netscanTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/netscan/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPLOIT DEV
 // ═══════════════════════════════════════════════════════════════════════════
-export function exploitPatternCreate(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/pattern/create", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitPatternOffset(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/pattern/offset", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitPack(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/pack", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitRopGadgets(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/rop/gadgets", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitRopChain(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/rop/chain", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitFormatString(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/format-string", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitShellcodeGen(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/shellcode/generate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitShellcodeEncode(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/shellcode/encode", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitEgghunter(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/egghunter", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitHeap(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/heap", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitBadChars(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/bad-chars", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function exploitTechniques(opts?: RequestOptions) { return request<any>("/pentest/exploit-dev/techniques", undefined, opts); }
+export function exploitPatternCreate(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/pattern/create", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitPatternOffset(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/pattern/offset", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitPack(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/pack", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitRopGadgets(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/rop/gadgets", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitRopChain(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/rop/chain", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitFormatString(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/format-string", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitShellcodeGen(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/shellcode/generate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitShellcodeEncode(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/shellcode/encode", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitEgghunter(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/egghunter", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitHeap(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/heap", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitBadChars(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/bad-chars", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function exploitTechniques(opts?: RequestOptions) { return request<ApiJson>("/pentest/exploit-dev/techniques", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // AI ASSISTANT
 // ═══════════════════════════════════════════════════════════════════════════
-export function aiAnalyze(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/analyze", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiSuggestAttack(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/suggest-attack", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiExplainVuln(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/explain-vuln", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiGeneratePayload(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/generate-payload", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiReviewOutput(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/review-output", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiWriteReport(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/write-report", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiDeobfuscate(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/deobfuscate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiCraftBypass(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/craft-bypass", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiChat(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/chat", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
-export function aiPersonas(opts?: RequestOptions) { return request<any>("/pentest/ai/personas", undefined, opts); }
-export function aiModels(opts?: RequestOptions) { return request<any>("/pentest/ai/models", undefined, opts); }
+export function aiAnalyze(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/analyze", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiSuggestAttack(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/suggest-attack", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiExplainVuln(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/explain-vuln", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiGeneratePayload(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/generate-payload", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiReviewOutput(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/review-output", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiWriteReport(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/write-report", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiDeobfuscate(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/deobfuscate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiCraftBypass(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/craft-bypass", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiChat(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/chat", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiPersonas(opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/personas", undefined, opts); }
+export function aiModels(opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/models", undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WORKFLOWS
@@ -1899,13 +1911,13 @@ export function workflowStart(body: { template_id: string; target: string; custo
 export function workflowGet(id: string, opts?: RequestOptions): Promise<WorkflowInstance> {
   return request<WorkflowInstance>(`/pentest/workflows/${id}`, undefined, opts);
 }
-export function workflowCurrent(id: string, opts?: RequestOptions): Promise<WorkflowStepInstance & { next_params: Record<string, any> }> {
-  return request<WorkflowStepInstance & { next_params: Record<string, any> }>(`/pentest/workflows/${id}/current`, undefined, opts);
+export function workflowCurrent(id: string, opts?: RequestOptions): Promise<WorkflowStepInstance & { next_params: Record<string, unknown> }> {
+  return request<WorkflowStepInstance & { next_params: Record<string, unknown> }>(`/pentest/workflows/${id}/current`, undefined, opts);
 }
 export function workflowStepStart(wfId: string, stepId: string, opts?: RequestOptions): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>(`/pentest/workflows/${wfId}/steps/${stepId}/start`, { method: "POST" }, opts);
 }
-export function workflowStepComplete(wfId: string, stepId: string, body: { result_summary: string; output_data: Record<string, any> }, opts?: RequestOptions): Promise<{ ok: boolean }> {
+export function workflowStepComplete(wfId: string, stepId: string, body: { result_summary: string; output_data: Record<string, unknown> }, opts?: RequestOptions): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>(`/pentest/workflows/${wfId}/steps/${stepId}/complete`, { method: "POST", body: JSON.stringify(body) }, opts);
 }
 export function workflowStepSkip(wfId: string, stepId: string, opts?: RequestOptions): Promise<{ ok: boolean }> {
@@ -1926,10 +1938,10 @@ export function workflowActive(opts?: RequestOptions): Promise<WorkflowInstance[
 export function workflowReport(id: string, opts?: RequestOptions): Promise<{ markdown: string }> {
   return request<{ markdown: string }>(`/pentest/workflows/${id}/report`, undefined, opts);
 }
-export function workflowNextParams(id: string, opts?: RequestOptions): Promise<Record<string, any>> {
-  return request<Record<string, any>>(`/pentest/workflows/${id}/next-params`, undefined, opts);
+export function workflowNextParams(id: string, opts?: RequestOptions): Promise<Record<string, unknown>> {
+  return request<ApiJson>(`/pentest/workflows/${id}/next-params`, undefined, opts);
 }
-export function aiChainAnalyze(data: Record<string, unknown>, opts?: RequestOptions) { return request<any>("/pentest/ai/chain-analyze", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function aiChainAnalyze(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/ai/chain-analyze", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
 
 // --- Live Attack Dashboard ---
 export function liveDashboard(opts?: RequestOptions): Promise<LiveDashboard> {
@@ -1965,8 +1977,8 @@ export function liveKillOp(opId: string, opts?: RequestOptions): Promise<{ ok: b
 export function liveSimulate(opts?: RequestOptions): Promise<{ operation_id: string }> {
   return request<{ operation_id: string }>("/pentest/live/simulate", { method: "POST" }, opts);
 }
-export function liveStats(opts?: RequestOptions): Promise<Record<string, any>> {
-  return request<Record<string, any>>("/pentest/live/stats", undefined, opts);
+export function liveStats(opts?: RequestOptions): Promise<Record<string, unknown>> {
+  return request<ApiJson>("/pentest/live/stats", undefined, opts);
 }
 
 // --- Auto-Exploit Engine ---
@@ -2093,7 +2105,7 @@ export function casesClose(id: string, resolution: string, summary = "", opts?: 
     method: "POST", body: JSON.stringify({ resolution, summary }),
   }, opts);
 }
-export function casesAddEvidence(id: string, body: { kind: string; title: string; content: string; extra?: Record<string, any> }, opts?: RequestOptions): Promise<CaseEvidenceItem> {
+export function casesAddEvidence(id: string, body: { kind: string; title: string; content: string; extra?: Record<string, unknown> }, opts?: RequestOptions): Promise<CaseEvidenceItem> {
   return request<CaseEvidenceItem>(`/cases/${id}/evidence`, { method: "POST", body: JSON.stringify(body) }, opts);
 }
 export function casesListEvidence(id: string, opts?: RequestOptions): Promise<{ evidence: CaseEvidenceItem[]; count: number }> {
