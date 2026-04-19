@@ -17,6 +17,16 @@ node_modules/
 .env.local
 .env.*.local
 
+# Secrets / tokens — JAMAIS committer (V4.7 hardening)
+.admin_token
+*.token
+*.token.txt
+operator*.cfg
+*.pem
+*.key
+!**/public.pem
+!**/*.pub.pem
+
 # IDE
 .vscode/
 .idea/
