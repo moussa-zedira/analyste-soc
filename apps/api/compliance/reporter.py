@@ -7,12 +7,15 @@ Calcule pour chaque controle :
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from apps.api.compliance.frameworks import (
     ALL_FRAMEWORKS,
@@ -125,7 +128,7 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                 feeds_enabled = db.query(ThreatFeed).filter(ThreatFeed.enabled == True).count()
                 evidence.append(_metric(f"feeds_enabled={feeds_enabled}", feeds_enabled))
             except Exception:
-                pass
+                logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap == "uba.profiling":
             from apps.api.models.uba import UserBaseline
             n = db.query(UserBaseline).count()
@@ -155,7 +158,7 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                     ))
                 evidence.append(_metric(f"cases_closed_30d={len(closed)}", len(closed)))
             except Exception:
-                pass
+                logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap == "audit.immutable":
             from apps.api.models.pentest_audit import PentestAuditLog
             n = db.query(PentestAuditLog).count()
@@ -175,7 +178,7 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                             "value": ts_attr.isoformat(),
                         })
             except Exception:
-                pass
+                logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap == "audit.user_actions":
             try:
                 from apps.api.models.audit_log import AuditLog
@@ -193,7 +196,7 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                         "value": last.created_at.isoformat(),
                     })
             except Exception:
-                pass
+                logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap in {
             "detection.brute_force",
             "detection.malware",
@@ -214,14 +217,14 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                     resolved,
                 ))
             except Exception:
-                pass
+                logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap == "vuln.scan":
             try:
                 from apps.api.models.scan_history import ScanHistory
                 n = db.query(ScanHistory).count()
                 evidence.append(_metric(f"scans_total={n}", n))
             except Exception:
-                pass
+                logger.debug("reporter: evidence collection failed", exc_info=True)
             try:
                 from apps.api.models.devsecops import ScanRun
                 runs_30d = (
@@ -231,9 +234,9 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                 ) if hasattr(ScanRun, "created_at") else db.query(ScanRun).count()
                 evidence.append(_metric(f"devsecops_runs_30d={runs_30d}", runs_30d))
             except Exception:
-                pass
+                logger.debug("reporter: evidence collection failed", exc_info=True)
     except Exception:
-        pass
+        logger.debug("reporter: evidence collection failed", exc_info=True)
     return evidence
 
 

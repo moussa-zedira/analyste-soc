@@ -31,6 +31,10 @@ from apps.api.devsecops.ci_integrations import (
     generate_circleci,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def generate_ci_config(platform: str, scans: list[str], quality_gate: dict | None = None) -> str:
     p = (platform or "").lower()
@@ -225,7 +229,7 @@ async def scan_full(body: ScanRequest, db: Session = Depends(get_db)):
             findings = await scan_fn(body.target, **({"language": body.language} if stype == "sast" else {}), options=body.options or {})
             all_findings.extend(findings)
         except Exception:
-            pass
+            logger.debug("devsecops: ignored exception", exc_info=True)
     run = _persist_run(db, "full", all_findings, body.project_id)
     return {"run": _run_dict(run), "findings": all_findings}
 

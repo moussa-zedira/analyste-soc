@@ -67,7 +67,7 @@ def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
         )
         ti_by_ip = {ip: score for ip, score in ti_rows if score}
     except Exception:
-        pass
+        logger.debug("threat_score: ignored exception", exc_info=True)
 
     # --- Gather per-IP severity sums ---
     severity_rows = (

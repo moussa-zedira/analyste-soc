@@ -124,7 +124,7 @@ async def _get_dns(domain: str) -> dict[str, list[str]]:
                 answers = r.json().get("Answer", [])
                 return rt, [a.get("data", "").strip('"') for a in answers]
         except Exception:
-            pass
+            logger.debug("recon: ignored exception", exc_info=True)
         return rt, []
 
     results = await asyncio.gather(*[q(rt) for rt in rtypes])
@@ -161,7 +161,7 @@ async def _get_subdomains(domain: str) -> list[dict]:
         try:
             ip = socket.gethostbyname(sub)
         except Exception:
-            pass
+            logger.debug("recon: ignored exception", exc_info=True)
         result.append({"subdomain": sub, "ip": ip})
     return result
 
@@ -325,7 +325,7 @@ async def _get_ssl(hostname: str) -> dict | None:
                             days = (exp - datetime.now(timezone.utc)).days
                             expired = days < 0
                         except Exception:
-                            pass
+                            logger.debug("recon: ignored exception", exc_info=True)
 
                     return {
                         "subject": subj, "issuer": " / ".join(issuer_parts),
@@ -496,7 +496,7 @@ async def _get_robots_sitemap(target: str) -> dict | None:
                         if url:
                             result["sitemaps"].append(url)
         except Exception:
-            pass
+            logger.debug("recon: ignored exception", exc_info=True)
     return result if result["robots_txt"] or result["disallowed"] or result["sitemaps"] else None
 
 
@@ -547,7 +547,7 @@ async def _harvest_emails(target: str) -> list[str]:
                     if not e.endswith((".png", ".jpg", ".gif", ".css", ".js")):
                         emails.add(e.lower())
         except Exception:
-            pass
+            logger.debug("recon: ignored exception", exc_info=True)
 
     await asyncio.gather(*[fetch(u) for u in pages])
     return sorted(emails)[:30]

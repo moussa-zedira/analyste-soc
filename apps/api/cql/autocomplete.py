@@ -10,6 +10,9 @@ from sqlalchemy.orm import Session
 
 from apps.api.cql.executor import EVENT_FIELDS, FIELD_ALIASES, _STRING_FIELDS, _NUMERIC_FIELDS
 from apps.api.cql.commands import list_commands
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Suggestion types
@@ -327,7 +330,7 @@ def _suggest_values(field_name: str | None, db: Session | None) -> list[dict]:
                 for v in cached[:20]
             ]
     except Exception:
-        pass
+        logger.debug("autocomplete: ignored exception", exc_info=True)
 
     # Query DB for recent unique values
     if db is not None:
@@ -350,14 +353,14 @@ def _suggest_values(field_name: str | None, db: Session | None) -> list[dict]:
                     from apps.api.cache import set_cache
                     set_cache(f"cql:values:{resolved}", value_list, ttl=300)
                 except Exception:
-                    pass
+                    logger.debug("autocomplete: ignored exception", exc_info=True)
 
                 return [
                     {"text": v, "type": SUGGESTION_TYPE_VALUE, "description": "Recent value", "score": 0.8}
                     for v in value_list[:20]
                 ]
         except Exception:
-            pass
+            logger.debug("autocomplete: ignored exception", exc_info=True)
 
     return []
 

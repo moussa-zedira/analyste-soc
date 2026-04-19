@@ -238,7 +238,7 @@ class StateStore:
             r.delete(self._redis_key(machine_id, group_key))
             r.srem(self._redis_index_key(machine_id), group_key)
         except Exception:
-            pass
+            logger.debug("state_machine: ignored exception", exc_info=True)
         if machine_id in self._memory_store:
             self._memory_store[machine_id].pop(group_key, None)
 

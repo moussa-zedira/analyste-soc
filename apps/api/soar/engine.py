@@ -494,4 +494,4 @@ def _publish_status(execution_id: str, status: str) -> None:
                 ex=3600,
             )
     except Exception:
-        pass
+        logger.debug("engine: ignored exception", exc_info=True)

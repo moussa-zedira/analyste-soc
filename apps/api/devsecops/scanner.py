@@ -1039,7 +1039,7 @@ async def _check_security_headers(client: httpx.AsyncClient, url: str) -> list[S
                 remediation="Remove or obfuscate the Server header.",
             ))
     except Exception:
-        pass
+        logger.debug("scanner: ignored exception", exc_info=True)
     return findings
 
 
@@ -1058,7 +1058,7 @@ async def _check_cors(client: httpx.AsyncClient, url: str) -> list[ScanFindingRe
                 remediation="Restrict Access-Control-Allow-Origin to trusted domains.",
             ))
     except Exception:
-        pass
+        logger.debug("scanner: ignored exception", exc_info=True)
     return findings
 
 
@@ -1089,7 +1089,7 @@ async def _check_reflected_xss(client: httpx.AsyncClient, url: str) -> list[Scan
                     remediation="Sanitize and encode all user input before rendering in HTML.",
                 ))
         except Exception:
-            pass
+            logger.debug("scanner: ignored exception", exc_info=True)
     return findings
 
 
@@ -1130,7 +1130,7 @@ async def _check_error_sqli(client: httpx.AsyncClient, url: str) -> list[ScanFin
                     ))
                     break
         except Exception:
-            pass
+            logger.debug("scanner: ignored exception", exc_info=True)
     return findings
 
 
@@ -1159,7 +1159,7 @@ async def _check_open_redirect(client: httpx.AsyncClient, url: str) -> list[Scan
                     remediation="Validate redirect URLs against a whitelist of allowed domains.",
                 ))
         except Exception:
-            pass
+            logger.debug("scanner: ignored exception", exc_info=True)
     return findings
 
 
@@ -1194,7 +1194,7 @@ async def _check_info_disclosure(client: httpx.AsyncClient, url: str) -> list[Sc
                     remediation="Restrict access to sensitive files. Configure web server to deny access.",
                 ))
         except Exception:
-            pass
+            logger.debug("scanner: ignored exception", exc_info=True)
     return findings
 
 
@@ -1429,7 +1429,7 @@ async def _run_iac_scan_regex(
                 elif "hosts:" in content or "tasks:" in content:
                     ansible_files.append(target)
             except Exception:
-                pass
+                logger.debug("scanner: ignored exception", exc_info=True)
     else:
         for root, dirs, filenames in os.walk(str(target)):
             dirs[:] = [d for d in dirs if d not in exclude]
@@ -1448,7 +1448,7 @@ async def _run_iac_scan_regex(
                         elif ("hosts:" in sample or "tasks:" in sample) and "ansible" in str(root).lower():
                             ansible_files.append(fp)
                     except Exception:
-                        pass
+                        logger.debug("scanner: ignored exception", exc_info=True)
 
     for fp in tf_files:
         findings.extend(_scan_terraform(fp, target))

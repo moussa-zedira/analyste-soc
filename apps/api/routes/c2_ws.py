@@ -276,7 +276,7 @@ async def ws_terminal(
                     },
                 )
             except Exception:
-                pass
+                logger.debug("c2_ws: ignored exception", exc_info=True)
     except WebSocketDisconnect:
         pass
     except Exception:

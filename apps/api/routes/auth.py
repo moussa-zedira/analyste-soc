@@ -23,6 +23,9 @@ from apps.api.db.session import get_db
 from apps.api.middleware.rate_limit import limiter
 from apps.api.models.user import User
 from apps.api.observability import record_login
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -167,14 +170,14 @@ def logout(request: Request, payload: RefreshRequest | None = None) -> None:
             access_payload = decode_token(auth_header[7:])
             revoke_jti(access_payload.get("jti", ""), access_payload.get("exp", 0))
         except Exception:
-            pass
+            logger.debug("auth: ignored exception", exc_info=True)
 
     if payload and payload.refresh_token:
         try:
             ref = decode_token(payload.refresh_token)
             revoke_jti(ref.get("jti", ""), ref.get("exp", 0))
         except Exception:
-            pass
+            logger.debug("auth: ignored exception", exc_info=True)
     record_login("logout", success=True)
 
 

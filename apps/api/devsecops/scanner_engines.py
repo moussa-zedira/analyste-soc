@@ -25,6 +25,9 @@ from pathlib import Path
 from typing import Any
 
 import structlog
+import logging
+
+logger = logging.getLogger(__name__)
 
 slog = structlog.get_logger(__name__)
 
@@ -90,7 +93,7 @@ async def _run(
         try:
             await proc.wait()
         except Exception:
-            pass
+            logger.debug("scanner_engines: ignored exception", exc_info=True)
         slog.warning("devsecops_engine_timeout", cmd=cmd[0], timeout=timeout)
         return 124, b"", b"timeout"
 

@@ -147,7 +147,7 @@ def traced(name: str | None = None, *, attributes: dict | None = None):
                             from opentelemetry.trace import Status, StatusCode
                             span.set_status(Status(StatusCode.ERROR, str(exc)))
                         except Exception:
-                            pass
+                            logger.debug("tracing: ignored exception", exc_info=True)
                         raise
             return awrap
 
@@ -166,7 +166,7 @@ def traced(name: str | None = None, *, attributes: dict | None = None):
                         from opentelemetry.trace import Status, StatusCode
                         span.set_status(Status(StatusCode.ERROR, str(exc)))
                     except Exception:
-                        pass
+                        logger.debug("tracing: ignored exception", exc_info=True)
                     raise
         return swrap
 

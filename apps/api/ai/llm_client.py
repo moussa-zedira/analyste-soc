@@ -232,7 +232,7 @@ def _refresh_daily_cost_cache(day: str | None = None) -> dict[str, Any] | None:
             try:
                 r.setex(f"ai:cost:daily:{day}", 48 * 3600, json.dumps(agg, default=str))
             except Exception:
-                pass
+                logger.debug("llm_client: ignored exception", exc_info=True)
         return agg
     except Exception as e:  # pragma: no cover
         logger.debug("daily cost cache refresh failed: %s", e)
@@ -651,7 +651,7 @@ def get_daily_cost(day: str | None = None) -> dict[str, Any]:
                 if cached:
                     return json.loads(cached)
             except Exception:
-                pass
+                logger.debug("llm_client: ignored exception", exc_info=True)
         return _refresh_daily_cost_cache(day) or {"day": day, "total_usd": 0.0}
     except Exception:
         return {"day": day, "total_usd": 0.0}

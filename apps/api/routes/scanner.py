@@ -19,6 +19,9 @@ from sqlalchemy.orm import Session
 from apps.api.db.session import get_db
 from apps.api.models.scan_history import ScanHistory
 from apps.api.security import require_api_key
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -201,7 +204,7 @@ def _scan_single_port(ip: str, port: int, timeout: float = 1.5) -> PortResult:
                 if banner_bytes:
                     banner = banner_bytes.decode("utf-8", errors="replace").strip()[:200]
             except Exception:
-                pass
+                logger.debug("scanner: ignored exception", exc_info=True)
             sock.close()
             return PortResult(port=port, service=service, state="open", banner=banner)
         else:
@@ -265,7 +268,7 @@ def _get_geo_full(ip: str) -> tuple[dict | None, list[str]]:
                 errors.append(f"GeoIP enrichment: {exc}")
             return basic_geo, errors
     except Exception:
-        pass
+        logger.debug("scanner: ignored exception", exc_info=True)
 
     # Repli complet sur ip-api.com
     try:
@@ -594,7 +597,7 @@ def _check_ip_reputation(ip: str) -> tuple[ReputationResult | None, list[str]]:
                         result.is_bot = is_bot
                         result.source = "ipapi.is + ip-api.com"
                 except Exception:
-                    pass
+                    logger.debug("scanner: ignored exception", exc_info=True)
 
                 return result, errors
     except Exception as exc:

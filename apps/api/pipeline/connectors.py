@@ -241,7 +241,7 @@ def event_to_cql_index(event_dict: dict[str, Any]) -> None:
         # Trim to last 100k events
         r.zremrangebyrank(key, 0, -100001)
     except Exception:
-        pass
+        logger.debug("connectors: ignored exception", exc_info=True)
 
 
 # ---------------------------------------------------------------------------

@@ -391,4 +391,4 @@ async def orchestrator_ws(websocket: WebSocket, orch_id: str):
         try:
             await websocket.close()
         except Exception:
-            pass
+            logger.debug("orchestrator: ignored exception", exc_info=True)

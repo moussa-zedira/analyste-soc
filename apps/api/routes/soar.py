@@ -13,6 +13,9 @@ from sqlalchemy.orm import Session
 from apps.api.db.session import get_db
 from apps.api.models.soar import Playbook, PlaybookExecution, PlaybookStepResult
 from apps.api.security import require_api_key
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -434,7 +437,7 @@ def cancel_execution(execution_id: str, db: Session = Depends(get_db)):
             from apps.api.celery_app import celery
             celery.control.revoke(execution.celery_task_id, terminate=True)
         except Exception:
-            pass
+            logger.debug("soar: ignored exception", exc_info=True)
 
     execution.status = "cancelled"
     execution.finished_at = datetime.now(timezone.utc)
@@ -445,7 +448,7 @@ def cancel_execution(execution_id: str, db: Session = Depends(get_db)):
         from apps.api.soar.engine import _publish_status
         _publish_status(execution_id, "cancelled")
     except Exception:
-        pass
+        logger.debug("soar: ignored exception", exc_info=True)
 
     return {"id": execution_id, "status": "cancelled"}
 

@@ -135,7 +135,7 @@ def ti_stats(db: Session = Depends(get_db)) -> dict:
             v = r.get("siem:ti:otx:hourly_count")
             otx_used = int(v) if v else 0
     except Exception:
-        pass
+        logger.debug("threat_intel: ignored exception", exc_info=True)
 
     return {
         "cache_entries": cache_count,

@@ -140,7 +140,7 @@ class GeoEnrichStage(BaseStage):
                 "longitude": resp.location.longitude,
             }
         except Exception:
-            pass
+            logger.debug("stages: ignored exception", exc_info=True)
         # Fallback: return None (no geo data available)
         return None
 
@@ -256,11 +256,11 @@ class AssetEnrichStage(BaseStage):
                         "business_unit": row[3],
                     }
             except Exception:
-                pass
+                logger.debug("stages: ignored exception", exc_info=True)
             finally:
                 db.close()
         except Exception:
-            pass
+            logger.debug("stages: ignored exception", exc_info=True)
         return None
 
 
@@ -303,7 +303,7 @@ class ClassifyStage(BaseStage):
                     })
                     return ctx
         except Exception:
-            pass
+            logger.debug("stages: ignored exception", exc_info=True)
 
         # Rule-based fallback
         text_to_check = " ".join([
@@ -443,7 +443,7 @@ class DetectStage(BaseStage):
                                 "description": compiled.get("description", ""),
                             })
                     except Exception:
-                        pass
+                        logger.debug("stages: ignored exception", exc_info=True)
             finally:
                 db.close()
         except ImportError:
@@ -469,7 +469,7 @@ class DetectStage(BaseStage):
                             "severity": rule.severity,
                         })
                 except Exception:
-                    pass
+                    logger.debug("stages: ignored exception", exc_info=True)
         except ImportError:
             pass
         return results

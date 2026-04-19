@@ -218,7 +218,7 @@ class PipelineMetrics:
             r.hincrby("pipeline:metrics:_overall", "count", 1)
             r.expire("pipeline:metrics:_overall", 7200)
         except Exception:
-            pass
+            logger.debug("metrics: ignored exception", exc_info=True)
 
 
 # ---------------------------------------------------------------------------

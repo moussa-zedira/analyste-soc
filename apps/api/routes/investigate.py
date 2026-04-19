@@ -102,7 +102,7 @@ def _get_dns_records(domain: str) -> dict:
         except socket.gaierror:
             pass
     except Exception:
-        pass
+        logger.debug("investigate: ignored exception", exc_info=True)
     return records
 
 
