@@ -1,30 +1,35 @@
 # Analyste SOC
 
-**Cyber Defense Dashboard -- SIEM & Offensive Security Platform**
+**Cyber Defense Dashboard — SIEM + Offensive Security + Red Team + AI Assistant**
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=next.js&logoColor=white)
-![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/License-Private-red?style=flat-square)
 
-A full-stack Security Information and Event Management (SIEM) platform combined with an integrated offensive security toolkit. The platform provides real-time event monitoring, ML-powered anomaly detection, MITRE ATT&CK mapping, and 30+ penetration testing modules -- all behind a unified dashboard.
+Plateforme unifiée combinant **SIEM défensif**, **65+ modules offensifs**, **opération Red Team** (Sliver C2, GoPhish, BloodHound), et **assistant IA contextuel** (Claude / GPT / Ollama local). Conçue pour un pentester freelance qui doit couvrir tout le cycle — recon → exploit → post-exploit → rapport — depuis un seul dashboard.
 
-> **Disclaimer:** The offensive security tools included in this project are intended strictly for authorized penetration testing, security assessments, and educational purposes. Unauthorized use of these tools against systems you do not own or have explicit written permission to test is illegal and unethical. The authors assume no liability for misuse.
+**État actuel (V4.9, 2026-04-19)** : 118 pages frontend, 750+ endpoints backend, 65+ modules. Stack validée end-to-end (3 tours de debug automatisés).
+
+> **Disclaimer :** Les outils offensifs inclus sont destinés strictement à des audits autorisés, missions de pentest sous contrat, ou contextes éducatifs (CTF, labs). Toute utilisation non autorisée est illégale.
 
 ---
 
-## Table of Contents
+## Sommaire
 
 - [Architecture](#architecture)
-- [SIEM & Defense Features](#siem--defense-features)
-- [Offensive Security Features](#offensive-security-features)
+- [Modules SIEM / Défense](#modules-siem--défense)
+- [Modules Pentest Offensif](#modules-pentest-offensif)
+- [Red Team (C2, Phishing, AD)](#red-team-c2-phishing-ad)
+- [Assistant IA](#assistant-ia)
+- [Workflows guidés](#workflows-guidés)
 - [Quick Start](#quick-start)
-- [Environment Variables](#environment-variables)
-- [Database Migrations](#database-migrations)
+- [Variables d'environnement](#variables-denvironnement)
+- [Migrations DB](#migrations-db)
 - [Tech Stack](#tech-stack)
 
 ---
@@ -33,165 +38,257 @@ A full-stack Security Information and Event Management (SIEM) platform combined 
 
 ```
 apps/
-├── api/            FastAPI backend (REST + WebSocket) — 200+ endpoints
-├── web/            Next.js 15 frontend (App Router, React 19) — 30+ pages
-├── agent/          Event simulator for development
-└── collectors/     (planned) Syslog, WinLog, File watcher collectors
+├── api/            FastAPI backend — 750+ endpoints REST + WebSocket
+├── web/            Next.js 15 (App Router) — 118 pages
+├── agent/          Event simulator
+└── collectors/     Syslog, WinLog, File watcher
 ```
 
-**Infrastructure** -- 7 Docker Compose services:
+**8 services Docker Compose :**
 
-| Service    | Role                                  |
-|------------|---------------------------------------|
-| `api`      | FastAPI application server            |
-| `web`      | Next.js frontend                      |
-| `postgres` | PostgreSQL 16 database                |
-| `redis`    | Redis 7 (caching, pub/sub, rate limiting) |
-| `worker`   | Celery task worker                    |
-| `beat`     | Celery periodic task scheduler        |
-| `syslog`   | Syslog ingestion endpoint             |
+| Service    | Rôle                                      |
+|------------|-------------------------------------------|
+| `api`      | Serveur FastAPI                           |
+| `web`      | Frontend Next.js                          |
+| `postgres` | PostgreSQL 16                             |
+| `redis`    | Cache, pub/sub, rate limit, sessions      |
+| `worker`   | Celery (tâches async)                     |
+| `beat`     | Celery scheduler (tâches périodiques)     |
+| `syslog`   | Ingestion syslog UDP/TCP                  |
+| `gophish`  | Serveur phishing (container séparé)       |
+
+**Services externes** (host) :
+- **Ollama** sur `localhost:11434` — IA locale (`qwen2.5-coder:7b`)
+- **Sliver C2** sur `localhost:31337` — daemon opérateur
 
 ---
 
-## SIEM & Defense Features
+## Modules SIEM / Défense
 
-### Core Engine
+### Moteur temps réel
+- **Event stream** — WebSocket push via Redis pub/sub, journal + carte GeoIP en live
+- **Moteur de détection** — règles (brute-force, impossible travel, anomalies stats) + ML (Isolation Forest, TF-IDF)
+- **Moteur SIGMA** — import automatique depuis SigmaHQ, conversion des rules, corrélation
+- **UBA** — User Behavior Analytics, profils comportementaux, scoring de dérive
 
-- **Real-time event stream** -- WebSocket push via Redis pub/sub with live journal and map updates
-- **Detection engine** -- Rule-based detection (brute force, impossible travel, statistical anomaly) combined with ML models (Isolation Forest, TF-IDF severity classifier)
-- **Anomaly detection** -- ML-powered behavioral analysis using Isolation Forest
-- **SIGMA rules engine** -- Import and manage SIGMA detection rules for standardized threat detection
-
-### Incident Response
-
-- **Incident management** -- Auto-created incidents with deduplication, severity scoring, and AI-assisted triage via Ollama
-- **Threat scores** -- Composite scoring incorporating threat intelligence factors
-- **Webhook notifications** -- Discord-compatible incident alerts with retry and backoff
+### Réponse à incident
+- **Gestion des incidents** — création auto, dedup, severity scoring, triage IA (Ollama)
+- **SOAR** — playbooks automatisés, actions remediation, intégration webhooks
+- **Threat score** — scoring composite (TI, contexte asset, historique)
+- **Notifications** — Discord, Slack, Email, Teams (avec retry + backoff)
 
 ### Threat Intelligence
+- **AbuseIPDB** + **AlienVault OTX** — enrichissement IP/domain avec cache 2 niveaux
+- **NVD / CVE** — recherche par keyword ou CPE
+- **IOC Manager** — base IOC centralisée (IP, domaines, hash, URL), TTL, confidence scoring
 
-- **AbuseIPDB integration** -- IP reputation lookups with 2-level cache
-- **AlienVault OTX integration** -- Pulse and indicator enrichment with 2-level cache
-- **NVD/CVE lookup** -- Search CVEs by keyword or CPE identifier
+### Visualisation & Analytics
+- **MITRE ATT&CK mapping** — heatmap couverture technique
+- **Graph relationnel** — graphe force-dirigé IP/user/incident (D3)
+- **GeoIP map** — carte temps réel (MaxMind GeoLite2 + Leaflet)
+- **Log sources** — santé et disponibilité par source
+- **Compliance** — templates ISO27001, NIST CSF, PCI-DSS
 
-### Visualization & Analytics
+### DevSecOps
+- **Pipeline scanner** — SAST (semgrep), SCA (trivy/osv), secrets, IaC (checkov)
+- **SBOM** — génération CycloneDX
+- **Policy as Code** — rules custom YAML
 
-- **MITRE ATT&CK mapping** -- Technique coverage heatmap with incident drill-down
-- **Relationship graph** -- Interactive IP/user/incident force-directed graph (D3)
-- **GeoIP map** -- Real-time threat map with Leaflet (MaxMind GeoLite2)
-- **Log sources monitoring** -- Source health status and availability tracking
-
-### Platform
-
-- **Authentication** -- Dual JWT + API key auth with role-based access control (RBAC)
-- **Rate limiting** -- Redis-backed per-IP rate limiter
-- **Export** -- CSV and JSON export of events and incidents
-- **Admin panel** -- User management and system configuration
+### Plateforme
+- **Auth** — JWT + API key + SSO federation (SAML/OIDC)
+- **RBAC** — rôles granulaires, mapping attributs IdP
+- **Rate limiting** — per-IP, Redis-backed
+- **Export** — CSV, JSON, Excel, PDF
+- **OpenTelemetry** — traces distribuées, spans manuels
+- **Admin panel** — users, clés API, config
 
 ---
 
-## Offensive Security Features
+## Modules Pentest Offensif
 
-> 30 modules organized across the penetration testing kill chain.
+> 65+ modules organisés selon la kill chain MITRE.
 
-### Reconnaissance & Scanning
+### Reconnaissance
+| Module | Description |
+|--------|-------------|
+| **Recon** | Subdomain enum, port scan, tech stack detection, SSL cert, Google dorks, robots/sitemap, emails |
+| **Deep Scan** | Crawling récursif, détection de surface complète |
+| **Subdomain Discovery** | Multi-techniques (DNS, CT logs, wordlists) |
+| **NVD / CVE Lookup** | Recherche CVE par keyword ou CPE |
+| **Crawler** | Spider ciblé, formulaires, endpoints cachés |
 
-| Module                | Description                                              |
-|-----------------------|----------------------------------------------------------|
-| **Recon**             | Subdomain enumeration, port scanning, technology detection |
-| **Deep Scan**         | Comprehensive vulnerability scanning                     |
-| **Subdomain Discovery** | Multi-technique subdomain finder                      |
-| **NVD/CVE Lookup**    | CVE search by keyword or CPE                             |
+### Web Application
+| Module | Description |
+|--------|-------------|
+| **SQLi Engine** | 5 techniques (UNION/error/boolean/time/stacked), DBMS auto-detect, schema enum, file read, OS exec, 10 tamper fns |
+| **XSS Engine** | 6 context detectors, cookie stealer, session hijack, keylogger, BeEF-style hook, WAF bypass |
+| **LFI→RCE** | 15+ traversals, log poisoning, wrappers PHP, `/proc` exploit, auto-chain |
+| **SSRF Advanced** | Cloud metadata, internal port scan, protocol smuggling |
+| **SSTI** | Template engines (Jinja2, Twig, ERB, FreeMarker) |
+| **XXE / Blind extraction** | XXE OOB, blind SQL/SSRF |
+| **WAF Bypass** | Encoding, chunking, case manipulation |
+| **JWT Attacks** | None algo, key confusion, JWK/JKU injection |
+| **Smart Payload** | Payload builder contextuel |
+| **Headless** | Chrome automation, DOM XSS dynamique |
+| **Interceptor** | Proxy HTTP interactif |
+| **AI Vuln** | Détection assistée par IA |
 
-### Web Application Attacks
+### Réseau & Protocoles
+| Module | Description |
+|--------|-------------|
+| **Protocol Exploiter** | 7 protocoles (SMB/LDAP/RDP/FTP/SNMP/DNS/SMTP), 38 attaques, EternalBlue/SMBGhost/BlueKeep, Kerberoasting |
+| **Network Scan** | Scan avancé (nmap-like), service fingerprint |
+| **NetMap** | Cartographie réseau visuelle |
+| **Network Evasion** | Fragmentation, tunneling, protocol abuse |
 
-| Module              | Description                                                                                  |
-|---------------------|----------------------------------------------------------------------------------------------|
-| **SQLi Engine**     | Auto-detect DBMS, 5 injection techniques (UNION/error/boolean/time/stacked), schema enumeration, file read, OS command exec, 10 tamper functions |
-| **XSS Engine**      | 6 context detectors, cookie stealer (5 methods), session hijack, keylogger, phishing overlay, BeEF-style hook, WAF bypass |
-| **LFI to RCE**      | 15+ traversal techniques, log poisoning (Apache/Nginx/SSH/Mail/FTP), PHP wrappers, /proc exploitation, auto-chain orchestrator |
-| **SSRF Advanced**   | Cloud metadata extraction, internal port scanning, protocol smuggling                        |
-| **Blind Extraction**| Blind SQL/XXE/SSRF data extraction                                                           |
-| **WAF Bypass**      | Encoding, chunking, and case-manipulation evasion techniques                                 |
-
-### Network & Protocol Exploitation
-
-| Module               | Description                                                                                  |
-|----------------------|----------------------------------------------------------------------------------------------|
-| **Protocol Exploiter** | 7 protocols (SMB/LDAP/RDP/FTP/SNMP/DNS/SMTP), 38 attacks, EternalBlue/SMBGhost/BlueKeep checks, Kerberoasting |
-| **Network Evasion**   | Fragmentation, tunneling, protocol abuse                                                   |
+### Active Directory & Cloud
+| Module | Description |
+|--------|-------------|
+| **BloodHound** | Import dump, analyse chemins d'attaque, pivot read-only |
+| **AD Tools** | Kerberoasting, ASREPRoasting, SID history, trust relationships |
+| **Cloud** | AWS (IAM, S3, EC2), Azure, GCP — misconfigurations |
+| **K8s RBAC** | Audit RBAC, escalade de privilèges |
 
 ### Post-Exploitation
+| Module | Description |
+|--------|-------------|
+| **Shell Handler** | TCP listener, 18 payload templates, WebSocket interactif, upgrade PTY |
+| **PrivEsc** | 55 GTFOBins, 21 kernel CVEs (DirtyCOW, DirtyPipe, PwnKit), 40+ checks Linux / 30+ Windows, Potato attacks |
+| **Credential Harvester** | 50+ sources (configs, SSH keys, cloud, browsers, registry, SAM), parsers, hash ID |
+| **Credential Vault** | Coffre-fort centralisé (Fernet), browser/cloud/secrets modules |
+| **Lateral Movement** | PtH, PtT, PSExec, WMI, WinRM, SSH pivot, chisel, spray, planner MITRE |
 
-| Module                  | Description                                                                              |
-|-------------------------|------------------------------------------------------------------------------------------|
-| **Shell Handler**       | TCP reverse shell listener, 18 payload templates (bash/python/php/perl/ruby/powershell/netcat/socat and more), WebSocket live interaction, PTY upgrade |
-| **Privilege Escalation**| 55 GTFOBins, 21 kernel CVEs (DirtyCOW/DirtyPipe/PwnKit), 40+ Linux checks, 30+ Windows checks, Potato attacks |
-| **Credential Harvester**| 50+ credential sources (config files, SSH keys, cloud, browser, registry, SAM), auto-parsers, hash identification, credential reuse validator |
-| **Lateral Movement**    | Pass-the-Hash, Pass-the-Ticket, PSExec, WMI, WinRM, SSH pivoting, chisel tunnels, credential spray, pivot planner, MITRE ATT&CK mapped |
+### Persistence & Évasion
+| Module | Description |
+|--------|-------------|
+| **Persistence** | Backdoors, registry, cron, services |
+| **Anti-Forensics** | Log cleaning, timestomp, artifact removal |
+| **Exfiltration** | DNS/HTTP/ICMP exfil, steganography, channels chiffrés |
+| **Stealth** | Traffic obfuscation, timing evasion |
+| **Shellcode** | Generator, encoder, loader |
 
-### Persistence & Evasion
+### Mobile / IoT
+| Module | Description |
+|--------|-------------|
+| **Mobile** | APK/IPA analysis, Frida hooks |
+| **IoT** | Firmware analysis, protocole MQTT/CoAP |
 
-| Module            | Description                                                  |
-|-------------------|--------------------------------------------------------------|
-| **Persistence**   | Backdoor deployment, registry/cron/service persistence       |
-| **Anti-Forensics**| Log cleaning, timestamp manipulation, artifact removal       |
-| **Exfiltration**  | DNS/HTTP/ICMP exfil, steganography, encrypted channels       |
-| **Stealth**       | Traffic obfuscation, timing evasion                          |
+### Orchestration & Rapports
+| Module | Description |
+|--------|-------------|
+| **Attack Chain Engine** | State machine persistante, 37 auto-actions, 3 modes (manual/semi/auto), kill-chain tracking |
+| **Workflows** | **Templates guidés** étape-par-étape (voir section dédiée) |
+| **Campaign / Engagement** | Suivi mission, scope, RoE, kill-switch |
+| **Session Manager** | HTTP sessions partagées, cookie jar, CSRF auto, re-auth |
+| **Pipeline** | Scans chaînés automatiques |
+| **Report** | Rapports professionnels (MITRE, CVSS, preuves, exec summary) |
+| **Findings** | Base des découvertes, statut, exploitation |
+| **Hash Cracker** | Dictionary, brute, rules |
+| **Wordgen** | Wordlist custom générée |
+| **Templates** | Templates pentest réutilisables |
+| **History** | Historique scans + comparaison |
+| **Adversary Emulation** | Rejeu TTPs MITRE |
+| **Scanner** | Scan vuln unifié |
 
-### Orchestration & Reporting
+---
 
-| Module                  | Description                                                                              |
-|-------------------------|------------------------------------------------------------------------------------------|
-| **Attack Chain Engine** | Persistent state machine, 37 auto-action rules, 3 modes (manual/semi-auto/auto), kill chain phase tracking, findings/credentials/sessions sharing |
-| **Kill Chain Planner**  | Full MITRE kill chain workflow                                                           |
-| **Session Manager**     | Shared HTTP session state, cookie jar, CSRF auto-extraction, auto re-auth               |
-| **Pentest Pipeline**    | Automated scan workflows                                                                 |
-| **Pentest Report**      | Professional report generation                                                           |
-| **Hash Cracker**        | Dictionary, brute force, and rule-based cracking                                         |
-| **Wordlist Generator**  | Custom wordlist creation                                                                 |
-| **OOB Callback Server** | Out-of-band interaction server for blind vulnerability confirmation                      |
-| **Scan History**        | Historical scan tracking and comparison                                                  |
-| **Templates**           | Reusable pentest templates                                                               |
+## Red Team (C2, Phishing, AD)
+
+### Sliver C2
+- **Intégration gRPC** vers Sliver daemon local (`31337`)
+- **Operator Console** — terminal live, gestion sessions, beacon graph
+- **Implants** — génération par engagement, beacons/sessions
+- **Pivot BloodHound** — utilise les dumps AD pour planifier le lateral movement
+
+### Phishing (GoPhish)
+- **Campagnes** — création, envoi, tracking (sent/opened/clicked/submitted)
+- **Templates email** — galerie + éditeur
+- **Landing pages** — mock login + capture credentials
+- **Scope enforcement** — double-check RoE avant envoi
+- **Kill-switch** — arrêt d'urgence de toute campagne
+
+### Engagements
+- **Tracking complet** — scope, clients, dates, RoE signée
+- **MITRE reporting** — mapping auto TTP → techniques
+- **Kill-switch global** — bloque toute action offensive si activé
+
+---
+
+## Assistant IA
+
+**Multi-provider** (priorité configurable) :
+- **Anthropic Claude** (primary) — via API key
+- **OpenAI** (fallback optionnel)
+- **Ollama local** (fallback gratuit, modèle `qwen2.5-coder:7b`, sans clé)
+
+**Contexte injecté automatiquement** :
+- Engagement actif (scope, RoE, kill-switch)
+- Machines compromises (sessions Sliver)
+- Credentials extraits (vault)
+- Résultats BloodHound récents
+- Historique de la session chat
+
+**RAG intégré** — 11 000+ docs indexés (MITRE, NVD CVE, SigmaHQ rules). Recherche sémantique (`all-MiniLM-L6-v2`, 384 dim), FAISS.
+
+**Persistance** — chaque message sauvegardé (table `chat_messages`), historique par engagement.
+
+---
+
+## Workflows guidés
+
+Plutôt que tout demander à l'assistant, la plateforme fournit des **templates de mission** préconfigurés accessibles depuis `/pentest/workflows`. Chaque template enchaîne les étapes avec paramètres pré-remplis, notes par step, et rapport auto.
+
+Exemples de templates : recon web externe, audit AD interne, test API, revue cloud AWS, campagne phishing. Tu peux suivre le workflow pas-à-pas, skip une étape, ou sortir du rail pour taper directement sur un module.
 
 ---
 
 ## Quick Start
 
-### Docker (recommended)
+### Docker (recommandé)
 
 ```bash
 docker compose up --build
 ```
 
-| Service   | URL                          |
-|-----------|------------------------------|
-| Dashboard | http://localhost:3000         |
-| API       | http://localhost:8000         |
-| API Docs  | http://localhost:8000/docs    |
+| Service   | URL                        |
+|-----------|----------------------------|
+| Dashboard | http://localhost:3001      |
+| API       | http://localhost:8000      |
+| API Docs  | http://localhost:8000/docs |
+| GoPhish   | http://localhost:3333      |
 
-**Default credentials:** `admin` / `admin`
+**Credentials par défaut :** `admin` / `admin`
 
-### Local Development
+### Services externes requis
 
-**Backend:**
+**Ollama** (host) :
+```bash
+ollama pull qwen2.5-coder:7b
+ollama serve  # écoute sur :11434
+```
 
+**Sliver C2** (host) :
+```bash
+sliver-server daemon  # écoute sur :31337
+# Copier operator.cfg dans le volume Docker /data/sliver/configs/
+```
+
+### Développement local
+
+**Backend :**
 ```bash
 pip install -r requirements.txt
-cd apps/api
 uvicorn apps.api.main:app --reload
 ```
 
-**Frontend:**
-
+**Frontend :**
 ```bash
 cd apps/web
 npm install
-npm run dev
+npm run dev  # port 3001
 ```
 
-**Workers:**
-
+**Workers :**
 ```bash
 celery -A apps.api.celery_app worker --loglevel=info
 celery -A apps.api.celery_app beat --loglevel=info
@@ -199,40 +296,62 @@ celery -A apps.api.celery_app beat --loglevel=info
 
 ---
 
-## Environment Variables
+## Variables d'environnement
 
-| Variable             | Default                        | Description                          |
-|----------------------|--------------------------------|--------------------------------------|
-| `DATABASE_URL`       | --                             | PostgreSQL connection string          |
-| `REDIS_URL`          | --                             | Redis connection string               |
-| `API_KEY`            | --                             | API key for authentication            |
-| `JWT_SECRET_KEY`     | --                             | Secret for JWT token signing          |
-| `GEOIP_DB_PATH`     | `/app/data/GeoLite2-City.mmdb` | MaxMind GeoLite2 database path       |
-| `OLLAMA_BASE_URL`    | `http://localhost:11434`       | Ollama server for AI triage           |
-| `WEBHOOK_ENABLED`    | `false`                        | Enable Discord webhook alerts         |
-| `WEBHOOK_URL`        | --                             | Discord webhook endpoint              |
-| `ABUSEIPDB_API_KEY`  | --                             | AbuseIPDB threat intel API key        |
-| `OTX_API_KEY`        | --                             | AlienVault OTX API key                |
+| Variable | Défaut | Description |
+|----------|--------|-------------|
+| `DATABASE_URL` | — | PostgreSQL connection string |
+| `REDIS_URL` | — | Redis connection string |
+| `API_KEY` | — | Clé API primaire |
+| `JWT_SECRET_KEY` | — | Secret JWT (rotate en prod) |
+| `ANTHROPIC_API_KEY` | — | Clé Claude (primary LLM) |
+| `OPENAI_API_KEY` | — | Clé OpenAI (fallback) |
+| `OLLAMA_BASE_URL` | `http://host.docker.internal:11434` | Ollama local |
+| `OLLAMA_MODEL` | `qwen2.5-coder:7b` | Modèle Ollama |
+| `SLIVER_OPERATOR_CFG` | `/data/sliver/configs/operator.cfg` | Config opérateur Sliver |
+| `SLIVER_DEFAULT_C2_URL` | `https://host.docker.internal:8443` | Listener HTTPS C2 |
+| `GOPHISH_API_URL` | `https://host.docker.internal:3333` | API GoPhish |
+| `GOPHISH_API_KEY` | — | Clé API GoPhish |
+| `GEOIP_DB_PATH` | `/app/data/GeoLite2-City.mmdb` | MaxMind DB |
+| `ABUSEIPDB_API_KEY` | — | Threat intel AbuseIPDB |
+| `OTX_API_KEY` | — | AlienVault OTX |
+| `WEBHOOK_URL` | — | Webhook notifications |
 
 ---
 
-## Database Migrations
+## Migrations DB
 
 ```bash
-# Apply all pending migrations
-alembic upgrade head
-
-# Create a new migration from model changes
-alembic revision --autogenerate -m "description"
+alembic upgrade head                             # appliquer toutes les migrations
+alembic revision --autogenerate -m "description" # nouvelle migration
 ```
+
+Tête actuelle : `022_chat_messages`.
+
+**Actions post-install** (1x) :
+- `POST /ai/rag/rebuild` — index RAG (MITRE + NVD + Sigma → ~11k docs)
+- `POST /sigma/sync` — import rules depuis SigmaHQ
 
 ---
 
 ## Tech Stack
 
-| Layer      | Technologies                                                              |
-|------------|---------------------------------------------------------------------------|
-| **Backend**  | Python 3.11+, FastAPI, SQLAlchemy, Celery, scikit-learn, structlog      |
-| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS, D3, Leaflet, Framer Motion |
-| **Infra**    | Docker Compose, PostgreSQL 16, Redis 7, Alembic                         |
-| **Security** | JWT + API key auth, RBAC, rate limiting, CORS                           |
+| Layer | Technologies |
+|-------|--------------|
+| **Backend** | Python 3.11, FastAPI, SQLAlchemy, Celery, scikit-learn, structlog, OpenTelemetry |
+| **Frontend** | Next.js 15, React 18, TypeScript, Tailwind CSS, D3, Leaflet, Framer Motion, TanStack Query |
+| **IA / RAG** | Anthropic, OpenAI, Ollama, sentence-transformers, FAISS |
+| **Infra** | Docker Compose, PostgreSQL 16, Redis 7, Alembic |
+| **Sécurité** | JWT + API key, SSO (SAML/OIDC), RBAC, rate limiting, CORS, kill-switch |
+| **Offensif** | Sliver C2, GoPhish, BloodHound, nmap-like, custom engines |
+
+---
+
+## Historique des vagues
+
+- **V1–V3** (12 commits) — SIEM core, DevSecOps, GeoIP, TI, AI triage, SOAR, pentest base, RAG, Sigma, UBA, compliance, OTel, notifications
+- **V4.1–V4.5** — Outbound integrations, SSO federation, Sliver C2, engagement tracking, MITRE reporting, Operator Console, BloodHound import
+- **V4.6** — Phishing Red Team (GoPhish workflow enrichi + scope/kill-switch)
+- **V4.7** — Post-Exploit Credential Vault (browser, cloud, secrets)
+- **V4.8** — Assistant pentest multi-provider (Claude/OpenAI/Ollama) avec contexte engagement
+- **V4.9** — Hardening 3 tours : 95+ bugs corrigés, validation E2E, 0 régression frontend sur 118 pages
