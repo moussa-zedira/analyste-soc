@@ -80,8 +80,25 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "-ra",
+    "--cov=apps/api",
+    "--cov-report=term-missing",
+    "--cov-report=html",
 ]
 markers = [
     "integration: tests requiring live Postgres/Redis",
     "slow: tests slower than 1s",
 ]
+
+[tool.coverage.run]
+source = ["apps/api"]
+omit = [
+    "*/tests/*",
+    "*/alembic/*",
+    "*/__init__.py",
+]
+branch = true
+
+[tool.coverage.report]
+skip_covered = false
+show_missing = true
+precision = 1

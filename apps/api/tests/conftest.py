@@ -16,7 +16,19 @@ import pytest
 
 @pytest.fixture(scope="session")
 def _postgres_url() -> Iterator[str]:
-    """Spin un Postgres 16 ephemere pour la duree de la session de test."""
+    """Fournit une URL Postgres pour la session.
+
+    Par defaut, spin un container ephemere via testcontainers.
+    Si TEST_DATABASE_URL est defini dans l'env (CI, docker-compose dev),
+    on l'utilise directement — evite de lancer Docker-in-Docker.
+    """
+    override = os.environ.get("TEST_DATABASE_URL")
+    if override:
+        if override.startswith("postgresql://"):
+            override = override.replace("postgresql://", "postgresql+psycopg2://", 1)
+        yield override
+        return
+
     try:
         from testcontainers.postgres import PostgresContainer
     except ImportError:
@@ -32,7 +44,15 @@ def _postgres_url() -> Iterator[str]:
 
 @pytest.fixture(scope="session")
 def _redis_url() -> Iterator[str]:
-    """Spin un Redis 7 ephemere pour la duree de la session."""
+    """Fournit une URL Redis pour la session.
+
+    TEST_REDIS_URL override le container ephemere pour CI / dev-compose.
+    """
+    override = os.environ.get("TEST_REDIS_URL")
+    if override:
+        yield override
+        return
+
     try:
         from testcontainers.redis import RedisContainer
     except ImportError:
