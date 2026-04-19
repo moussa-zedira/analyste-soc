@@ -32,6 +32,10 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    # Resource limits (V4.7 hardening) — evite OOM cascade.
+    mem_limit: 2g
+    mem_reservation: 512m
+    cpus: 1.5
     ports:
       - "8000:8000"
     environment:
@@ -114,6 +118,9 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    mem_limit: 2g
+    mem_reservation: 512m
+    cpus: 1.5
     command: celery -A apps.api.celery_app worker --loglevel=info --concurrency=2
     environment:
       ENV: ${ENV:-dev}
@@ -171,6 +178,9 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    mem_limit: 1g
+    mem_reservation: 128m
+    cpus: 0.5
     command: celery -A apps.api.celery_app beat --loglevel=info
     environment:
       ENV: ${ENV:-dev}
@@ -219,12 +229,21 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: http://api:8000
+    mem_limit: 1g
+    mem_reservation: 128m
+    cpus: 0.5
     ports:
       - "3001:3000"
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://api:8000
       INTERNAL_API_BASE_URL: http://api:8000
       INTERNAL_API_KEY: ${API_KEY:?API_KEY required in .env}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     depends_on:
       api:
         condition: service_healthy
