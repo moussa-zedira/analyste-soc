@@ -268,9 +268,8 @@ def test_create_campaign_blocks_when_before_start_date(
 
 
 def test_stop_campaign_sets_status_stopped_and_audits(
-    api_client, monkeypatch
+    api_client, db_session, monkeypatch
 ):
-    from apps.api.db.session import SessionLocal
     from apps.api.models.phishing import PhishingCampaign
     from apps.api.pentest.phishing import gophish_client as gc
 
@@ -293,13 +292,11 @@ def test_stop_campaign_sets_status_stopped_and_audits(
     assert body["status"] == "stopped"
     assert body["gophish_deleted"] is True
 
-    db = SessionLocal()
-    try:
-        again = db.get(PhishingCampaign, camp_id)
-        assert again.status == "stopped"
-        assert again.completed_at is not None
-    finally:
-        db.close()
+    # Relit via la session partagée pour voir la mise à jour du serveur.
+    db_session.expire_all()
+    again = db_session.get(PhishingCampaign, camp_id)
+    assert again.status == "stopped"
+    assert again.completed_at is not None
 
 
 def test_stop_campaign_noop_when_already_completed(api_client, monkeypatch):
