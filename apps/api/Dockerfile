@@ -1,8 +1,15 @@
 # syntax=docker/dockerfile:1.7
 # =====================================================================
-# Multi-stage Dockerfile — hardening CIS Docker Benchmark
+# Multi-stage Dockerfile — hardening CIS Docker Benchmark + slim build
 # - Stage "builder" : compile Python wheels avec gcc/libpq-dev
 # - Stage "runtime" : image finale minimale, user non-root "appuser"
+#
+# Optim V4.7b (size) :
+#   - torch CPU-only (PyTorch wheel index CPU) → -1.5/-2 GB vs CUDA par défaut
+#   - pip --no-compile + strip __pycache__ runtime → -150/-300 MB
+#   - Playwright: chromium only, pas firefox/webkit (cible déjà par défaut)
+#   - Layers "stables" (apt, pip, binaires pentest, playwright) AVANT
+#     le COPY apps/ → cache docker beaucoup plus chaud sur rebuild code.
 # =====================================================================
 
 # ── Stage 1 : builder (compile wheels only) ─────────────────────────
@@ -22,7 +29,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY apps/api/requirements.txt requirements.txt
 
 # Produit des wheels pré-compilées (copiées ensuite dans runtime).
-RUN pip wheel --wheel-dir /wheels -r requirements.txt \
+# torch forcé CPU-only via l'index PyTorch dédié (sinon CUDA ~2 GB).
+RUN pip wheel --wheel-dir /wheels \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        -r requirements.txt \
     && pip wheel --wheel-dir /wheels \
         "semgrep>=1.50" \
         "bandit[toml]>=1.7" \
@@ -52,7 +62,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         net-tools iproute2 dnsutils \
         # curl/git/tar pour runtime (git-history scans, scripts)
         curl ca-certificates git tar \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && find /var/log -type f -delete
 
 # ── DevSecOps native binaries (conservés en runtime) ────────────────
 # Trivy
@@ -76,18 +87,26 @@ RUN curl -sSL -o /usr/local/bin/hadolint \
 
 # ── Install Python deps from pre-built wheels (no gcc needed) ───────
 # --find-links=/wheels permet de reutiliser les wheels compiles au stage
-# builder (psycopg2, scipy...). PyPI reste actif pour resolver les deps
-# transitives manquantes (pip wheel n'inclut pas toutes les variantes).
+# builder (psycopg2, scipy...). PyPI + index CPU PyTorch restent actifs
+# pour resolver les deps transitives manquantes.
+# --no-compile : pas de .pyc generes a l'install (recomputes au 1er run, en /tmp).
 COPY --from=builder /wheels /wheels
 COPY apps/api/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir --find-links=/wheels \
+RUN pip install --no-cache-dir --no-compile --find-links=/wheels \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
         -r /tmp/requirements.txt \
-    && pip install --no-cache-dir --find-links=/wheels \
+    && pip install --no-cache-dir --no-compile --find-links=/wheels \
         "semgrep>=1.50" \
         "bandit[toml]>=1.7" \
         "safety>=3.0" \
         "checkov>=3.2" \
-    && rm -rf /wheels /tmp/requirements.txt
+    && rm -rf /wheels /tmp/requirements.txt \
+    # Strip __pycache__ eventuels (cas de libs qui compilent a l'install).
+    && find /usr/local/lib/python3.13 -type d -name __pycache__ -prune -exec rm -rf {} + \
+    && find /usr/local/lib/python3.13 -type f -name "*.pyc" -delete \
+    # Strip tests/docs des libs lourdes (torch, scipy, sklearn...) : ~50-100 MB.
+    && find /usr/local/lib/python3.13 -type d -name tests -prune -exec rm -rf {} + 2>/dev/null || true \
+    && find /usr/local/lib/python3.13 -type d -name test -prune -exec rm -rf {} + 2>/dev/null || true
 
 # ── Non-root user ───────────────────────────────────────────────────
 # UID/GID 1000 pour compatibilité bind-mounts dev.
@@ -96,8 +115,6 @@ RUN groupadd --system --gid 1000 appuser \
         --home-dir /home/appuser --create-home \
         --shell /usr/sbin/nologin appuser
 
-WORKDIR /app
-
 # Playwright doit être installé comme appuser pour que les binaires Chromium
 # atterrissent dans /data/playwright (accessible par appuser).
 RUN mkdir -p /app /data/geoip /data/models /data/rag \
@@ -105,15 +122,24 @@ RUN mkdir -p /app /data/geoip /data/models /data/rag \
              /data/playwright /app/data \
     && chown -R appuser:appuser /app /data
 
-# Copie du code applicatif (ownership appuser).
-COPY --chown=appuser:appuser apps/ apps/
-COPY --chown=appuser:appuser alembic.ini alembic.ini
-COPY --chown=appuser:appuser alembic/ alembic/
-
+WORKDIR /app
 USER appuser
 
 # Playwright Chromium installé sous appuser (évite les perm denied au runtime).
-RUN python -m playwright install chromium
+# "chromium" uniquement (pas firefox/webkit → -300 MB). On nettoie aussi
+# le cache de download (.cache/ms-playwright/.links → kept, tmp → flush).
+RUN python -m playwright install chromium \
+    && rm -rf /home/appuser/.cache/ms-playwright/.tmp* 2>/dev/null || true
+
+# ── Code applicatif (layer final — change souvent) ──────────────────
+# Place en dernier pour que le cache Docker reste chaud sur les layers
+# lourds (pip install, playwright, binaires pentest) lors des rebuilds
+# quand seul le code Python change.
+USER root
+COPY --chown=appuser:appuser apps/ apps/
+COPY --chown=appuser:appuser alembic.ini alembic.ini
+COPY --chown=appuser:appuser alembic/ alembic/
+USER appuser
 
 EXPOSE 8000
 CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
