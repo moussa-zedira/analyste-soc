@@ -11,11 +11,21 @@ from unittest.mock import MagicMock
 import pytest
 
 # ---------------------------------------------------------------------------
-# Stub les modules optionnels qui ne sont pas installes dans l'env de test
+# Stub les modules optionnels qui ne sont pas installes dans l'env de test.
+# IMPORTANT : on ne stube QUE si le vrai module n'est pas installe. Sinon,
+# on corromprait ``sys.modules['redis']`` pour toute la session pytest,
+# et ``limits`` (via slowapi) verrait ``__version__ == "0.0.0"`` au
+# prochain import de ``apps.api.main`` (rate_limiter), ce qui casse
+# ~40 tests en cascade (ConfigurationError: min version 3.0).
 # ---------------------------------------------------------------------------
 
 for _mod in ("redis", "redis.asyncio"):
-    if _mod not in sys.modules:
+    if _mod in sys.modules:
+        # Module deja importe (vrai ou stub precedent) : on n'y touche pas.
+        continue
+    try:
+        __import__(_mod)
+    except ImportError:
         sys.modules[_mod] = MagicMock()
 
 # ---------------------------------------------------------------------------
