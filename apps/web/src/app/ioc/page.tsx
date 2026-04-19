@@ -1,17 +1,27 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import {
+  listIocs,
+  createIoc,
+  revokeIoc,
+  markIocFalsePositive,
+  bulkImportIocs,
+  getIocGraph,
+  type IocApi,
+} from "@/lib/apiClient";
 
 // ---------------------------------------------------------------------------
-// Types
+// Types (UI-side — with hyphens to match existing design tokens)
 // ---------------------------------------------------------------------------
 type IocType = "ip" | "domain" | "url" | "hash-md5" | "hash-sha1" | "hash-sha256" | "email" | "cidr";
 type IocState = "active" | "revoked" | "false-positive" | "expired";
 type TLP = "white" | "green" | "amber" | "red";
 
 interface IOC {
-  id: string;
+  id: number;
   type: IocType;
+  rawType: string;
   value: string;
   state: IocState;
   confidence: number;
@@ -24,7 +34,56 @@ interface IOC {
   mitreTechnique?: string;
   killChainPhase?: string;
   expiry?: string;
-  relatedIds: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Backend <-> UI shape adapters
+// ---------------------------------------------------------------------------
+const TYPE_API_TO_UI: Record<string, IocType> = {
+  ip: "ip",
+  domain: "domain",
+  url: "url",
+  email: "email",
+  cidr: "cidr",
+  hash_md5: "hash-md5",
+  hash_sha1: "hash-sha1",
+  hash_sha256: "hash-sha256",
+};
+const TYPE_UI_TO_API: Record<IocType, string> = {
+  ip: "ip",
+  domain: "domain",
+  url: "url",
+  email: "email",
+  cidr: "cidr",
+  "hash-md5": "hash_md5",
+  "hash-sha1": "hash_sha1",
+  "hash-sha256": "hash_sha256",
+};
+const STATE_API_TO_UI: Record<string, IocState> = {
+  active: "active",
+  revoked: "revoked",
+  false_positive: "false-positive",
+  expired: "expired",
+};
+
+function adaptIoc(api: IocApi): IOC {
+  return {
+    id: api.id,
+    type: TYPE_API_TO_UI[api.type] ?? "ip",
+    rawType: api.type,
+    value: api.value,
+    state: STATE_API_TO_UI[api.state] ?? "active",
+    confidence: api.confidence,
+    tlp: (api.tlp?.toLowerCase().split("+")[0] ?? "amber") as TLP,
+    source: api.source,
+    firstSeen: api.first_seen ?? "",
+    lastSeen: api.last_seen ?? "",
+    sightings: api.sightings_count ?? 0,
+    tags: api.tags ?? [],
+    mitreTechnique: api.mitre_techniques?.[0],
+    killChainPhase: api.kill_chain_phase ?? undefined,
+    expiry: api.expiry ?? undefined,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -56,55 +115,38 @@ const STATE_COLORS: Record<IocState, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Demo Data
+// Relationship Graph (fetched from /ioc/graph)
 // ---------------------------------------------------------------------------
-function generateIOCs(): IOC[] {
-  return [
-    { id: "ioc-1", type: "ip", value: "185.220.101.34", state: "active", confidence: 95, tlp: "amber", source: "AbuseIPDB", firstSeen: "2026-03-10T08:00:00Z", lastSeen: "2026-03-28T14:22:00Z", sightings: 42, tags: ["tor-exit", "brute-force", "scanner"], mitreTechnique: "T1190", killChainPhase: "Delivery", relatedIds: ["ioc-2", "ioc-5"] },
-    { id: "ioc-2", type: "domain", value: "evil-c2.darknet.io", state: "active", confidence: 88, tlp: "red", source: "ThreatFox", firstSeen: "2026-03-15T12:00:00Z", lastSeen: "2026-03-28T10:00:00Z", sightings: 18, tags: ["c2", "cobalt-strike"], mitreTechnique: "T1071.001", killChainPhase: "C2", relatedIds: ["ioc-1", "ioc-3"] },
-    { id: "ioc-3", type: "hash-sha256", value: "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456", state: "active", confidence: 99, tlp: "red", source: "MalwareBazaar", firstSeen: "2026-03-20T06:00:00Z", lastSeen: "2026-03-27T18:00:00Z", sightings: 7, tags: ["ransomware", "lockbit"], mitreTechnique: "T1486", killChainPhase: "Actions", relatedIds: ["ioc-2"] },
-    { id: "ioc-4", type: "url", value: "https://phishing.example.com/login/fake-bank", state: "active", confidence: 75, tlp: "green", source: "PhishTank", firstSeen: "2026-03-22T09:00:00Z", lastSeen: "2026-03-28T11:00:00Z", sightings: 156, tags: ["phishing", "credential-theft"], mitreTechnique: "T1566.002", killChainPhase: "Delivery", relatedIds: [] },
-    { id: "ioc-5", type: "ip", value: "45.33.32.156", state: "revoked", confidence: 30, tlp: "white", source: "Manual", firstSeen: "2026-03-01T00:00:00Z", lastSeen: "2026-03-10T00:00:00Z", sightings: 2, tags: ["scanner"], relatedIds: ["ioc-1"] },
-    { id: "ioc-6", type: "email", value: "attacker@malware-delivery.com", state: "active", confidence: 82, tlp: "amber", source: "OTX", firstSeen: "2026-03-18T14:00:00Z", lastSeen: "2026-03-28T09:00:00Z", sightings: 11, tags: ["spam", "malware-delivery"], mitreTechnique: "T1566.001", killChainPhase: "Delivery", relatedIds: ["ioc-4"] },
-    { id: "ioc-7", type: "hash-md5", value: "d41d8cd98f00b204e9800998ecf8427e", state: "false-positive", confidence: 10, tlp: "white", source: "VirusTotal", firstSeen: "2026-03-25T00:00:00Z", lastSeen: "2026-03-25T00:00:00Z", sightings: 1, tags: ["empty-file"], relatedIds: [] },
-    { id: "ioc-8", type: "cidr", value: "192.168.100.0/24", state: "active", confidence: 60, tlp: "green", source: "Internal", firstSeen: "2026-03-26T08:00:00Z", lastSeen: "2026-03-28T15:00:00Z", sightings: 5, tags: ["lateral-movement", "internal"], mitreTechnique: "T1021", killChainPhase: "Lateral", relatedIds: [] },
-    { id: "ioc-9", type: "domain", value: "crypto-miner-pool.xyz", state: "expired", confidence: 70, tlp: "green", source: "Emerging Threats", firstSeen: "2026-02-01T00:00:00Z", lastSeen: "2026-02-28T00:00:00Z", sightings: 33, tags: ["cryptominer"], mitreTechnique: "T1496", killChainPhase: "Actions", expiry: "2026-03-15T00:00:00Z", relatedIds: [] },
-    { id: "ioc-10", type: "ip", value: "103.224.182.245", state: "active", confidence: 91, tlp: "amber", source: "Feodo Tracker", firstSeen: "2026-03-24T10:00:00Z", lastSeen: "2026-03-28T16:00:00Z", sightings: 28, tags: ["botnet", "emotet"], mitreTechnique: "T1071", killChainPhase: "C2", relatedIds: ["ioc-2"] },
-  ];
-}
+type GraphData = {
+  nodes: { id: number; type: string; value: string; confidence: number }[];
+  edges: { source: number; target: number; type: string }[];
+};
 
-// ---------------------------------------------------------------------------
-// Relationship Graph (D3-style SVG)
-// ---------------------------------------------------------------------------
-function RelationshipGraph({ iocs, selectedId }: { iocs: IOC[]; selectedId: string | null }) {
+function RelationshipGraph({ data, selectedId }: { data: GraphData | null; selectedId: number | null }) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [nodes, setNodes] = useState<{ id: string; x: number; y: number; type: IocType; label: string }[]>([]);
-  const [edges, setEdges] = useState<{ from: string; to: string }[]>([]);
-
-  useEffect(() => {
-    const relevant = selectedId ? iocs.filter(i => i.id === selectedId || iocs.find(o => o.id === selectedId)?.relatedIds.includes(i.id)) : iocs.slice(0, 8);
-    const cx = 300, cy = 180;
-    const r = 140;
-    const n = relevant.map((ioc, i) => {
-      const angle = (2 * Math.PI * i) / relevant.length - Math.PI / 2;
-      return { id: ioc.id, x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), type: ioc.type, label: ioc.value.length > 20 ? ioc.value.slice(0, 18) + "..." : ioc.value };
+  const layout = useMemo(() => {
+    if (!data || data.nodes.length === 0) return { nodes: [], edges: [] as { from: number; to: number }[] };
+    const relevantIds = selectedId
+      ? new Set<number>([selectedId, ...data.edges.filter(e => e.source === selectedId || e.target === selectedId).flatMap(e => [e.source, e.target])])
+      : new Set(data.nodes.slice(0, 12).map(n => n.id));
+    const relevant = data.nodes.filter(n => relevantIds.has(n.id));
+    const cx = 300, cy = 180, r = 140;
+    const positioned = relevant.map((node, i) => {
+      const angle = (2 * Math.PI * i) / Math.max(relevant.length, 1) - Math.PI / 2;
+      const label = node.value.length > 20 ? node.value.slice(0, 18) + "..." : node.value;
+      return { id: node.id, x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), type: node.type, label };
     });
-    setNodes(n);
-    const e: { from: string; to: string }[] = [];
-    const nodeIds = new Set(n.map(nd => nd.id));
-    for (const ioc of relevant) {
-      for (const rid of ioc.relatedIds) {
-        if (nodeIds.has(rid) && !e.find(ed => (ed.from === rid && ed.to === ioc.id))) {
-          e.push({ from: ioc.id, to: rid });
-        }
-      }
-    }
-    setEdges(e);
-  }, [iocs, selectedId]);
+    const ids = new Set(positioned.map(n => n.id));
+    const edges = data.edges
+      .filter(e => ids.has(e.source) && ids.has(e.target))
+      .map(e => ({ from: e.source, to: e.target }));
+    return { nodes: positioned, edges };
+  }, [data, selectedId]);
 
-  const typeColor: Record<IocType, string> = {
-    ip: "#00E5FF", domain: "#A855F7", url: "#F97316", "hash-md5": "#EF4444",
-    "hash-sha1": "#EF4444", "hash-sha256": "#EF4444", email: "#EAB308", cidr: "#3B82F6",
+  const typeColor: Record<string, string> = {
+    ip: "#00E5FF", domain: "#A855F7", url: "#F97316",
+    hash_md5: "#EF4444", hash_sha1: "#EF4444", hash_sha256: "#EF4444",
+    email: "#EAB308", cidr: "#3B82F6",
   };
 
   return (
@@ -115,19 +157,25 @@ function RelationshipGraph({ iocs, selectedId }: { iocs: IOC[]; selectedId: stri
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
-      {edges.map((e, i) => {
-        const from = nodes.find(n => n.id === e.from);
-        const to = nodes.find(n => n.id === e.to);
+      {layout.edges.map((e, i) => {
+        const from = layout.nodes.find(n => n.id === e.from);
+        const to = layout.nodes.find(n => n.id === e.to);
         if (!from || !to) return null;
         return <line key={i} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="rgba(0,229,255,0.2)" strokeWidth={1.5} strokeDasharray="4 4" />;
       })}
-      {nodes.map(n => (
-        <g key={n.id} filter="url(#glow-ioc)">
-          <circle cx={n.x} cy={n.y} r={selectedId === n.id ? 28 : 22} fill={typeColor[n.type] + "18"} stroke={typeColor[n.type]} strokeWidth={selectedId === n.id ? 2 : 1} opacity={0.9} />
-          <text x={n.x} y={n.y - 30} textAnchor="middle" fill={typeColor[n.type]} fontSize={9} fontFamily="JetBrains Mono, monospace">{n.label}</text>
-          <text x={n.x} y={n.y + 4} textAnchor="middle" fill={typeColor[n.type]} fontSize={8} fontFamily="JetBrains Mono, monospace" fontWeight="bold">{n.type.toUpperCase()}</text>
-        </g>
-      ))}
+      {layout.nodes.map(n => {
+        const color = typeColor[n.type] ?? "#00E5FF";
+        return (
+          <g key={n.id} filter="url(#glow-ioc)">
+            <circle cx={n.x} cy={n.y} r={selectedId === n.id ? 28 : 22} fill={color + "18"} stroke={color} strokeWidth={selectedId === n.id ? 2 : 1} opacity={0.9} />
+            <text x={n.x} y={n.y - 30} textAnchor="middle" fill={color} fontSize={9} fontFamily="JetBrains Mono, monospace">{n.label}</text>
+            <text x={n.x} y={n.y + 4} textAnchor="middle" fill={color} fontSize={8} fontFamily="JetBrains Mono, monospace" fontWeight="bold">{n.type.toUpperCase()}</text>
+          </g>
+        );
+      })}
+      {layout.nodes.length === 0 && (
+        <text x={300} y={180} textAnchor="middle" fill="#6B7280" fontSize={11}>No IOCs in graph yet</text>
+      )}
     </svg>
   );
 }
@@ -136,7 +184,9 @@ function RelationshipGraph({ iocs, selectedId }: { iocs: IOC[]; selectedId: stri
 // Main Component
 // ---------------------------------------------------------------------------
 export default function IOCManagementPage() {
-  const [iocs, setIocs] = useState<IOC[]>(generateIOCs);
+  const [iocs, setIocs] = useState<IOC[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"dashboard" | "add" | "import" | "graph">("dashboard");
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<IocType | "all">("all");
@@ -145,6 +195,7 @@ export default function IOCManagementPage() {
   const [confidenceMin, setConfidenceMin] = useState(0);
   const [selectedIoc, setSelectedIoc] = useState<IOC | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
 
   // Add IOC form
   const [addType, setAddType] = useState<IocType>("ip");
@@ -154,13 +205,34 @@ export default function IOCManagementPage() {
   const [addTags, setAddTags] = useState("");
   const [addMitre, setAddMitre] = useState("");
   const [addKillChain, setAddKillChain] = useState("");
-  const [addExpiry, setAddExpiry] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Bulk import
   const [importFormat, setImportFormat] = useState<"stix" | "csv" | "text">("text");
   const [importData, setImportData] = useState("");
+  const [importResult, setImportResult] = useState<string | null>(null);
 
-  // Filter
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { iocs: apiIocs } = await listIocs({ limit: 500 });
+      setIocs(apiIocs.map(adaptIoc));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  useEffect(() => {
+    if (activeTab !== "graph") return;
+    getIocGraph(200).then(setGraphData).catch(() => setGraphData({ nodes: [], edges: [] }));
+  }, [activeTab, iocs.length]);
+
+  // Filter (client-side for responsiveness on the already-loaded list)
   const filtered = useMemo(() => {
     return iocs.filter(ioc => {
       if (filterType !== "all" && ioc.type !== filterType) return false;
@@ -189,66 +261,40 @@ export default function IOCManagementPage() {
     return s;
   }, [iocs]);
 
-  const handleAddIOC = useCallback(() => {
+  const handleAddIOC = useCallback(async () => {
     if (!addValue.trim()) return;
-    const newIoc: IOC = {
-      id: `ioc-${Date.now()}`,
-      type: addType,
-      value: addValue.trim(),
-      state: "active",
-      confidence: addConfidence,
-      tlp: addTlp,
-      source: "Manual",
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      sightings: 0,
-      tags: addTags.split(",").map(t => t.trim()).filter(Boolean),
-      mitreTechnique: addMitre || undefined,
-      killChainPhase: addKillChain || undefined,
-      expiry: addExpiry || undefined,
-      relatedIds: [],
-    };
-    setIocs(prev => [newIoc, ...prev]);
-    setAddValue("");
-    setAddTags("");
-    setAddMitre("");
-    setAddKillChain("");
-    setAddExpiry("");
-    setActiveTab("dashboard");
-  }, [addType, addValue, addConfidence, addTlp, addTags, addMitre, addKillChain, addExpiry]);
-
-  const handleBulkImport = useCallback(() => {
-    if (!importData.trim()) return;
-    let values: string[] = [];
-    if (importFormat === "text") {
-      values = importData.split("\n").map(l => l.trim()).filter(Boolean);
-    } else if (importFormat === "csv") {
-      values = importData.split("\n").slice(1).map(l => l.split(",")[0]?.trim()).filter(Boolean);
-    } else {
-      try {
-        const parsed = JSON.parse(importData);
-        const objects = parsed.objects || [parsed];
-        values = objects.filter((o: Record<string, string>) => o.type === "indicator").map((o: Record<string, string>) => o.pattern || o.name || "unknown");
-      } catch { /* ignore */ }
+    setFormError(null);
+    try {
+      await createIoc({
+        type: TYPE_UI_TO_API[addType],
+        value: addValue.trim(),
+        confidence: addConfidence,
+        tlp: addTlp.toUpperCase(),
+        source: "manual",
+        tags: addTags.split(",").map(t => t.trim()).filter(Boolean),
+        mitre_techniques: addMitre ? [addMitre] : undefined,
+        kill_chain_phase: addKillChain || undefined,
+      });
+      setAddValue(""); setAddTags(""); setAddMitre(""); setAddKillChain("");
+      setActiveTab("dashboard");
+      await reload();
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : "Create failed");
     }
-    const newIocs: IOC[] = values.map((v, i) => ({
-      id: `ioc-import-${Date.now()}-${i}`,
-      type: "ip" as IocType,
-      value: v,
-      state: "active" as IocState,
-      confidence: 70,
-      tlp: "amber" as TLP,
-      source: "Bulk Import",
-      firstSeen: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      sightings: 0,
-      tags: ["imported"],
-      relatedIds: [],
-    }));
-    setIocs(prev => [...newIocs, ...prev]);
-    setImportData("");
-    setActiveTab("dashboard");
-  }, [importData, importFormat]);
+  }, [addType, addValue, addConfidence, addTlp, addTags, addMitre, addKillChain, reload]);
+
+  const handleBulkImport = useCallback(async () => {
+    if (!importData.trim()) return;
+    setImportResult(null);
+    try {
+      const { count } = await bulkImportIocs({ format: importFormat, data: importData, source: "bulk_import" });
+      setImportResult(`${count} IOCs imported`);
+      setImportData("");
+      await reload();
+    } catch (e) {
+      setImportResult(`Import failed: ${e instanceof Error ? e.message : "unknown"}`);
+    }
+  }, [importData, importFormat, reload]);
 
   const handleExport = useCallback((format: "stix" | "csv" | "openioc") => {
     let content = "";
@@ -272,15 +318,15 @@ export default function IOCManagementPage() {
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
   }, [filtered]);
 
-  const handleRevokeIOC = useCallback((id: string) => {
-    setIocs(prev => prev.map(i => i.id === id ? { ...i, state: "revoked" as IocState } : i));
+  const handleRevokeIOC = useCallback(async (id: number) => {
+    try { await revokeIoc(id); await reload(); } catch (e) { setError(e instanceof Error ? e.message : "Revoke failed"); }
     setShowDetail(false);
-  }, []);
+  }, [reload]);
 
-  const handleMarkFP = useCallback((id: string) => {
-    setIocs(prev => prev.map(i => i.id === id ? { ...i, state: "false-positive" as IocState } : i));
+  const handleMarkFP = useCallback(async (id: number) => {
+    try { await markIocFalsePositive(id); await reload(); } catch (e) { setError(e instanceof Error ? e.message : "Mark FP failed"); }
     setShowDetail(false);
-  }, []);
+  }, [reload]);
 
   return (
     <div className="flex h-full flex-col gap-4 p-6 overflow-y-auto">
@@ -295,6 +341,7 @@ export default function IOCManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button onClick={reload} className="glass-panel px-3 py-2 text-[10px] font-bold tracking-wider text-gray-400 hover:text-cyan-glow">REFRESH</button>
           <button onClick={() => handleExport("stix")} className="glass-panel px-3 py-2 text-[10px] font-bold tracking-wider text-cyan-glow hover:bg-cyan-glow/10">STIX</button>
           <button onClick={() => handleExport("csv")} className="glass-panel px-3 py-2 text-[10px] font-bold tracking-wider text-gray-400 hover:text-cyan-glow">CSV</button>
           <button onClick={() => handleExport("openioc")} className="glass-panel px-3 py-2 text-[10px] font-bold tracking-wider text-gray-400 hover:text-cyan-glow">OpenIOC</button>
@@ -302,6 +349,12 @@ export default function IOCManagementPage() {
       </div>
 
       <div className="cyan-line" />
+
+      {error && (
+        <div className="glass-panel border-red-500/30 bg-red-500/5 px-4 py-2 text-[11px] text-red-300">
+          {error}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -371,7 +424,7 @@ export default function IOCManagementPage() {
               <input type="range" min={0} max={100} value={confidenceMin} onChange={e => setConfidenceMin(Number(e.target.value))} className="w-20 accent-cyan-400" />
               <span className="text-[10px] text-cyan-glow font-mono">{confidenceMin}%</span>
             </div>
-            <span className="ml-auto text-xs text-gray-500 font-mono">{filtered.length} results</span>
+            <span className="ml-auto text-xs text-gray-500 font-mono">{filtered.length} / {iocs.length} results</span>
           </div>
 
           {/* IOC Table */}
@@ -419,8 +472,8 @@ export default function IOCManagementPage() {
                         <span className={`rounded border px-2 py-0.5 text-[10px] font-bold ${TLP_COLORS[ioc.tlp]}`}>TLP:{ioc.tlp.toUpperCase()}</span>
                       </td>
                       <td className="px-3 py-3 text-[10px] text-gray-400">{ioc.source}</td>
-                      <td className="px-3 py-3 text-[10px] font-mono text-gray-500">{new Date(ioc.firstSeen).toLocaleDateString()}</td>
-                      <td className="px-3 py-3 text-[10px] font-mono text-gray-500">{new Date(ioc.lastSeen).toLocaleDateString()}</td>
+                      <td className="px-3 py-3 text-[10px] font-mono text-gray-500">{ioc.firstSeen ? new Date(ioc.firstSeen).toLocaleDateString() : "-"}</td>
+                      <td className="px-3 py-3 text-[10px] font-mono text-gray-500">{ioc.lastSeen ? new Date(ioc.lastSeen).toLocaleDateString() : "-"}</td>
                       <td className="px-3 py-3 text-[10px] font-mono text-cyan-glow">{ioc.sightings}</td>
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap gap-1">
@@ -435,9 +488,14 @@ export default function IOCManagementPage() {
                 </tbody>
               </table>
             </div>
-            {filtered.length === 0 && (
+            {loading && iocs.length === 0 && (
               <div className="py-12 text-center">
-                <p className="text-sm text-gray-500">No IOCs match your filters</p>
+                <p className="text-sm text-gray-500">Loading IOCs...</p>
+              </div>
+            )}
+            {!loading && filtered.length === 0 && (
+              <div className="py-12 text-center">
+                <p className="text-sm text-gray-500">{iocs.length === 0 ? "No IOCs yet — add one or bulk import" : "No IOCs match your filters"}</p>
               </div>
             )}
           </div>
@@ -448,6 +506,7 @@ export default function IOCManagementPage() {
       {activeTab === "add" && (
         <div className="glass-panel p-6 space-y-4 max-w-2xl">
           <h3 className="text-[10px] font-bold tracking-widest text-gray-500">ADD NEW IOC</h3>
+          {formError && <p className="text-xs text-red-400">{formError}</p>}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">TYPE</label>
@@ -483,24 +542,18 @@ export default function IOCManagementPage() {
               <input type="text" value={addMitre} onChange={e => setAddMitre(e.target.value)} placeholder="e.g. T1071.001" className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">KILL CHAIN PHASE</label>
-              <select value={addKillChain} onChange={e => setAddKillChain(e.target.value)} className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 focus:border-cyan-glow/40 focus:outline-none">
-                <option value="">None</option>
-                <option value="Reconnaissance">Reconnaissance</option>
-                <option value="Weaponization">Weaponization</option>
-                <option value="Delivery">Delivery</option>
-                <option value="Exploitation">Exploitation</option>
-                <option value="Installation">Installation</option>
-                <option value="C2">C2</option>
-                <option value="Actions">Actions on Objectives</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">EXPIRY DATE</label>
-              <input type="date" value={addExpiry} onChange={e => setAddExpiry(e.target.value)} className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 focus:border-cyan-glow/40 focus:outline-none" />
-            </div>
+          <div>
+            <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">KILL CHAIN PHASE</label>
+            <select value={addKillChain} onChange={e => setAddKillChain(e.target.value)} className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 focus:border-cyan-glow/40 focus:outline-none">
+              <option value="">None</option>
+              <option value="Reconnaissance">Reconnaissance</option>
+              <option value="Weaponization">Weaponization</option>
+              <option value="Delivery">Delivery</option>
+              <option value="Exploitation">Exploitation</option>
+              <option value="Installation">Installation</option>
+              <option value="C2">C2</option>
+              <option value="Actions">Actions on Objectives</option>
+            </select>
           </div>
           <button onClick={handleAddIOC} disabled={!addValue.trim()} className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-6 py-2.5 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20 transition-colors disabled:opacity-50">
             ADD IOC
@@ -512,6 +565,7 @@ export default function IOCManagementPage() {
       {activeTab === "import" && (
         <div className="glass-panel p-6 space-y-4 max-w-2xl">
           <h3 className="text-[10px] font-bold tracking-widest text-gray-500">BULK IMPORT IOCs</h3>
+          {importResult && <p className="text-xs text-cyan-glow">{importResult}</p>}
           <div>
             <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">FORMAT</label>
             <div className="flex gap-2">
@@ -536,7 +590,7 @@ export default function IOCManagementPage() {
       {activeTab === "graph" && (
         <div className="glass-panel p-4">
           <h3 className="text-[10px] font-bold tracking-widest text-gray-500 mb-3">IOC RELATIONSHIP GRAPH</h3>
-          <RelationshipGraph iocs={iocs} selectedId={selectedIoc?.id || null} />
+          <RelationshipGraph data={graphData} selectedId={selectedIoc?.id || null} />
           <p className="text-[10px] text-gray-500 mt-2 text-center">Click an IOC in the table to focus the graph on its relationships</p>
         </div>
       )}
@@ -585,11 +639,11 @@ export default function IOCManagementPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-[10px] font-bold tracking-widest text-gray-500">FIRST SEEN</p>
-                <p className="text-xs font-mono text-gray-300">{new Date(selectedIoc.firstSeen).toLocaleString()}</p>
+                <p className="text-xs font-mono text-gray-300">{selectedIoc.firstSeen ? new Date(selectedIoc.firstSeen).toLocaleString() : "-"}</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold tracking-widest text-gray-500">LAST SEEN</p>
-                <p className="text-xs font-mono text-gray-300">{new Date(selectedIoc.lastSeen).toLocaleString()}</p>
+                <p className="text-xs font-mono text-gray-300">{selectedIoc.lastSeen ? new Date(selectedIoc.lastSeen).toLocaleString() : "-"}</p>
               </div>
             </div>
             {selectedIoc.mitreTechnique && (
@@ -604,29 +658,19 @@ export default function IOCManagementPage() {
                 <p className="text-xs text-gray-300">{selectedIoc.killChainPhase}</p>
               </div>
             )}
-            <div>
-              <p className="text-[10px] font-bold tracking-widest text-gray-500">TAGS</p>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {selectedIoc.tags.map(tag => (
-                  <span key={tag} className="rounded-full border border-cyan-glow/20 bg-cyan-glow/5 px-2.5 py-0.5 text-[10px] text-cyan-glow">{tag}</span>
-                ))}
-              </div>
-            </div>
-            {selectedIoc.relatedIds.length > 0 && (
+            {selectedIoc.tags.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold tracking-widest text-gray-500">RELATED IOCs</p>
+                <p className="text-[10px] font-bold tracking-widest text-gray-500">TAGS</p>
                 <div className="flex flex-wrap gap-1.5 mt-1">
-                  {selectedIoc.relatedIds.map(rid => {
-                    const r = iocs.find(i => i.id === rid);
-                    return r ? <span key={rid} className="rounded border border-gray-700 bg-gray-900/50 px-2 py-0.5 text-[10px] font-mono text-gray-300">{r.value.length > 30 ? r.value.slice(0, 28) + "..." : r.value}</span> : null;
-                  })}
+                  {selectedIoc.tags.map(tag => (
+                    <span key={tag} className="rounded-full border border-cyan-glow/20 bg-cyan-glow/5 px-2.5 py-0.5 text-[10px] text-cyan-glow">{tag}</span>
+                  ))}
                 </div>
               </div>
             )}
             <div className="flex gap-2 pt-2 border-t border-gray-800">
-              <button onClick={() => handleRevokeIOC(selectedIoc.id)} className="rounded border border-red-500/20 bg-red-500/10 px-4 py-2 text-[10px] font-bold tracking-widest text-red-400 hover:bg-red-500/20 transition-colors">REVOKE</button>
-              <button onClick={() => handleMarkFP(selectedIoc.id)} className="rounded border border-yellow-500/20 bg-yellow-500/10 px-4 py-2 text-[10px] font-bold tracking-widest text-yellow-400 hover:bg-yellow-500/20 transition-colors">MARK FALSE POSITIVE</button>
-              <button className="rounded border border-cyan-glow/20 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20 transition-colors">ENRICH</button>
+              <button onClick={() => handleRevokeIOC(selectedIoc.id)} disabled={selectedIoc.state === "revoked"} className="rounded border border-red-500/20 bg-red-500/10 px-4 py-2 text-[10px] font-bold tracking-widest text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-30">REVOKE</button>
+              <button onClick={() => handleMarkFP(selectedIoc.id)} disabled={selectedIoc.state === "false-positive"} className="rounded border border-yellow-500/20 bg-yellow-500/10 px-4 py-2 text-[10px] font-bold tracking-widest text-yellow-400 hover:bg-yellow-500/20 transition-colors disabled:opacity-30">MARK FALSE POSITIVE</button>
             </div>
           </div>
         </div>

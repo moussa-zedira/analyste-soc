@@ -2213,3 +2213,55 @@ export function aiRulesFromEvent(eventId: string, params: { enrich_with_llm?: bo
   const qs = sp.toString() ? `?${sp.toString()}` : "";
   return request<RuleGenerateResponse>(`/ai/rules/from-event/${encodeURIComponent(eventId)}${qs}`, { method: "POST" }, opts);
 }
+
+// ─── IOC Management ────────────────────────────────────────────────────────
+export interface IocApi {
+  id: number;
+  type: string;
+  value: string;
+  state: string;
+  confidence: number;
+  tlp: string;
+  source: string;
+  tags: string[];
+  mitre_techniques: string[];
+  kill_chain_phase: string | null;
+  metadata: Record<string, unknown>;
+  stix_id: string | null;
+  first_seen: string | null;
+  last_seen: string | null;
+  expiry: string | null;
+  sightings_count: number;
+}
+export interface IocCreatePayload {
+  type: string;
+  value: string;
+  source?: string;
+  confidence?: number;
+  tlp?: string;
+  tags?: string[];
+  mitre_techniques?: string[];
+  kill_chain_phase?: string;
+  ttl_hours?: number;
+}
+export function listIocs(params: {
+  type?: string; state?: string; tlp?: string; source?: string;
+  search?: string; confidence_min?: number; limit?: number; offset?: number;
+} = {}, opts?: RequestOptions): Promise<{ iocs: IocApi[]; count: number }> {
+  return request(`/ioc${buildQuery(params)}`, undefined, opts);
+}
+export function createIoc(body: IocCreatePayload, opts?: RequestOptions): Promise<{ status: string; ioc: IocApi }> {
+  return request(`/ioc`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function revokeIoc(id: number, opts?: RequestOptions): Promise<{ status: string }> {
+  return request(`/ioc/${id}/revoke`, { method: "POST" }, opts);
+}
+export function markIocFalsePositive(id: number, opts?: RequestOptions): Promise<{ status: string }> {
+  return request(`/ioc/${id}/false-positive`, { method: "POST" }, opts);
+}
+export function bulkImportIocs(body: { format: "text" | "csv" | "stix"; data: string; source?: string; default_confidence?: number; default_tlp?: string }, opts?: RequestOptions): Promise<{ status: string; count: number }> {
+  return request(`/ioc/bulk`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function getIocGraph(limit = 200, opts?: RequestOptions): Promise<{ nodes: { id: number; type: string; value: string; confidence: number }[]; edges: { source: number; target: number; type: string }[] }> {
+  return request(`/ioc/graph?limit=${limit}`, undefined, opts);
+}
