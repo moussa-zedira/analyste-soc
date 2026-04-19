@@ -57,8 +57,8 @@ class ShodanProvider:
             pipe.incr(REDIS_COUNTER_KEY)
             pipe.expire(REDIS_COUNTER_KEY, REDIS_COUNTER_TTL)
             pipe.execute()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Shodan rate-limit counter update failed: %s", exc)
 
     def _params(self, **extra: str) -> dict:
         return {"key": self._api_key, **extra}

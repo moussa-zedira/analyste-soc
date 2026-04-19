@@ -464,8 +464,8 @@ def export_csv(db: Session, state: str | None = "active") -> str:
         if ioc.tags_json:
             try:
                 tags = ";".join(json.loads(ioc.tags_json))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Malformed tags_json on IOC %s during CSV export: %s", ioc.id, exc)
         writer.writerow([
             ioc.type, ioc.value, ioc.state, ioc.confidence, ioc.tlp,
             ioc.source, tags,
@@ -520,20 +520,20 @@ def ioc_to_dict(ioc: IOC) -> dict[str, Any]:
     if ioc.tags_json:
         try:
             tags = json.loads(ioc.tags_json)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Malformed tags_json on IOC %s: %s", ioc.id, exc)
     mitre = []
     if ioc.mitre_techniques_json:
         try:
             mitre = json.loads(ioc.mitre_techniques_json)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Malformed mitre_techniques_json on IOC %s: %s", ioc.id, exc)
     meta = {}
     if ioc.metadata_json:
         try:
             meta = json.loads(ioc.metadata_json)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Malformed metadata_json on IOC %s: %s", ioc.id, exc)
 
     return {
         "id": ioc.id,

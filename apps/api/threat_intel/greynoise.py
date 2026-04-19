@@ -58,8 +58,8 @@ class GreyNoiseProvider:
             pipe.incr(REDIS_COUNTER_KEY)
             pipe.expire(REDIS_COUNTER_KEY, REDIS_COUNTER_TTL)
             pipe.execute()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("GreyNoise rate-limit counter update failed: %s", exc)
 
     def _headers(self) -> dict:
         return {"key": self._api_key, "Accept": "application/json"}

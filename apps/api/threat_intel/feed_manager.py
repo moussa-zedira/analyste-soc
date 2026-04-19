@@ -557,8 +557,8 @@ def feed_to_dict(feed: ThreatFeed) -> dict[str, Any]:
     if feed.config_json:
         try:
             config = json.loads(feed.config_json)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Malformed config_json on feed %s: %s", feed.id, exc)
     return {
         "id": feed.id,
         "name": feed.name,

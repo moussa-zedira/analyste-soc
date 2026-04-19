@@ -289,8 +289,8 @@ def taxii_list_collections(db: Session = Depends(get_db)) -> JSONResponse:
         if c.media_types_json:
             try:
                 media = json.loads(c.media_types_json)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to parse media_types_json for collection %s: %s", c.collection_id, exc)
         collections.append({
             "id": c.collection_id,
             "title": c.title,
@@ -312,8 +312,8 @@ def taxii_get_collection(collection_id: str, db: Session = Depends(get_db)) -> J
     if col.media_types_json:
         try:
             media = json.loads(col.media_types_json)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to parse media_types_json for collection %s: %s", col.collection_id, exc)
     return _taxii_response({
         "id": col.collection_id,
         "title": col.title,
@@ -349,8 +349,8 @@ def taxii_get_objects(
         try:
             dt = datetime.fromisoformat(added_after.replace("Z", "+00:00"))
             q = q.filter(STIXObject.added > dt)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Invalid added_after filter %r in taxii_get_objects: %s", added_after, exc)
     if type:
         q = q.filter(STIXObject.stix_type == type)
     if id:
@@ -365,8 +365,8 @@ def taxii_get_objects(
     for o in objects_db:
         try:
             objects.append(json.loads(o.object_json))
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Skipping malformed STIX object %s: %s", o.stix_id, exc)
 
     more = (next + limit) < total
     resp: dict[str, Any] = {"objects": objects, "more": more}
@@ -454,8 +454,8 @@ def taxii_manifest(
         try:
             dt = datetime.fromisoformat(added_after.replace("Z", "+00:00"))
             q = q.filter(STIXObject.added > dt)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Invalid added_after filter %r in taxii_manifest: %s", added_after, exc)
 
     total = q.count()
     items = q.order_by(STIXObject.added).offset(next).limit(limit).all()

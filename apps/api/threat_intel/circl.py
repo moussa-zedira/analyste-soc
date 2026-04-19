@@ -59,8 +59,8 @@ class CIRCLProvider:
             pipe.incr(REDIS_COUNTER_KEY)
             pipe.expire(REDIS_COUNTER_KEY, REDIS_COUNTER_TTL)
             pipe.execute()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("CIRCL rate-limit counter update failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Public API — IP via passive DNS

@@ -71,8 +71,8 @@ def set_rate_limit_remaining(provider: str, remaining: float) -> None:
     """Met a jour la jauge de quota restant pour un provider."""
     try:
         ti_provider_rate_limit_remaining.labels(provider=provider).set(float(remaining))
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Failed to set rate_limit_remaining metric for %s: %s", provider, exc)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -129,8 +129,8 @@ class CircuitBreaker:
     def _publish_state(self) -> None:
         try:
             ti_provider_circuit_state.labels(provider=self.provider).set(int(self._state))
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to publish circuit state metric for %s: %s", self.provider, exc)
 
     @property
     def state(self) -> CircuitState:
@@ -342,8 +342,8 @@ def instrument(
                         provider=provider, operation=operation,
                     ).observe(elapsed)
                     record_result(provider, result_label)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Failed to record instrument metrics for %s/%s: %s", provider, operation, exc)
 
         return wrapper
 

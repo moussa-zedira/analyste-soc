@@ -104,5 +104,5 @@ class BaseTIProvider:
                     provider=self.name, operation=operation,
                 ).observe(elapsed)
                 record_result(self.name, result_label)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to record provider metrics for %s/%s: %s", self.name, operation, exc)

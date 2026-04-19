@@ -56,8 +56,8 @@ class AbuseIPDBProvider:
             pipe.incr(REDIS_COUNTER_KEY)
             pipe.expire(REDIS_COUNTER_KEY, REDIS_COUNTER_TTL)
             pipe.execute()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("AbuseIPDB rate-limit counter update failed: %s", exc)
 
     @instrument("abuseipdb", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:

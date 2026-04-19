@@ -66,8 +66,8 @@ class VirusTotalProvider:
             pipe.incr(REDIS_DAILY_KEY)
             pipe.expire(REDIS_DAILY_KEY, REDIS_DAILY_TTL)
             pipe.execute()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("VirusTotal rate-limit counter update failed: %s", exc)
 
     def _headers(self) -> dict:
         return {"x-apikey": self._api_key, "Accept": "application/json"}

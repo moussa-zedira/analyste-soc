@@ -31,8 +31,8 @@ def get_cached(indicator: str, source: str, db: Session) -> TIResult | None:
             if raw:
                 data = json.loads(raw)
                 return TIResult(**data)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("TI cache Redis GET failed for %s/%s: %s", source, indicator, exc)
 
     # Level 2: PostgreSQL
     try:
@@ -82,8 +82,8 @@ def _set_redis(indicator: str, source: str, result: TIResult) -> None:
                 "total_reports": result.total_reports,
             }
             r.setex(_redis_key(indicator, source), REDIS_TTL, json.dumps(data))
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("TI cache Redis SET failed for %s: %s", source, exc)
 
 
 def _set_db(result: TIResult, db: Session) -> None:

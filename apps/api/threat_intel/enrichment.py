@@ -100,8 +100,8 @@ async def _lookup_ip(ip: str, db: Session) -> TIResult | None:
             # Compteur de cache hit par provider source.
             try:
                 record_result(p.name, "cache_hit")
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to record cache_hit metric for %s: %s", p.name, exc)
             return cached
 
     # Query providers
@@ -172,8 +172,8 @@ async def lookup_ip_manual(ip: str, db: Session) -> dict:
         if cached:
             try:
                 record_result(provider.name, "cache_hit")
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to record cache_hit metric for %s: %s", provider.name, exc)
             results.append({
                 "source": cached.source,
                 "risk_score": cached.risk_score,

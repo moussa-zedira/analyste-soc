@@ -53,8 +53,8 @@ class OTXProvider:
             pipe.incr(REDIS_COUNTER_KEY)
             pipe.expire(REDIS_COUNTER_KEY, REDIS_COUNTER_TTL)
             pipe.execute()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("OTX rate-limit counter update failed: %s", exc)
 
     @instrument("otx", "check_ip")
     async def check_ip(self, ip: str) -> TIResult | None:
