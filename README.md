@@ -31,6 +31,7 @@ Plateforme unifiée combinant **SIEM défensif**, **65+ modules offensifs**, **o
 - [Variables d'environnement](#variables-denvironnement)
 - [Migrations DB](#migrations-db)
 - [Tech Stack](#tech-stack)
+- [Documentation](#documentation)
 
 ---
 
@@ -344,6 +345,36 @@ Tête actuelle : `022_chat_messages`.
 | **Infra** | Docker Compose, PostgreSQL 16, Redis 7, Alembic |
 | **Sécurité** | JWT + API key, SSO (SAML/OIDC), RBAC, rate limiting, CORS, kill-switch |
 | **Offensif** | Sliver C2, GoPhish, BloodHound, nmap-like, custom engines |
+
+---
+
+## Documentation
+
+La documentation complète vit dans [`docs/`](./docs/) :
+
+| Fichier | Contenu |
+|---------|---------|
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Vision globale, diagrammes Mermaid, flux données, sécurité |
+| [`docs/ONBOARDING.md`](./docs/ONBOARDING.md) | Setup d'un nouveau dev (0 → productif), prérequis, smoke tests |
+| [`docs/api-reference.md`](./docs/api-reference.md) | Lien Swagger auto + exemples curl par domaine |
+| [`docs/adr/`](./docs/adr/) | Architecture Decision Records (5 ADRs initiaux) |
+| [`docs/runbooks/`](./docs/runbooks/) | Runbooks opérationnels (DR, deploy, incidents, migrations) |
+
+**ADRs disponibles :**
+
+- [ADR-0001 — Stack FastAPI + Next.js + PostgreSQL](./docs/adr/0001-stack-choice.md)
+- [ADR-0002 — Auth duale JWT + API key](./docs/adr/0002-auth-dual-jwt-apikey.md)
+- [ADR-0003 — LLM multi-provider](./docs/adr/0003-llm-multi-provider.md)
+- [ADR-0004 — Sliver C2](./docs/adr/0004-sliver-c2-integration.md)
+- [ADR-0005 — Split pentest.py](./docs/adr/0005-split-pentest-routes.md)
+
+**Runbooks disponibles :**
+
+- [DR — Disaster Recovery](./docs/runbooks/DR.md)
+- [Déploiement en production](./docs/runbooks/deploy.md)
+- [Incident : API down](./docs/runbooks/incident-api-down.md)
+- [Incident : RAG index vide](./docs/runbooks/incident-rag-index-vide.md)
+- [Migrations DB (upgrade / rollback)](./docs/runbooks/db-migration.md)
 
 ---
 
