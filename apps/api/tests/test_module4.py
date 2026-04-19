@@ -92,10 +92,13 @@ def test_bruteforce_creates_incident(api_client: TestClient):
     incidents = resp.json()
     assert len(incidents) >= 1
 
-    inc = incidents[0]
+    bf_incidents = [
+        i for i in incidents if i["rule_id"] in ("bruteforce.v1", "auth-targeted.v1")
+    ]
+    assert bf_incidents, f"no bruteforce incident in {[i['rule_id'] for i in incidents]}"
+    inc = bf_incidents[0]
     assert inc["severity"] in ("high", "critical")
     assert inc["status"] == "open"
-    assert inc["rule_id"] in ("bruteforce.v1", "auth-targeted.v1")
     assert "src_ip:" in inc["entity_key"]
     assert "10.0.0.1" in inc["title"]
 

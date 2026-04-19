@@ -164,20 +164,21 @@ def redis_client(_configure_env):
 
 
 @pytest.fixture()
-def api_client(_engine, redis_client):
-    """TestClient FastAPI avec dependance get_db remplacee par notre session test."""
+def api_client(_engine, db_session, redis_client):
+    """TestClient FastAPI partageant la session test (voit les fixtures insérées)."""
     from fastapi.testclient import TestClient
-    from apps.api.db.session import SessionLocal, get_db
+    from apps.api.db.session import get_db
     from apps.api.main import create_app
 
     app = create_app()
 
     def _override_get_db():
-        db = SessionLocal()
+        # Partage la session du test : fixtures insérées visibles côté serveur,
+        # rollback final propre à la sortie du test.
         try:
-            yield db
+            yield db_session
         finally:
-            db.close()
+            pass
 
     app.dependency_overrides[get_db] = _override_get_db
 
