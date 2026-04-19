@@ -238,7 +238,7 @@ services:
       INTERNAL_API_BASE_URL: http://api:8000
       INTERNAL_API_KEY: ${API_KEY:?API_KEY required in .env}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
       interval: 15s
       timeout: 5s
       retries: 5
