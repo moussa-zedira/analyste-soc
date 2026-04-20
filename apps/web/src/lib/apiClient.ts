@@ -2265,3 +2265,175 @@ export function bulkImportIocs(body: { format: "text" | "csv" | "stix"; data: st
 export function getIocGraph(limit = 200, opts?: RequestOptions): Promise<{ nodes: { id: number; type: string; value: string; confidence: number }[]; edges: { source: number; target: number; type: string }[] }> {
   return request(`/ioc/graph?limit=${limit}`, undefined, opts);
 }
+
+// ---------------------------------------------------------------------------
+// SOAR
+// ---------------------------------------------------------------------------
+export interface PlaybookSummaryApi {
+  id: string; name: string; description: string; category: string;
+  trigger_type: string; enabled: boolean; builtin: boolean;
+  version: number; tags: string[] | null; created_at: string;
+}
+export interface PlaybookStepApi { name: string; action: string; params?: Record<string, unknown>; condition?: string; on_error?: string }
+export interface PlaybookDefinitionApi { steps: PlaybookStepApi[]; rollback_on_failure?: boolean }
+export interface PlaybookReadApi extends PlaybookSummaryApi {
+  trigger_config: Record<string, unknown> | null;
+  definition: PlaybookDefinitionApi;
+  updated_at: string;
+}
+export interface ExecutionReadApi {
+  id: string; playbook_id: string; playbook_name: string;
+  status: string; trigger: string;
+  input_data: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+  error: string | null; dry_run: boolean;
+  started_at: string | null; finished_at: string | null;
+  duration_ms: number | null; created_at: string;
+}
+export interface SoarMetricsApi {
+  total_playbooks: number; enabled_playbooks: number;
+  total_executions: number; completed: number; failed: number;
+  cancelled: number; running: number;
+  avg_duration_ms: number | null; success_rate: number;
+  playbook_usage: { playbook_id: string; playbook_name: string; count: number }[];
+  recent_executions: { id: string; playbook_name: string; status: string; started_at: string | null }[];
+}
+export function listPlaybooks(opts?: RequestOptions): Promise<PlaybookSummaryApi[]> {
+  return request(`/soar/playbooks`, undefined, opts);
+}
+export function getPlaybook(id: string, opts?: RequestOptions): Promise<PlaybookReadApi> {
+  return request(`/soar/playbooks/${id}`, undefined, opts);
+}
+export function getPlaybookHistory(id: string, limit = 50, opts?: RequestOptions): Promise<ExecutionReadApi[]> {
+  return request(`/soar/playbooks/${id}/history?limit=${limit}`, undefined, opts);
+}
+export function executePlaybook(id: string, body: { input_data?: Record<string, unknown>; trigger?: string; incident_id?: string | null } = {}, opts?: RequestOptions): Promise<ExecutionReadApi> {
+  return request(`/soar/playbooks/${id}/execute`, { method: "POST", body: JSON.stringify({ input_data: body.input_data ?? {}, trigger: body.trigger ?? "manual", incident_id: body.incident_id ?? null }) }, opts);
+}
+export function simulatePlaybook(id: string, body: { input_data?: Record<string, unknown>; trigger?: string } = {}, opts?: RequestOptions): Promise<ExecutionReadApi> {
+  return request(`/soar/playbooks/${id}/simulate`, { method: "POST", body: JSON.stringify({ input_data: body.input_data ?? {}, trigger: body.trigger ?? "manual" }) }, opts);
+}
+export function listExecutions(params: { status?: string; playbook_id?: string; limit?: number } = {}, opts?: RequestOptions): Promise<ExecutionReadApi[]> {
+  return request(`/soar/executions${buildQuery(params)}`, undefined, opts);
+}
+export function getExecution(id: string, opts?: RequestOptions): Promise<ExecutionReadApi & { steps?: { name: string; action: string; status: string; output?: unknown; error?: string | null; duration_ms?: number | null }[] }> {
+  return request(`/soar/executions/${id}`, undefined, opts);
+}
+export function cancelExecution(id: string, opts?: RequestOptions): Promise<{ status: string }> {
+  return request(`/soar/executions/${id}/cancel`, { method: "POST" }, opts);
+}
+export function getSoarMetrics(opts?: RequestOptions): Promise<SoarMetricsApi> {
+  return request(`/soar/metrics`, undefined, opts);
+}
+
+// ---------------------------------------------------------------------------
+// Alerts (channels + rules)
+// ---------------------------------------------------------------------------
+export interface AlertChannelApi {
+  id: string; channel_type: string; name: string;
+  config_json: string; enabled: boolean; min_severity: string;
+  created_at: string; updated_at: string;
+}
+export interface AlertRuleApi {
+  id: string; name: string; description: string;
+  conditions_json: string; channel_id: string;
+  enabled: boolean; priority: number;
+  created_at: string; updated_at?: string;
+}
+export function listAlertChannels(opts?: RequestOptions): Promise<AlertChannelApi[]> {
+  return request(`/alerts/channels`, undefined, opts);
+}
+export function createAlertChannel(body: { channel_type: string; name: string; config_json?: string; min_severity?: string }, opts?: RequestOptions): Promise<AlertChannelApi> {
+  return request(`/alerts/channels`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function updateAlertChannel(id: string, body: Partial<{ name: string; channel_type: string; config_json: string; enabled: boolean; min_severity: string }>, opts?: RequestOptions): Promise<AlertChannelApi> {
+  return request(`/alerts/channels/${id}`, { method: "PUT", body: JSON.stringify(body) }, opts);
+}
+export function deleteAlertChannel(id: string, opts?: RequestOptions): Promise<{ status: string }> {
+  return request(`/alerts/channels/${id}`, { method: "DELETE" }, opts);
+}
+export function testAlertChannel(id: string, opts?: RequestOptions): Promise<{ status: string; message?: string }> {
+  return request(`/alerts/channels/${id}/test`, { method: "POST" }, opts);
+}
+export function listAlertRules(opts?: RequestOptions): Promise<AlertRuleApi[]> {
+  return request(`/alerts/rules`, undefined, opts);
+}
+export function createAlertRule(body: { name: string; description?: string; conditions_json?: string; channel_id: string; priority?: number }, opts?: RequestOptions): Promise<AlertRuleApi> {
+  return request(`/alerts/rules`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function updateAlertRule(id: string, body: Partial<{ name: string; description: string; conditions_json: string; channel_id: string; enabled: boolean; priority: number }>, opts?: RequestOptions): Promise<AlertRuleApi> {
+  return request(`/alerts/rules/${id}`, { method: "PUT", body: JSON.stringify(body) }, opts);
+}
+export function deleteAlertRule(id: string, opts?: RequestOptions): Promise<{ status: string }> {
+  return request(`/alerts/rules/${id}`, { method: "DELETE" }, opts);
+}
+export function listAlertDedupFingerprints(opts?: RequestOptions): Promise<{ fingerprints: { fingerprint: string; count: number; first_seen: string; last_seen: string }[] }> {
+  return request(`/alerts/dedup/fingerprints`, undefined, opts);
+}
+
+// ---------------------------------------------------------------------------
+// Pentest Brute Force
+// ---------------------------------------------------------------------------
+export interface BruteScopeApi { targets: string[] }
+export interface BruteWordlistsApi { usernames: string[]; passwords: string[] }
+export interface BruteCredential { username: string; password: string }
+export interface BruteAttemptApi {
+  username: string; password?: string; success: boolean;
+  error?: string | null; response_code?: number | null; response_length?: number | null;
+}
+export interface BruteResultApi {
+  id?: number; target: string; service: string; port?: number | null;
+  total_attempts: number; successful: number; duration_ms?: number | null;
+  credentials_found: BruteCredential[]; attempts?: BruteAttemptApi[];
+  started_at?: string; finished_at?: string;
+}
+export function getBruteScope(opts?: RequestOptions): Promise<BruteScopeApi> {
+  return request(`/pentest/brute/scope`, undefined, opts);
+}
+export function setBruteScope(targets: string[], opts?: RequestOptions): Promise<BruteScopeApi> {
+  return request(`/pentest/brute/scope`, { method: "POST", body: JSON.stringify({ targets }) }, opts);
+}
+export function getBruteWordlists(opts?: RequestOptions): Promise<BruteWordlistsApi> {
+  return request(`/pentest/brute/wordlists`, undefined, opts);
+}
+export function getBruteResults(limit = 50, opts?: RequestOptions): Promise<{ total: number; results: BruteResultApi[] }> {
+  return request(`/pentest/brute/results?limit=${limit}`, undefined, opts);
+}
+export function bruteSsh(body: { target: string; port?: number; usernames: string[]; passwords: string[]; timeout?: number; concurrency?: number; stop_on_success?: boolean; max_attempts?: number }, opts?: RequestOptions): Promise<BruteResultApi> {
+  return request(`/pentest/brute/ssh`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function bruteFtp(body: { target: string; port?: number; usernames: string[]; passwords: string[]; timeout?: number; concurrency?: number; stop_on_success?: boolean }, opts?: RequestOptions): Promise<BruteResultApi> {
+  return request(`/pentest/brute/ftp`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function bruteHttpBasic(body: { url: string; usernames: string[]; passwords: string[]; timeout?: number; concurrency?: number; stop_on_success?: boolean; auth_type?: string }, opts?: RequestOptions): Promise<BruteResultApi> {
+  return request(`/pentest/brute/http-basic`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function bruteHttpForm(body: { url: string; method?: string; username_field: string; password_field: string; usernames: string[]; passwords: string[]; success_indicator?: string; failure_indicator?: string; timeout?: number; concurrency?: number; stop_on_success?: boolean; follow_redirects?: boolean; extra_fields?: Record<string, string>; csrf_field?: string; csrf_url?: string }, opts?: RequestOptions): Promise<BruteResultApi> {
+  return request(`/pentest/brute/http-form`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+
+// ---------------------------------------------------------------------------
+// Pentest Web Crawler
+// ---------------------------------------------------------------------------
+export interface CrawlerScopeApi { domains: string[] }
+export interface CrawlerPageApi {
+  url: string; status_code?: number | null; title?: string | null;
+  forms?: { action?: string; method?: string; inputs?: { name: string; type: string }[] }[];
+  links?: string[]; technologies?: string[];
+}
+export interface CrawlerResultApi {
+  base_url: string; pages_crawled: number; pages: CrawlerPageApi[];
+  forms_found?: number; technologies?: string[]; duration_ms?: number;
+}
+export function getCrawlerScope(opts?: RequestOptions): Promise<CrawlerScopeApi> {
+  return request(`/pentest/crawler/scope`, undefined, opts);
+}
+export function setCrawlerScope(domains: string[], opts?: RequestOptions): Promise<CrawlerScopeApi> {
+  return request(`/pentest/crawler/scope`, { method: "POST", body: JSON.stringify({ domains }) }, opts);
+}
+export function crawlerCrawl(body: { url: string; max_depth?: number; max_pages?: number; timeout?: number; concurrency?: number; follow_subdomains?: boolean; user_agent?: string; extract_forms?: boolean; extract_js_links?: boolean; check_robots?: boolean; check_sitemap?: boolean }, opts?: RequestOptions): Promise<CrawlerResultApi> {
+  return request(`/pentest/crawler/crawl`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function crawlerAnalyze(body: { url: string; timeout?: number; user_agent?: string }, opts?: RequestOptions): Promise<CrawlerPageApi & { technologies?: string[]; headers?: Record<string, string> }> {
+  return request(`/pentest/crawler/analyze`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
