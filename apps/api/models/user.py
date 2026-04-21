@@ -22,3 +22,5 @@ class User(Base):
     role: Mapped[str] = mapped_column(Text, default="analyst")  # analyst | lead | admin
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    totp_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
