@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CQLEditor } from "@/components/CQLEditor";
 import { SearchResults, type SearchResultData, type ViewMode } from "@/components/SearchResults";
 import { FieldExplorer, type FieldInfo } from "@/components/FieldExplorer";
+import { cqlSearch, getCqlFields, type CqlSearchResponse } from "@/lib/apiClient";
 
 /* ------------------------------------------------------------------ */
 /*  Time range presets                                                 */
@@ -84,98 +85,96 @@ const BUILTIN_QUERIES: SavedQuery[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  Mock search execution                                              */
+/*  Time range → earliest/latest                                       */
 /* ------------------------------------------------------------------ */
 
-function generateMockResults(query: string): SearchResultData {
-  const lower = query.toLowerCase();
-  const isTimechart = lower.includes("| timechart") || lower.includes("|timechart");
-  const isStats = lower.includes("| stats") || lower.includes("| top") || lower.includes("| rare");
+function timeRangeToEarliest(tr: string, customFrom?: string): string {
+  if (tr === "custom" && customFrom) return new Date(customFrom).toISOString();
+  const map: Record<string, string> = {
+    "15m": "-15m", "1h": "-1h", "4h": "-4h",
+    "24h": "-24h", "7d": "-7d", "30d": "-30d",
+  };
+  return map[tr] ?? "-24h";
+}
+function timeRangeToLatest(tr: string, customTo?: string): string {
+  if (tr === "custom" && customTo) return new Date(customTo).toISOString();
+  return "now";
+}
 
-  if (isTimechart) {
-    const buckets = 24;
-    const series = ["critical", "high", "medium", "low"];
-    const events: Record<string, unknown>[] = [];
-    const now = Date.now();
-    for (let i = 0; i < buckets; i++) {
-      const row: Record<string, unknown> = {
-        _time: new Date(now - (buckets - i) * 3600000).toISOString().slice(0, 16),
-      };
-      for (const s of series) {
-        row[s] = Math.floor(Math.random() * 50) + 1;
-      }
-      events.push(row);
-    }
-    return {
-      events,
-      totalCount: buckets,
-      queryTimeMs: Math.random() * 500 + 50,
-      queryType: "timechart",
-      fields: ["_time", ...series],
-    };
+/* ------------------------------------------------------------------ */
+/*  CQL response → SearchResultData                                    */
+/* ------------------------------------------------------------------ */
+
+function mapCqlResponse(resp: CqlSearchResponse): SearchResultData {
+  const cmds = resp.metadata.commands ?? [];
+  const hasTimechart = cmds.some((c) => c.toLowerCase().includes("timechart"));
+  const hasStats = cmds.some((c) => {
+    const lc = c.toLowerCase();
+    return lc.includes("stats") || lc.includes("top") || lc.includes("rare") || lc.includes("chart");
+  });
+  const queryType: SearchResultData["queryType"] = hasTimechart ? "timechart" : hasStats ? "stats" : "events";
+
+  const results = resp.results ?? [];
+  const fieldSet = new Set<string>();
+  for (const row of results) {
+    for (const k of Object.keys(row)) fieldSet.add(k);
   }
-
-  if (isStats) {
-    const groups = ["auth.fail", "auth.success", "scan.port", "malware.detect", "dns.query", "firewall.block", "vpn.connect", "file.modify"];
-    const events: Record<string, unknown>[] = groups.map((g) => ({
-      event_type: g,
-      count: Math.floor(Math.random() * 500) + 10,
-      unique_ips: Math.floor(Math.random() * 50) + 1,
-    }));
-    events.sort((a, b) => (b.count as number) - (a.count as number));
-    return {
-      events,
-      totalCount: events.length,
-      queryTimeMs: Math.random() * 300 + 30,
-      queryType: "stats",
-      fields: ["event_type", "count", "unique_ips"],
-    };
-  }
-
-  // Regular events
-  const severities = ["critical", "high", "medium", "low", "info"];
-  const eventTypes = ["auth.fail", "auth.success", "scan.port", "malware.detect", "firewall.block", "dns.query", "file.modify"];
-  const sources = ["firewall-01", "ids-sensor-02", "edr-agent-05", "proxy-east", "dns-resolver-01"];
-  const ips = ["10.0.1.15", "192.168.1.100", "172.16.0.50", "10.0.2.200", "192.168.5.30", "203.0.113.42", "198.51.100.17"];
-
-  const count = 150;
-  const events: Record<string, unknown>[] = [];
-  const now = Date.now();
-  for (let i = 0; i < count; i++) {
-    events.push({
-      id: `evt-${1000 + i}`,
-      timestamp: new Date(now - Math.random() * 86400000).toISOString(),
-      severity: severities[Math.floor(Math.random() * severities.length)],
-      event_type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
-      source: sources[Math.floor(Math.random() * sources.length)],
-      src_ip: ips[Math.floor(Math.random() * ips.length)],
-      dst_ip: ips[Math.floor(Math.random() * ips.length)],
-      username: ["admin", "jdoe", "svc-backup", "root", "analyst01"][Math.floor(Math.random() * 5)],
-      message: [
-        "Multiple failed login attempts detected",
-        "Port scan activity from external source",
-        "Malicious file quarantined",
-        "Firewall rule triggered for outbound traffic",
-        "DNS request to known malicious domain",
-        "Suspicious process execution detected",
-        "User privilege escalation attempt",
-      ][Math.floor(Math.random() * 7)],
-      port: [22, 80, 443, 3389, 8080, 53, 445][Math.floor(Math.random() * 7)],
-      protocol: ["TCP", "UDP", "HTTP", "DNS"][Math.floor(Math.random() * 4)],
-      action: ["allow", "block", "alert"][Math.floor(Math.random() * 3)],
-      threat_score: Math.floor(Math.random() * 100),
-    });
-  }
-  events.sort((a, b) => new Date(b.timestamp as string).getTime() - new Date(a.timestamp as string).getTime());
+  const fields = Array.from(fieldSet);
 
   return {
-    events,
-    totalCount: count + Math.floor(Math.random() * 5000),
-    queryTimeMs: Math.random() * 800 + 100,
-    queryType: "events",
-    fields: ["timestamp", "severity", "event_type", "source", "src_ip", "dst_ip", "username", "message", "port", "protocol", "action", "threat_score"],
+    events: results,
+    totalCount: resp.metadata.total ?? results.length,
+    queryTimeMs: resp.metadata.execution_time_ms ?? 0,
+    queryType,
+    fields,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/*  Derive field stats from results                                    */
+/* ------------------------------------------------------------------ */
+
+function deriveFields(events: Record<string, unknown>[]): FieldInfo[] {
+  if (events.length === 0) return [];
+  const stats = new Map<string, { values: Map<string, number>; nulls: number; total: number; sample: unknown }>();
+  for (const ev of events) {
+    for (const [k, v] of Object.entries(ev)) {
+      if (!stats.has(k)) stats.set(k, { values: new Map(), nulls: 0, total: 0, sample: v });
+      const s = stats.get(k)!;
+      s.total += 1;
+      if (v === null || v === undefined || v === "") {
+        s.nulls += 1;
+      } else {
+        const vs = String(v);
+        s.values.set(vs, (s.values.get(vs) ?? 0) + 1);
+      }
+    }
+  }
+  const out: FieldInfo[] = [];
+  for (const [name, s] of stats) {
+    let type: FieldInfo["type"] = "string";
+    const sample = s.sample;
+    if (typeof sample === "number") type = "number";
+    else if (typeof sample === "string") {
+      if (/^\d{4}-\d{2}-\d{2}T/.test(sample)) type = "time";
+      else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(sample)) type = "ip";
+    }
+    const topValues = Array.from(s.values.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([value, count]) => ({ value, count }));
+    out.push({
+      name,
+      type,
+      count: s.total - s.nulls,
+      unique: s.values.size,
+      nullPct: s.total > 0 ? (s.nulls / s.total) * 100 : 0,
+      topValues,
+    });
+  }
+  return out.sort((a, b) => b.count - a.count);
+}
+
 
 /* ------------------------------------------------------------------ */
 /*  Save query modal                                                   */
@@ -353,6 +352,13 @@ function SearchContent() {
   });
 
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [schemaFields, setSchemaFields] = useState<Record<string, { type: string; description: string }>>({});
+
+  useEffect(() => {
+    getCqlFields()
+      .then((r) => setSchemaFields(r.fields ?? {}))
+      .catch(() => setSchemaFields({}));
+  }, []);
 
   // Execute search
   const executeSearch = useCallback(() => {
@@ -362,31 +368,30 @@ function SearchContent() {
     setError(null);
     setPage(0);
 
-    // Save to history
     setQueryHistory((prev) => {
       const next = [query, ...prev.filter((q) => q !== query)].slice(0, 20);
       localStorage.setItem("cql_history", JSON.stringify(next));
       return next;
     });
 
-    // Update URL
     const url = new URL(window.location.href);
     url.searchParams.set("q", query);
     url.searchParams.set("t", timeRange);
     window.history.replaceState({}, "", url.toString());
 
-    // Mock API call - replace with real apiClient call
-    setTimeout(() => {
-      try {
-        const data = generateMockResults(query);
-        setResults(data);
+    const earliest = timeRangeToEarliest(timeRange, customFrom);
+    const latest = timeRangeToLatest(timeRange, customTo);
+
+    cqlSearch({ query, earliest, latest, limit: 500 })
+      .then((resp) => {
+        setResults(mapCqlResponse(resp));
         setLoading(false);
-      } catch (err) {
+      })
+      .catch((err) => {
         setError(err instanceof Error ? err.message : "Query execution failed");
         setLoading(false);
-      }
-    }, 300 + Math.random() * 700);
-  }, [query, timeRange]);
+      });
+  }, [query, timeRange, customFrom, customTo]);
 
   // Auto-refresh
   useEffect(() => {
@@ -409,14 +414,16 @@ function SearchContent() {
     if (q) {
       setQuery(q);
       if (t) setTimeRange(t);
-      // Auto-execute
-      setTimeout(() => {
-        setLoading(true);
-        setTimeout(() => {
-          setResults(generateMockResults(q));
+      setLoading(true);
+      cqlSearch({ query: q, earliest: timeRangeToEarliest(t ?? "24h"), latest: "now", limit: 500 })
+        .then((resp) => {
+          setResults(mapCqlResponse(resp));
           setLoading(false);
-        }, 400);
-      }, 100);
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : "Query execution failed");
+          setLoading(false);
+        });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -498,6 +505,20 @@ function SearchContent() {
     },
     [results]
   );
+
+  // Field stats: prefer derived from current results; fall back to schema names
+  const fieldInfos = useMemo<FieldInfo[]>(() => {
+    const derived = results ? deriveFields(results.events) : [];
+    if (derived.length > 0) return derived;
+    return Object.entries(schemaFields).map(([name, spec]) => {
+      const t = spec.type?.toLowerCase() ?? "";
+      let type: FieldInfo["type"] = "string";
+      if (t.includes("int") || t.includes("float") || t.includes("num")) type = "number";
+      else if (t.includes("date") || t.includes("time")) type = "time";
+      else if (t.includes("ip")) type = "ip";
+      return { name, type, count: 0, unique: 0, nullPct: 0, topValues: [] };
+    });
+  }, [results, schemaFields]);
 
   // All queries combined for the library
   const allQueries = useMemo(() => [...BUILTIN_QUERIES, ...userQueries], [userQueries]);
@@ -900,7 +921,7 @@ function SearchContent() {
 
         {/* Field explorer side panel */}
         <FieldExplorer
-          fields={[]}
+          fields={fieldInfos}
           collapsed={fieldsPanelCollapsed}
           onToggle={() => setFieldsPanelCollapsed(!fieldsPanelCollapsed)}
           onAddToQuery={addToQuery}

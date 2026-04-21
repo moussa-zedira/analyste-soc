@@ -2437,3 +2437,153 @@ export function crawlerCrawl(body: { url: string; max_depth?: number; max_pages?
 export function crawlerAnalyze(body: { url: string; timeout?: number; user_agent?: string }, opts?: RequestOptions): Promise<CrawlerPageApi & { technologies?: string[]; headers?: Record<string, string> }> {
   return request(`/pentest/crawler/analyze`, { method: "POST", body: JSON.stringify(body) }, opts);
 }
+
+// ---------------------------------------------------------------------------
+// Pentest Network Mapper (inventory + topology + discovery)
+// ---------------------------------------------------------------------------
+export interface NetmapServiceApi {
+  host: string; port: number; protocol?: string; service?: string; version?: string; banner?: string; state?: string;
+}
+export interface NetmapInventoryApi {
+  total_hosts: number; total_services: number;
+  services: NetmapServiceApi[];
+  device_summary: Record<string, number>;
+  os_summary: Record<string, number>;
+  subnets: { cidr: string; hosts: number; services?: number }[];
+}
+export interface NetmapTopologyNodeApi {
+  id: string; label?: string; ip?: string; hostname?: string; os?: string; type?: string; services?: number;
+}
+export interface NetmapTopologyEdgeApi {
+  from: string; to: string; type?: string; latency_ms?: number;
+}
+export interface NetmapTopologyApi {
+  nodes: NetmapTopologyNodeApi[]; edges: NetmapTopologyEdgeApi[];
+  segments?: { cidr: string; nodes?: number }[];
+  total_hosts: number; total_edges: number; total_segments: number;
+  scan_id?: string | null; last_scan?: string | null;
+}
+export interface NetmapDiscoverRequest {
+  target: string;
+  scan_types?: string[]; ports?: string;
+  timeout_ms?: number; max_hosts?: number;
+  os_detection?: boolean; service_detection?: boolean;
+  traceroute?: boolean; snmp_communities?: string[]; aggressive?: boolean;
+}
+export function getNetmapInventory(opts?: RequestOptions): Promise<NetmapInventoryApi> {
+  return request(`/pentest/netmap/inventory`, undefined, opts);
+}
+export function getNetmapTopology(opts?: RequestOptions): Promise<NetmapTopologyApi> {
+  return request(`/pentest/netmap/topology`, undefined, opts);
+}
+export function netmapDiscover(body: NetmapDiscoverRequest, opts?: RequestOptions): Promise<Record<string, unknown>> {
+  return request(`/pentest/netmap/discover`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function netmapPingSweep(body: { target: string; timeout_ms?: number; concurrency?: number }, opts?: RequestOptions): Promise<Record<string, unknown>> {
+  return request(`/pentest/netmap/ping-sweep`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function netmapArpScan(body: { interface?: string; target?: string }, opts?: RequestOptions): Promise<Record<string, unknown>> {
+  return request(`/pentest/netmap/arp-scan`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+
+// ---------------------------------------------------------------------------
+// CQL Search (Claude Query Language)
+// ---------------------------------------------------------------------------
+export interface CqlSearchRequest {
+  query: string; earliest?: string; latest?: string; limit?: number; offset?: number;
+}
+export interface CqlSearchMetadata {
+  total: number; returned: number; execution_time_ms: number;
+  query: string; commands: string[]; earliest: string; latest: string;
+}
+export interface CqlSearchResponse {
+  results: Record<string, unknown>[]; metadata: CqlSearchMetadata;
+}
+export interface CqlFieldSpec { type: string; description: string }
+export interface CqlFieldsResponse { fields: Record<string, CqlFieldSpec> }
+export interface CqlExample { name: string; description?: string; query: string; category?: string }
+export interface CqlExamplesResponse { examples: CqlExample[] }
+export interface CqlCommandSpec { name: string; description?: string; syntax?: string; category?: string }
+export interface CqlCommandsResponse { commands: CqlCommandSpec[] }
+
+export function cqlSearch(body: CqlSearchRequest, opts?: RequestOptions): Promise<CqlSearchResponse> {
+  return request(`/cql/search`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+export function getCqlFields(opts?: RequestOptions): Promise<CqlFieldsResponse> {
+  return request(`/cql/fields`, undefined, opts);
+}
+export function getCqlExamples(opts?: RequestOptions): Promise<CqlExamplesResponse> {
+  return request(`/cql/examples`, undefined, opts);
+}
+export function getCqlCommands(opts?: RequestOptions): Promise<CqlCommandsResponse> {
+  return request(`/cql/commands`, undefined, opts);
+}
+
+// ---------------------------------------------------------------------------
+// AI RAG Search
+// ---------------------------------------------------------------------------
+export interface RagSearchRequest {
+  query: string; top_k?: number; min_score?: number;
+  include_events?: boolean; include_incidents?: boolean; lookback_hours?: number;
+}
+export interface RagHit {
+  id?: string; type?: string; title?: string; snippet?: string; score?: number;
+  timestamp?: string; source?: string; metadata?: Record<string, unknown>;
+}
+export interface RagSearchResponse {
+  query?: string; results?: RagHit[]; count?: number; execution_time_ms?: number;
+}
+export function ragSearch(body: RagSearchRequest, opts?: RequestOptions): Promise<RagSearchResponse> {
+  return request(`/ai/rag/search`, { method: "POST", body: JSON.stringify(body) }, opts);
+}
+
+// ---------------------------------------------------------------------------
+// IOC extra endpoints (core IOC helpers live earlier in this file)
+// ---------------------------------------------------------------------------
+export interface IocStatsResponse {
+  total: number;
+  by_type: Record<string, number>;
+  by_state: Record<string, number>;
+  by_tlp: Record<string, number>;
+  by_source: Record<string, number>;
+  avg_confidence: number;
+  total_sightings: number;
+  total_relationships: number;
+}
+export interface IocTypesResponse { types: string[]; states: string[]; tlp_levels: string[] }
+export function getIocStats(opts?: RequestOptions): Promise<IocStatsResponse> {
+  return request(`/ioc/stats`, undefined, opts);
+}
+export function getIocTypes(opts?: RequestOptions): Promise<IocTypesResponse> {
+  return request(`/ioc/types`, undefined, opts);
+}
+
+// ---------------------------------------------------------------------------
+// Compliance framework runner + pentest report extras
+// (core helpers: complianceGlobalReport, complianceFrameworks, generateReport
+//  defined earlier — these wrappers match the actual envelope shapes)
+// ---------------------------------------------------------------------------
+export interface PentestReportRequestBody {
+  title: string; client: string; tester?: string; scope?: string[];
+  scan_ids?: string[]; classification?: string;
+  include_evidence?: boolean; include_remediation?: boolean;
+  language?: string; template?: string;
+}
+export interface PentestReportTemplateApi {
+  id: string; name: string; description: string;
+  sections: string[]; estimated_pages?: string;
+}
+export interface PentestReportHistoryEntryApi {
+  id: string; title?: string; client?: string;
+  template?: string; format?: string; status?: string;
+  created_at?: string; size_bytes?: number;
+}
+export function runFrameworkReport(fid: string, opts?: RequestOptions): Promise<Record<string, unknown>> {
+  return request(`/compliance/frameworks/${encodeURIComponent(fid)}/report/run`, { method: "POST" }, opts);
+}
+export function listPentestReportTemplates(opts?: RequestOptions): Promise<{ templates: PentestReportTemplateApi[] }> {
+  return request(`/pentest/report/templates`, undefined, opts);
+}
+export function listPentestReportHistory(opts?: RequestOptions): Promise<{ total: number; reports: PentestReportHistoryEntryApi[] }> {
+  return request(`/pentest/report/history`, undefined, opts);
+}
