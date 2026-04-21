@@ -8,6 +8,7 @@ export type AuthUser = {
   email: string;
   role: "analyst" | "lead" | "admin";
   is_active: boolean;
+  created_at?: string;
 };
 
 type AuthState = {

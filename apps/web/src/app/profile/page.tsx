@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
-
-/* ---------- helpers ---------- */
-
-function getLocalStorage(key: string, fallback: string) {
-  if (typeof window === "undefined") return fallback;
-  return localStorage.getItem(key) ?? fallback;
-}
+import { useAuthStore } from "@/stores/authStore";
 
 function AnimatedCounter({ target, duration = 1200 }: { target: number; duration?: number }) {
   const [value, setValue] = useState(0);
@@ -96,15 +91,47 @@ function mockActivityLog() {
 /* ---------- page ---------- */
 
 export default function ProfilePage() {
-  // Read localStorage lazily on mount to avoid SSR/CSR hydration mismatch
-  const [username, setUsername] = useState("operator");
-  const [role, setRole] = useState("analyst");
+  const router = useRouter();
+  const { user, status, refreshMe, logout } = useAuthStore();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => {
-    setUsername(getLocalStorage("username", "operator"));
-    setRole(getLocalStorage("user_role", "analyst"));
-  }, []);
+    if (status === "idle") void refreshMe();
+  }, [status, refreshMe]);
+
+  const username = user?.username ?? "—";
+  const role = user?.role ?? "—";
+  const email = user?.email ?? "—";
+  const userId = user?.id ?? "—";
+  const memberSince = useMemo(() => {
+    if (!user?.created_at) return "—";
+    const d = new Date(user.created_at);
+    if (Number.isNaN(d.getTime())) return user.created_at;
+    return d.toLocaleDateString("fr-FR", { year: "numeric", month: "short" });
+  }, [user?.created_at]);
+
   const stats = useMemo(mockStats, []);
   const activities = useMemo(mockActivityLog, []);
+
+  async function onLogout() {
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.replace("/login");
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      await refreshMe();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   const [showApiKey, setShowApiKey] = useState(false);
   const maskedKey = "cd-xxxx-xxxx-xxxx-" + "a1b2c3d4".slice(0, 4);
@@ -155,11 +182,32 @@ export default function ProfilePage() {
     <PageTransition className="min-h-screen p-6 lg:p-8 space-y-6">
       {/* Header */}
       <StaggerItem>
-        <div className="flex items-center gap-3 mb-2">
-          <svg className="h-5 w-5 text-cyan-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-          </svg>
-          <h1 className="hud-heading text-lg font-bold tracking-widest text-cyan-glow">User Profile</h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <svg className="h-5 w-5 text-cyan-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+            <h1 className="hud-heading text-lg font-bold tracking-widest text-cyan-glow">User Profile</h1>
+            {status === "loading" && (
+              <span className="text-[10px] uppercase tracking-widest text-cyan-glow/40">loading...</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="rounded-md border border-gray-700/50 bg-gray-900/50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-cyan-glow disabled:opacity-50"
+            >
+              {refreshing ? "..." : "REFRESH"}
+            </button>
+            <button
+              onClick={onLogout}
+              disabled={loggingOut}
+              className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+            >
+              {loggingOut ? "..." : "LOGOUT"}
+            </button>
+          </div>
         </div>
         <div className="cyan-line w-full" />
       </StaggerItem>
@@ -175,8 +223,14 @@ export default function ProfilePage() {
               <span className="inline-block rounded-full border border-cyan-glow/20 bg-cyan-glow/10 px-3 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-cyan-glow">
                 {role}
               </span>
-              <p className="text-xs text-gray-500 mt-2">{username}@cyberdef.local</p>
-              <p className="text-[10px] text-gray-600">Member since Jan 2025</p>
+              <p className="text-xs text-gray-500 mt-2">{email}</p>
+              <p className="text-[10px] text-gray-600">Member since {memberSince}</p>
+              <p className="mt-1 font-mono text-[9px] text-gray-700 break-all">{userId}</p>
+              {user && !user.is_active && (
+                <span className="mt-2 inline-block rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-amber-400">
+                  account disabled
+                </span>
+              )}
             </div>
           </HudCard>
 
