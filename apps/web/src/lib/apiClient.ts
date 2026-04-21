@@ -1789,6 +1789,11 @@ export function c2AgentSleep(agentId: string, data: Record<string, unknown>, opt
 export function c2Dashboard(opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/dashboard", undefined, opts); }
 export function c2GenerateImplant(data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/implants/generate", { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
 export function c2ListProfiles(opts?: RequestOptions) { return request<ApiJson>("/pentest/c2/profiles", undefined, opts); }
+export function c2GetProfile(name: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/profiles/${encodeURIComponent(name)}`, undefined, opts); }
+export function c2CreateProfile(name: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/profiles/${encodeURIComponent(name)}`, { method: "POST", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function c2UpdateProfile(name: string, data: Record<string, unknown>, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/profiles/${encodeURIComponent(name)}`, { method: "PATCH", body: JSON.stringify(data), headers: { "Content-Type": "application/json" } }, opts); }
+export function c2DeleteProfile(name: string, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/profiles/${encodeURIComponent(name)}`, { method: "DELETE" }, opts); }
+export function c2BindListenerProfile(listenerId: string, profileName: string | null, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/listeners/${encodeURIComponent(listenerId)}/profile`, { method: "PATCH", body: JSON.stringify({ profile_name: profileName }), headers: { "Content-Type": "application/json" } }, opts); }
 export function c2EventLog(limit?: number, opts?: RequestOptions) { return request<ApiJson>(`/pentest/c2/log${limit ? `?limit=${limit}` : ""}`, undefined, opts); }
 
 // ═══════════════════════════════════════════════════════════════════════════
