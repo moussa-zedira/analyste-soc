@@ -28,6 +28,7 @@ from apps.api.cql.saved_queries import (
     EXAMPLE_QUERIES,
     CATEGORIES,
 )
+from apps.api.cql.query_library import LIBRARY as QUERY_LIBRARY
 
 router = APIRouter(
     prefix="/cql",
@@ -196,3 +197,13 @@ def cql_examples() -> dict[str, Any]:
         "categories": list(CATEGORIES),
         "examples": EXAMPLE_QUERIES,
     }
+
+
+@router.get("/library")
+def cql_library() -> dict[str, Any]:
+    """Retourne la bibliothèque de requêtes CQL prédéfinies (starter pack).
+
+    Chaque entrée contient : id, name, description, category, tags, query,
+    builtIn, author. Les utilisateurs peuvent les cloner via /cql/saved.
+    """
+    return {"queries": QUERY_LIBRARY, "total": len(QUERY_LIBRARY)}

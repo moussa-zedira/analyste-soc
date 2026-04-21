@@ -53,14 +53,12 @@ export default function AiTriagePage() {
   const [error, setError] = useState<string | null>(null);
 
   // Inline
-  const [title, setTitle] = useState("Possible SSH brute force from external IP");
-  const [severity, setSeverity] = useState("high");
-  const [srcIp, setSrcIp] = useState("203.0.113.42");
-  const [username, setUsername] = useState("admin");
-  const [eventType, setEventType] = useState("auth_failure");
-  const [message, setMessage] = useState(
-    "Failed password for invalid user admin from 203.0.113.42 port 51234 ssh2 (15 attempts in 60s)"
-  );
+  const [title, setTitle] = useState("");
+  const [severity, setSeverity] = useState("medium");
+  const [srcIp, setSrcIp] = useState("");
+  const [username, setUsername] = useState("");
+  const [eventType, setEventType] = useState("");
+  const [message, setMessage] = useState("");
 
   // By ID
   const [eventId, setEventId] = useState("");
@@ -142,14 +140,18 @@ export default function AiTriagePage() {
                 Event Details
               </h2>
               {[
-                ["Title", title, setTitle],
-                ["Severity", severity, setSeverity],
-                ["Src IP", srcIp, setSrcIp],
-                ["Username", username, setUsername],
-                ["Event Type", eventType, setEventType],
-              ].map(([label, val, set]: any) => (
+                ["Title", title, setTitle, "e.g. Possible SSH brute force from external IP"],
+                ["Severity", severity, setSeverity, "critical | high | medium | low | info"],
+                ["Src IP", srcIp, setSrcIp, "e.g. 203.0.113.42"],
+                ["Username", username, setUsername, "e.g. admin"],
+                ["Event Type", eventType, setEventType, "e.g. auth_failure"],
+              ].map(([label, val, set, placeholder]: any) => (
                 <HudField key={label} label={label}>
-                  <HudInput value={val} onChange={(e) => set(e.target.value)} />
+                  <HudInput
+                    value={val}
+                    onChange={(e) => set(e.target.value)}
+                    placeholder={placeholder}
+                  />
                 </HudField>
               ))}
               <HudField label="Message">
@@ -157,6 +159,7 @@ export default function AiTriagePage() {
                   className="h-32"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Raw event log line or incident description…"
                 />
               </HudField>
             </>
@@ -189,7 +192,18 @@ export default function AiTriagePage() {
               <option value="stub">stub</option>
             </HudSelect>
           </HudField>
-          <HudButton block variant="matrix" loading={loading} onClick={run}>
+          <HudButton
+            block
+            variant="matrix"
+            loading={loading}
+            onClick={run}
+            disabled={
+              loading ||
+              (tab === "Inline" && (!title.trim() || !message.trim())) ||
+              (tab === "By Event ID" && !eventId.trim()) ||
+              (tab === "By Incident ID" && !incidentId.trim())
+            }
+          >
             {loading ? "Analyzing…" : "Run Triage"}
           </HudButton>
         </HudCard>

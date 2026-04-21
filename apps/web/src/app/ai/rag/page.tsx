@@ -6,7 +6,7 @@ import { aiRagCorpus, aiRagSearch } from "@/lib/apiClient";
 import type { RagSearchResult } from "@/lib/types";
 
 export default function AiRagPage() {
-  const [query, setQuery] = useState("ssh brute force admin");
+  const [query, setQuery] = useState("");
   const [topK, setTopK] = useState(10);
   const [lookback, setLookback] = useState(168);
   const [includeEvents, setIncludeEvents] = useState(true);
@@ -108,7 +108,7 @@ export default function AiRagPage() {
             Incidents
           </label>
         </div>
-        <button onClick={search} disabled={loading}
+        <button onClick={search} disabled={loading || !query.trim()}
                 className="w-full rounded border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] uppercase font-bold tracking-widest text-emerald-300 disabled:opacity-50">
           {loading ? "Searching..." : "Search"}
         </button>

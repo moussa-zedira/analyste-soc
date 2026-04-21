@@ -48,41 +48,8 @@ interface SavedQuery {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Built-in queries library                                           */
+/*  Built-in queries library — fetched from /cql/library                */
 /* ------------------------------------------------------------------ */
-
-const BUILTIN_QUERIES: SavedQuery[] = [
-  { id: "b1", name: "Brute Force Detection", description: "Detect multiple failed login attempts from same IP", category: "threat-hunting", tags: ["auth", "brute-force", "T1110"], query: 'event_type="auth.fail" | stats count by src_ip | where count > 10 | sort -count', builtIn: true, author: "System" },
-  { id: "b2", name: "Lateral Movement", description: "Track internal-to-internal connections on uncommon ports", category: "threat-hunting", tags: ["lateral", "T1021"], query: 'src_ip="10.0.0.0/8" AND dst_ip="10.0.0.0/8" AND port!=443 AND port!=80 | stats count by src_ip, dst_ip, port | where count > 5', builtIn: true, author: "System" },
-  { id: "b3", name: "Data Exfiltration", description: "Large outbound data transfers to external IPs", category: "threat-hunting", tags: ["exfil", "T1048"], query: 'direction="outbound" AND bytes > 10000000 | stats sum(bytes) as total_bytes by dst_ip | sort -total_bytes | head 20', builtIn: true, author: "System" },
-  { id: "b4", name: "DNS Tunneling", description: "Detect suspiciously long DNS queries", category: "threat-hunting", tags: ["dns", "tunneling", "T1071"], query: 'event_type="dns" | eval query_len=len(dns_query) | where query_len > 50 | stats count by src_ip | sort -count', builtIn: true, author: "System" },
-  { id: "b5", name: "Privilege Escalation", description: "Track privilege escalation events", category: "threat-hunting", tags: ["privesc", "T1068"], query: 'event_type="privesc" OR event_type="sudo" OR event_type="runas" | stats count by username, src_ip | sort -count', builtIn: true, author: "System" },
-  { id: "b6", name: "Suspicious Processes", description: "Detect known malicious process names", category: "threat-hunting", tags: ["process", "T1059"], query: 'process_name IN ("mimikatz", "psexec", "procdump", "nc.exe", "ncat") | table timestamp, src_ip, username, process_name, cmdline', builtIn: true, author: "System" },
-  { id: "b7", name: "Critical Events Overview", description: "All critical severity events in time buckets", category: "monitoring", tags: ["critical", "overview"], query: 'severity="critical" | timechart count by event_type', builtIn: true, author: "System" },
-  { id: "b8", name: "Top Talkers", description: "Most active source IPs by event count", category: "monitoring", tags: ["traffic", "top"], query: '* | stats count by src_ip | sort -count | head 25', builtIn: true, author: "System" },
-  { id: "b9", name: "Failed Auth Timeline", description: "Authentication failures over time", category: "incident-response", tags: ["auth", "timeline"], query: 'event_type="auth.fail" | timechart count by username', builtIn: true, author: "System" },
-  { id: "b10", name: "Port Scan Detection", description: "Detect hosts scanning multiple ports", category: "threat-hunting", tags: ["scan", "T1046"], query: '* | stats dc(port) as unique_ports by src_ip | where unique_ports > 20 | sort -unique_ports', builtIn: true, author: "System" },
-  { id: "b11", name: "Malware Detection Events", description: "All malware-related detections", category: "incident-response", tags: ["malware", "detection"], query: 'event_type="malware.detect" OR event_type="malware.quarantine" | table timestamp, src_ip, file_path, hash, action', builtIn: true, author: "System" },
-  { id: "b12", name: "Firewall Blocks", description: "Top blocked connections by firewall", category: "monitoring", tags: ["firewall", "block"], query: 'source="firewall" AND action="block" | stats count by src_ip, dst_ip, port | sort -count | head 50', builtIn: true, author: "System" },
-  { id: "b13", name: "User Activity Audit", description: "Complete activity for a specific user", category: "compliance", tags: ["audit", "user"], query: 'username="admin" | sort timestamp | table timestamp, event_type, src_ip, action, message', builtIn: true, author: "System" },
-  { id: "b14", name: "Severity Distribution", description: "Event count breakdown by severity", category: "monitoring", tags: ["stats", "severity"], query: '* | stats count by severity', builtIn: true, author: "System" },
-  { id: "b15", name: "Geographic Anomalies", description: "Logins from unusual countries", category: "threat-hunting", tags: ["geo", "anomaly"], query: 'event_type="auth.success" | iplocation src_ip | stats count by country | sort -count', builtIn: true, author: "System" },
-  { id: "b16", name: "Command & Control Beaconing", description: "Detect periodic connections to same destination", category: "threat-hunting", tags: ["c2", "beaconing", "T1071"], query: '* | stats count, dc(timestamp) as unique_times by src_ip, dst_ip | where count > 100 AND unique_times > 50 | sort -count', builtIn: true, author: "System" },
-  { id: "b17", name: "HTTP Error Surge", description: "Spike in HTTP 4xx/5xx errors", category: "monitoring", tags: ["http", "errors"], query: 'status >= 400 | timechart count by status', builtIn: true, author: "System" },
-  { id: "b18", name: "Registry Modifications", description: "Track Windows registry changes", category: "threat-hunting", tags: ["registry", "T1112"], query: 'event_type="registry.modify" | table timestamp, username, registry_key, process_name', builtIn: true, author: "System" },
-  { id: "b19", name: "SSH Anomalies", description: "SSH connections from unexpected sources", category: "threat-hunting", tags: ["ssh", "T1021.004"], query: 'protocol="SSH" AND action="allow" | stats count by src_ip, dst_ip, username | where count < 3 | sort -count', builtIn: true, author: "System" },
-  { id: "b20", name: "Event Source Health", description: "Check all log source activity", category: "monitoring", tags: ["health", "sources"], query: '* | stats count, max(timestamp) as last_event by source | sort -last_event', builtIn: true, author: "System" },
-  { id: "b21", name: "MITRE Coverage", description: "Events mapped to MITRE techniques", category: "compliance", tags: ["mitre", "coverage"], query: 'mitre_technique!="" | stats count by mitre_tactic, mitre_technique | sort -count', builtIn: true, author: "System" },
-  { id: "b22", name: "Encoded PowerShell", description: "Detect encoded PowerShell commands", category: "threat-hunting", tags: ["powershell", "T1059.001"], query: 'process_name="powershell.exe" AND cmdline CONTAINS "-enc" | table timestamp, username, cmdline', builtIn: true, author: "System" },
-  { id: "b23", name: "DDoS Indicators", description: "High volume traffic from single sources", category: "incident-response", tags: ["ddos", "flood"], query: '* | stats count, sum(bytes) as total_bytes by src_ip | where count > 1000 | sort -count | head 10', builtIn: true, author: "System" },
-  { id: "b24", name: "New User Accounts", description: "Recently created user accounts", category: "compliance", tags: ["user", "creation"], query: 'event_type="user.create" | sort -timestamp | table timestamp, username, src_ip, message', builtIn: true, author: "System" },
-  { id: "b25", name: "SSL/TLS Anomalies", description: "Expired or self-signed certificate connections", category: "monitoring", tags: ["ssl", "certificates"], query: 'event_type="ssl.error" OR event_type="ssl.expired" | stats count by dst_ip, domain | sort -count', builtIn: true, author: "System" },
-  { id: "b26", name: "File Integrity Changes", description: "Critical file modifications", category: "compliance", tags: ["fim", "integrity"], query: 'event_type="file.modify" AND file_path CONTAINS "/etc/" | table timestamp, src_ip, username, file_path, action', builtIn: true, author: "System" },
-  { id: "b27", name: "VPN Anomalies", description: "Multiple VPN sessions per user", category: "threat-hunting", tags: ["vpn", "anomaly"], query: 'event_type="vpn.connect" | stats count, dc(src_ip) as unique_ips by username | where unique_ips > 2', builtIn: true, author: "System" },
-  { id: "b28", name: "Rare Processes", description: "Processes seen on very few hosts", category: "threat-hunting", tags: ["process", "rare"], query: '* | stats dc(src_ip) as host_count by process_name | where host_count < 3 | sort host_count', builtIn: true, author: "System" },
-  { id: "b29", name: "Event Volume Trend", description: "Overall event ingestion rate over time", category: "monitoring", tags: ["volume", "trend"], query: '* | timechart count', builtIn: true, author: "System" },
-  { id: "b30", name: "Outbound to Rare Ports", description: "External connections on uncommon ports", category: "threat-hunting", tags: ["port", "outbound"], query: 'direction="outbound" AND port!=80 AND port!=443 AND port!=53 | stats count by dst_ip, port | where count < 5 | sort -count', builtIn: true, author: "System" },
-];
 
 /* ------------------------------------------------------------------ */
 /*  Time range → earliest/latest                                       */
@@ -353,11 +320,19 @@ function SearchContent() {
 
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [schemaFields, setSchemaFields] = useState<Record<string, { type: string; description: string }>>({});
+  const [libraryQueries, setLibraryQueries] = useState<SavedQuery[]>([]);
 
   useEffect(() => {
     getCqlFields()
       .then((r) => setSchemaFields(r.fields ?? {}))
       .catch(() => setSchemaFields({}));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/proxy/cql/library", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { queries: [] }))
+      .then((d: { queries?: SavedQuery[] }) => setLibraryQueries(d.queries ?? []))
+      .catch(() => setLibraryQueries([]));
   }, []);
 
   // Execute search
@@ -521,7 +496,10 @@ function SearchContent() {
   }, [results, schemaFields]);
 
   // All queries combined for the library
-  const allQueries = useMemo(() => [...BUILTIN_QUERIES, ...userQueries], [userQueries]);
+  const allQueries = useMemo(
+    () => [...libraryQueries, ...userQueries],
+    [libraryQueries, userQueries],
+  );
   const filteredQueries = useMemo(() => {
     if (savedQueriesTab === "all") return allQueries;
     return allQueries.filter((q) => q.category === savedQueriesTab);
