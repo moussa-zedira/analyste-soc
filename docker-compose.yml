@@ -6,6 +6,8 @@ services:
   # ── Infrastructure ──────────────────────────────────────
   postgres:
     image: postgres:16-alpine
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER required in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required in .env}
@@ -20,25 +22,33 @@ services:
 
   redis:
     image: redis:7-alpine
+    security_opt:
+      - no-new-privileges:true
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD required in .env}"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "sh", "-c", "redis-cli -a \"$$REDIS_PASSWORD\" ping"]
       interval: 5s
       timeout: 3s
       retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD required in .env}
 
   # ── Backend API ─────────────────────────────────────────
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    security_opt:
+      - no-new-privileges:true
     # Resource limits (V4.7 hardening) — evite OOM cascade.
     mem_limit: 2g
     mem_reservation: 512m
     cpus: 1.5
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       ENV: ${ENV:-dev}
+      STEALTH_MODE: ${STEALTH_MODE:-false}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       API_KEY: ${API_KEY:?API_KEY required in .env}
@@ -120,9 +130,12 @@ services:
     mem_limit: 2g
     mem_reservation: 512m
     cpus: 1.5
+    security_opt:
+      - no-new-privileges:true
     command: celery -A apps.api.celery_app worker --loglevel=info --concurrency=2
     environment:
       ENV: ${ENV:-dev}
+      STEALTH_MODE: ${STEALTH_MODE:-false}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       API_KEY: ${API_KEY:?API_KEY required in .env}
@@ -180,9 +193,12 @@ services:
     mem_limit: 1g
     mem_reservation: 128m
     cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
     command: celery -A apps.api.celery_app beat --loglevel=info
     environment:
       ENV: ${ENV:-dev}
+      STEALTH_MODE: ${STEALTH_MODE:-false}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       API_KEY: ${API_KEY:?API_KEY required in .env}
@@ -204,9 +220,11 @@ services:
     build:
       context: .
       dockerfile: apps/collectors/Dockerfile
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "514:514/udp"
-      - "1514:1514"
+      - "127.0.0.1:514:514/udp"
+      - "127.0.0.1:1514:1514"
     environment:
       API_BASE_URL: http://api:8000
       API_KEY: ${API_KEY:?API_KEY required in .env}
@@ -228,11 +246,13 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: http://api:8000
+    security_opt:
+      - no-new-privileges:true
     mem_limit: 1g
     mem_reservation: 128m
     cpus: 0.5
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://api:8000
       INTERNAL_API_BASE_URL: http://api:8000
@@ -267,9 +287,11 @@ services:
   # dans le container api, puis exporter SLIVER_OPERATOR_CFG dans .env.
   sliver:
     image: ghcr.io/bishopfox/sliver-server:latest
+    security_opt:
+      - no-new-privileges:true
     profiles: ["redteam"]
     ports:
-      - "31337:31337"
+      - "127.0.0.1:31337:31337"
     volumes:
       - sliver_data:/home/sliver/.sliver
       - sliver_configs:/data/sliver/configs

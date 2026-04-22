@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
@@ -317,9 +318,12 @@ def _seed_builtin_sigma() -> None:
 def create_app() -> FastAPI:
     """Construit et retourne l'application FastAPI."""
     kwargs: dict = {}
-    if settings.ENV == "prod":
+    # Stealth mode hides the attack surface (Swagger, ReDoc, OpenAPI schema)
+    stealth = os.getenv("STEALTH_MODE", "false").lower() in ("1", "true", "yes")
+    if settings.ENV == "prod" or stealth:
         kwargs["docs_url"] = None
         kwargs["redoc_url"] = None
+        kwargs["openapi_url"] = None
 
     app = FastAPI(
         title="Cyber Defense Dashboard API",
@@ -471,6 +475,21 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-Id"],
         max_age=600,
     )
+
+    # -------------------------------------------------------------------
+    # Stealth headers — strip Server/X-Powered-By + security headers
+    # -------------------------------------------------------------------
+    @app.middleware("http")
+    async def _stealth_headers(request, call_next):
+        response = await call_next(request)
+        for h in ("server", "x-powered-by"):
+            if h in response.headers:
+                del response.headers[h]
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        return response
 
     # -------------------------------------------------------------------
     # Prometheus metrics
