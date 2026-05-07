@@ -2,7 +2,7 @@
 # =====================================================================
 # Next.js multi-stage build — hardening non-root
 # =====================================================================
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 RUN npm run build
 
 # ── Production ────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 # node:20-alpine fournit déjà un utilisateur "node" (UID 1000).
 # On l'utilise pour appliquer le principe de moindre privilège.
