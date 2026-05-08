@@ -49,3 +49,8 @@ Thumbs.db
 secrets/
 certs/
 backups/
+
+# pytest coverage cache
+.coverage
+.coverage.*
+htmlcov/
