@@ -728,9 +728,11 @@ _rag_instance: FaissRAG | None = None
 _rag_lock = threading.Lock()
 
 
-def get_rag(index_dir: str = DEFAULT_INDEX_DIR) -> FaissRAG:
+def get_rag(index_dir: str | None = None) -> FaissRAG:
     """Singleton FaissRAG pour partager l'index entre requetes."""
     global _rag_instance
+    if index_dir is None:
+        index_dir = DEFAULT_INDEX_DIR
     if _rag_instance is not None and str(_rag_instance.index_dir) == str(Path(index_dir)):
         return _rag_instance
     with _rag_lock:
