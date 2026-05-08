@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 
 from celery import Celery
-from celery.schedules import crontab
 from celery.signals import task_postrun, task_prerun, worker_process_init
 
 from apps.api.config import get_settings

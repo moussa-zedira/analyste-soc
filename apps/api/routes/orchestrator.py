@@ -88,7 +88,7 @@ async def start_orchestration(body: StartRequest):
     automatically through the selected profile phases.
     """
     from apps.api.pentest.orchestrator.engine import PentestOrchestrator
-    from apps.api.pentest.orchestrator.state import ScanProfile, Phase, StatePersistence
+    from apps.api.pentest.orchestrator.state import Phase, ScanProfile, StatePersistence
 
     try:
         profile = ScanProfile(body.profile)
@@ -274,7 +274,9 @@ async def get_timeline(orch_id: str, limit: int = 500):
 async def list_profiles():
     """List all available scan profiles with descriptions and phases."""
     from apps.api.pentest.orchestrator.state import (
-        ScanProfile, PROFILE_DESCRIPTIONS, PROFILE_PHASES,
+        PROFILE_DESCRIPTIONS,
+        PROFILE_PHASES,
+        ScanProfile,
     )
 
     return {

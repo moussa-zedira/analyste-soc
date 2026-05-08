@@ -12,8 +12,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -38,7 +37,6 @@ from apps.api.pentest.phishing.gophish_client import (
     GoPhishNotConfigured,
 )
 from apps.api.pentest.phishing.sync import sync_campaign
-
 
 logger = logging.getLogger("apps.api.pentest.phishing")
 router = APIRouter(prefix="/redteam/phishing", tags=["Red Team Phishing"])
@@ -67,7 +65,7 @@ class TargetIn(BaseModel):
 
 class CreateCampaignIn(BaseModel):
     name: str = Field(..., min_length=1)
-    engagement_id: Optional[str] = None
+    engagement_id: str | None = None
     template_name: str = Field(..., min_length=1)
     landing_page: str = Field(
         default="", description="GoPhish landing page name"
@@ -82,8 +80,8 @@ class CreateCampaignIn(BaseModel):
         ),
     )
     targets: list[TargetIn] = Field(default_factory=list)
-    launch_date: Optional[str] = None
-    send_by_date: Optional[str] = None
+    launch_date: str | None = None
+    send_by_date: str | None = None
     notes: str = ""
 
 
@@ -92,8 +90,8 @@ class CampaignOut(BaseModel):
 
     id: str
     name: str
-    engagement_id: Optional[str]
-    gophish_campaign_id: Optional[int]
+    engagement_id: str | None
+    gophish_campaign_id: int | None
     status: str
     template_name: str
     landing_url: str
@@ -102,13 +100,13 @@ class CampaignOut(BaseModel):
     clicked_count: int
     submitted_count: int
     email_failed_count: int
-    launched_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    created_by: Optional[str]
+    launched_at: datetime | None
+    completed_at: datetime | None
+    created_by: str | None
     created_at: datetime
     mitre_technique: str
     notes: str
-    last_synced_at: Optional[datetime]
+    last_synced_at: datetime | None
 
 
 class TargetOut(BaseModel):
@@ -121,20 +119,20 @@ class TargetOut(BaseModel):
     position: str
     group_name: str
     last_status: str
-    opened_at: Optional[datetime]
-    clicked_at: Optional[datetime]
-    submitted_at: Optional[datetime]
+    opened_at: datetime | None
+    clicked_at: datetime | None
+    submitted_at: datetime | None
 
 
 class ResultOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    target_id: Optional[str]
+    target_id: str | None
     event_type: str
     ip_address: str
     user_agent: str
-    payload: Optional[dict]
+    payload: dict | None
     ts: datetime
 
 
@@ -300,7 +298,7 @@ async def create_campaign(
         except (TypeError, ValueError):
             gp_id = None
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     launched_at = None
     if isinstance(gp_resp, dict) and gp_resp.get("launch_date"):
         try:
@@ -383,8 +381,8 @@ async def create_campaign(
 
 @router.get("/campaigns", response_model=list[CampaignOut])
 def list_campaigns(
-    engagement_id: Optional[str] = Query(None),
-    status_filter: Optional[str] = Query(None, alias="status"),
+    engagement_id: str | None = Query(None),
+    status_filter: str | None = Query(None, alias="status"),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -487,7 +485,7 @@ async def stop_campaign(
             )
 
     c.status = "stopped"
-    c.completed_at = datetime.now(timezone.utc)
+    c.completed_at = datetime.now(UTC)
     try:
         db.commit()
     except Exception:
@@ -664,7 +662,7 @@ def campaign_stats(
 @router.get("/campaigns/{cid}/targets", response_model=list[TargetOut])
 def list_targets(
     cid: str,
-    last_status: Optional[str] = Query(None),
+    last_status: str | None = Query(None),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -683,9 +681,9 @@ def list_targets(
 @router.get("/campaigns/{cid}/results", response_model=list[ResultOut])
 def list_results(
     cid: str,
-    event_type: Optional[str] = Query(None),
-    since: Optional[datetime] = Query(None),
-    until: Optional[datetime] = Query(None),
+    event_type: str | None = Query(None),
+    since: datetime | None = Query(None),
+    until: datetime | None = Query(None),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),

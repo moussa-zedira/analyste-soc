@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Literal
+from datetime import UTC, datetime
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # In-memory store (swap for DB model in production)
@@ -16,7 +16,7 @@ CATEGORIES = ("threat_hunting", "incident_response", "compliance", "monitoring",
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ---------------------------------------------------------------------------

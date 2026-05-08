@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from apps.api.pentest.exploitation.shellcode_encoder import (
+    _parse_bad_bytes,
     alphanumeric_decode,
     alphanumeric_encode,
     find_bad_byte_positions,
@@ -11,9 +12,7 @@ from apps.api.pentest.exploitation.shellcode_encoder import (
     rot13_bytes,
     xor_multi,
     xor_single,
-    _parse_bad_bytes,
 )
-
 
 SAMPLE_SC = bytes.fromhex("31c050682f2f7368682f62696e89e3505389e1b00bcd80")
 

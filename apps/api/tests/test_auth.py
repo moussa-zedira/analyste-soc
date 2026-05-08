@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jose import jwt, JWTError
+from jose import JWTError, jwt
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -98,7 +98,7 @@ def test_decode_expired_token():
     """Vérifie qu'un jeton JWT expiré lève une erreur lors du décodage."""
     expired_payload = {
         "sub": "user-expired",
-        "exp": datetime.now(timezone.utc) - timedelta(hours=1),
+        "exp": datetime.now(UTC) - timedelta(hours=1),
     }
     token = jwt.encode(expired_payload, TEST_JWT_SECRET, algorithm=TEST_JWT_ALGORITHM)
 
@@ -126,7 +126,7 @@ def security_app():
         return {"ok": True}
 
     # Use dependency injection properly
-    from fastapi import Depends, Request
+    from fastapi import Depends
 
     @app.get("/dep-protected")
     def dep_protected(_: None = Depends(require_api_key)):

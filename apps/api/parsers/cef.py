@@ -14,7 +14,7 @@ Supports:
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from apps.api.parsers import BaseParser, _normalize_severity
@@ -100,11 +100,11 @@ def _parse_cef_timestamp(ext: dict[str, str]) -> datetime | None:
         return None
     # Epoch millis
     if raw.isdigit():
-        return datetime.fromtimestamp(int(raw) / 1000, tz=timezone.utc)
+        return datetime.fromtimestamp(int(raw) / 1000, tz=UTC)
     # Try ISO
     for fmt in ("%b %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"):
         try:
-            return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(raw, fmt).replace(tzinfo=UTC)
         except ValueError:
             continue
     return None
@@ -169,7 +169,7 @@ class CEFParser(BaseParser):
         for em in _EXT_RE.finditer(ext_raw):
             ext[em.group(1)] = _unescape_cef(em.group(2).strip())
 
-        ts = _parse_cef_timestamp(ext) or datetime.now(timezone.utc)
+        ts = _parse_cef_timestamp(ext) or datetime.now(UTC)
 
         return {
             "ts": ts,

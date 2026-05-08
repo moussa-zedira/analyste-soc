@@ -10,7 +10,7 @@ from pathlib import Path
 
 from apps.collectors.api_client import send_batch
 from apps.collectors.normalizer import NormalizedEvent
-from apps.collectors.winlog_ids import WINLOG_EVENT_MAP, HIGH_PRIORITY_IDS
+from apps.collectors.winlog_ids import WINLOG_EVENT_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ def collect_windows_logs() -> None:
                 )
 
                 last_record = bookmarks.get(channel, 0)
-                total = win32evtlog.GetNumberOfEventLogRecords(hand)
+                win32evtlog.GetNumberOfEventLogRecords(hand)
 
                 while True:
                     events = win32evtlog.ReadEventLog(hand, flags, 0)

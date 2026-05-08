@@ -6,12 +6,11 @@ by the various pentest modules.
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from apps.api.security import require_api_key
 from apps.api.wordlists import builtin

@@ -9,11 +9,11 @@ Usage::
 
 from __future__ import annotations
 
+from apps.api.cql.autocomplete import autocomplete_cql  # noqa: F401
+from apps.api.cql.executor import execute_cql, explain_cql  # noqa: F401
 from apps.api.cql.lexer import Lexer, Token, TokenType  # noqa: F401
 from apps.api.cql.parser import Parser  # noqa: F401
-from apps.api.cql.executor import execute_cql, explain_cql  # noqa: F401
 from apps.api.cql.validator import validate_cql  # noqa: F401
-from apps.api.cql.autocomplete import autocomplete_cql  # noqa: F401
 
 __all__ = [
     "Lexer",

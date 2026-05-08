@@ -23,7 +23,7 @@ import hashlib
 import logging
 import uuid
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -50,14 +50,14 @@ def _compute_dedup_hash(rule_id: str, entity_key: str, end_ts: datetime) -> str:
 def run(db: Session) -> dict:
     """Execute la regle bruteforce.v1. Retourne un dictionnaire de resume."""
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # ---- checkpoint ----
     checkpoint = db.get(RuleCheckpoint, RULE_ID)
     if checkpoint is not None:
         query_start = checkpoint.last_ts - WINDOW
     else:
-        query_start = datetime(2000, 1, 1, tzinfo=timezone.utc)
+        query_start = datetime(2000, 1, 1, tzinfo=UTC)
 
     query_end = now
 
@@ -157,7 +157,7 @@ def _detect_for_ip(db: Session, ip: str, events: list[Event]) -> int:
         )
 
         incident_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         incident = Incident(
             id=incident_id,

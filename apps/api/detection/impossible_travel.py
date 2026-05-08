@@ -19,7 +19,7 @@ import hashlib
 import logging
 import uuid
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -58,7 +58,7 @@ def run_impossible_travel(db: Session, events: list[Event]) -> int:
 
     Retourne le nombre d'incidents créés.
     """
-    cutoff = datetime.now(timezone.utc) - LOOKBACK
+    cutoff = datetime.now(UTC) - LOOKBACK
     candidates = [
         e
         for e in events
@@ -133,7 +133,7 @@ def _detect_for_user(
             continue
 
         incident_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         title = f"Impossible travel: {username} {geo1['city']}->{geo2['city']}"
         speed_str = "infinite" if implied_kmh == float("inf") else f"{implied_kmh:.0f}"
         description = (

@@ -226,7 +226,7 @@ def _build_incident_pdf(incident: Incident) -> bytes:
     elements.append(Paragraph("CYBERDEF — Incident Report", title_style))
     elements.append(Spacer(1, 4 * mm))
 
-    sev_color = {
+    {
         "critical": "#EF4444",
         "high": "#F97316",
         "medium": "#F59E0B",

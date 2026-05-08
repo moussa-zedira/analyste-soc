@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+
 from apps.collectors.normalizer import NormalizedEvent
 
 # <PRI>Mmm dd HH:MM:SS hostname app[pid]: message

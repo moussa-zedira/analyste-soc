@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from apps.api.parsers import BaseParser, _normalize_severity
@@ -64,18 +64,18 @@ def _parse_ts(raw: Any) -> datetime | None:
     if isinstance(raw, (int, float)):
         if raw > 1e12:  # millis
             raw = raw / 1000
-        return datetime.fromtimestamp(raw, tz=timezone.utc)
+        return datetime.fromtimestamp(raw, tz=UTC)
     s = str(raw).strip()
     if _EPOCH_RE.match(s):
         v = int(s)
         if v > 1e12:
             v = v / 1000
-        return datetime.fromtimestamp(v, tz=timezone.utc)
+        return datetime.fromtimestamp(v, tz=UTC)
     for fmt in _TS_FORMATS:
         try:
             dt = datetime.strptime(s, fmt)
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
             return dt
         except ValueError:
             continue

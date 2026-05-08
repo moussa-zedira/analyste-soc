@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import json
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -24,42 +20,42 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 
 
 class FindingCreate(BaseModel):
-    session_id: Optional[str] = None
-    module: Optional[str] = None
-    finding_type: Optional[str] = None
-    severity: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    target: Optional[str] = None
-    evidence: Optional[str] = None
+    session_id: str | None = None
+    module: str | None = None
+    finding_type: str | None = None
+    severity: str | None = None
+    title: str | None = None
+    description: str | None = None
+    target: str | None = None
+    evidence: str | None = None
     exploitable: bool = False
     exploited: bool = False
-    cvss_score: Optional[float] = None
-    cwe_id: Optional[str] = None
-    mitre_technique: Optional[str] = None
-    raw_data: Optional[dict] = None
+    cvss_score: float | None = None
+    cwe_id: str | None = None
+    mitre_technique: str | None = None
+    raw_data: dict | None = None
 
 
 class FindingUpdate(BaseModel):
-    session_id: Optional[str] = None
-    module: Optional[str] = None
-    finding_type: Optional[str] = None
-    severity: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    target: Optional[str] = None
-    evidence: Optional[str] = None
-    exploitable: Optional[bool] = None
-    exploited: Optional[bool] = None
-    cvss_score: Optional[float] = None
-    cwe_id: Optional[str] = None
-    mitre_technique: Optional[str] = None
-    raw_data: Optional[dict] = None
+    session_id: str | None = None
+    module: str | None = None
+    finding_type: str | None = None
+    severity: str | None = None
+    title: str | None = None
+    description: str | None = None
+    target: str | None = None
+    evidence: str | None = None
+    exploitable: bool | None = None
+    exploited: bool | None = None
+    cvss_score: float | None = None
+    cwe_id: str | None = None
+    mitre_technique: str | None = None
+    raw_data: dict | None = None
 
 
 class ExploitRequest(BaseModel):
     """Parametres pour declencher l'exploitation d'un finding."""
-    params: Optional[dict] = Field(default_factory=dict)
+    params: dict | None = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -106,11 +102,11 @@ def create_finding(body: FindingCreate, db: Session = Depends(get_db)):
 
 @router.get("")
 def list_findings(
-    session_id: Optional[str] = Query(None),
-    module: Optional[str] = Query(None),
-    severity: Optional[str] = Query(None),
-    finding_type: Optional[str] = Query(None),
-    exploitable: Optional[bool] = Query(None),
+    session_id: str | None = Query(None),
+    module: str | None = Query(None),
+    severity: str | None = Query(None),
+    finding_type: str | None = Query(None),
+    exploitable: bool | None = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -138,7 +134,7 @@ def list_findings(
 
 @router.get("/stats")
 def finding_stats(
-    session_id: Optional[str] = Query(None),
+    session_id: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
     """Statistiques agregees des findings."""
@@ -167,8 +163,8 @@ def finding_stats(
         .all()
     )
 
-    exploitable_count = q.filter(Finding.exploitable == True).count()
-    exploited_count = q.filter(Finding.exploited == True).count()
+    exploitable_count = q.filter(Finding.exploitable).count()
+    exploited_count = q.filter(Finding.exploited).count()
 
     return {
         "total": total,
@@ -182,7 +178,7 @@ def finding_stats(
 
 @router.get("/export")
 def export_findings(
-    session_id: Optional[str] = Query(None),
+    session_id: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
     """Exporte tous les findings en JSON."""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+
 from apps.collectors.normalizer import NormalizedEvent
 
 # <PRI>VERSION TIMESTAMP HOSTNAME APP-NAME PROCID MSGID STRUCTURED-DATA MSG

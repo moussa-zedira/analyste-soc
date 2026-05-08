@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from fastapi import Depends, HTTPException, Request, status
@@ -51,7 +51,7 @@ def _create_token(data: dict, token_type: TokenType, lifetime: timedelta) -> tup
     """Encode un JWT (access ou refresh) et retourne (token, jti)."""
     settings = get_settings()
     jti = uuid.uuid4().hex
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         **data,
         "type": token_type,
@@ -97,7 +97,7 @@ def revoke_jti(jti: str, exp_ts: int | float) -> None:
         # en prod : le check de configuration au demarrage le signalera.
         logger.warning("auth_revocation_skipped_no_redis", extra={"jti": jti})
         return
-    ttl = int(exp_ts - datetime.now(timezone.utc).timestamp())
+    ttl = int(exp_ts - datetime.now(UTC).timestamp())
     if ttl <= 0:
         return
     try:

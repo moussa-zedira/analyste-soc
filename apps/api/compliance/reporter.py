@@ -8,8 +8,7 @@ Calcule pour chaque controle :
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func
@@ -21,9 +20,7 @@ from apps.api.compliance.frameworks import (
     ALL_FRAMEWORKS,
     Control,
     Framework,
-    get_framework,
 )
-
 
 # ──────────────────────────────────────────────────────────────────────
 # Capability registry — qui implemente quoi
@@ -106,7 +103,7 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
     evidence: list[dict[str, Any]] = list(STATIC_EVIDENCE.get(cap, []))
     if db is None:
         return evidence
-    cutoff_30d = datetime.now(timezone.utc) - timedelta(days=30)
+    cutoff_30d = datetime.now(UTC) - timedelta(days=30)
     try:
         if cap == "sigma.rules":
             from apps.api.models.sigma_rule import SigmaRule
@@ -125,7 +122,7 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                 )
                 for src, cnt in rows:
                     evidence.append(_metric(f"iocs[{src}]={cnt}", int(cnt)))
-                feeds_enabled = db.query(ThreatFeed).filter(ThreatFeed.enabled == True).count()
+                feeds_enabled = db.query(ThreatFeed).filter(ThreatFeed.enabled).count()
                 evidence.append(_metric(f"feeds_enabled={feeds_enabled}", feeds_enabled))
             except Exception:
                 logger.debug("reporter: evidence collection failed", exc_info=True)

@@ -16,7 +16,6 @@ import hashlib
 import logging
 import secrets
 import time
-from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
@@ -83,7 +82,7 @@ class OIDCClient:
 
     def __init__(self, provider: SSOProvider) -> None:
         self.provider = provider
-        self._discovery: Optional[dict] = None
+        self._discovery: dict | None = None
 
     async def _ensure_discovery(self) -> dict:
         if self._discovery is None:

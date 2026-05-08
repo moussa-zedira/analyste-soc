@@ -15,11 +15,12 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import yaml
 from sqlalchemy import and_, not_, or_
@@ -284,7 +285,7 @@ class SigmaEngine:
           3. Sinon, on retombe sur l'evaluation legacy en Python sur les
              events de la fenetre.
         """
-        since = datetime.now(timezone.utc) - timedelta(minutes=lookback_minutes)
+        since = datetime.now(UTC) - timedelta(minutes=lookback_minutes)
         q = db.query(Event).filter(Event.ts >= since)
 
         if rule.event_types:

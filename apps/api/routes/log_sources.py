@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -30,7 +30,7 @@ def list_log_sources(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     """Liste les sources de logs actives avec leurs statistiques."""
-    cutoff_1h = datetime.now(timezone.utc) - timedelta(hours=1)
+    cutoff_1h = datetime.now(UTC) - timedelta(hours=1)
 
     rows = (
         db.query(

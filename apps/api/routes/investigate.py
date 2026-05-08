@@ -5,7 +5,7 @@ from __future__ import annotations
 import ipaddress
 import logging
 import socket
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -97,8 +97,8 @@ def _get_dns_records(domain: str) -> dict:
         # dnspython not available, basic lookup only
         try:
             ips = socket.getaddrinfo(domain, None)
-            records["A"] = list(set(addr[4][0] for addr in ips if addr[0] == socket.AF_INET))
-            records["AAAA"] = list(set(addr[4][0] for addr in ips if addr[0] == socket.AF_INET6))
+            records["A"] = list({addr[4][0] for addr in ips if addr[0] == socket.AF_INET})
+            records["AAAA"] = list({addr[4][0] for addr in ips if addr[0] == socket.AF_INET6})
         except socket.gaierror:
             pass
     except Exception:
@@ -143,8 +143,8 @@ async def _get_threat_intel(ip: str, db: Session) -> dict | None:
 
 def _get_siem_data(ip: str, db: Session) -> dict:
     """Recupere les donnees SIEM liees a cette IP."""
-    cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
-    cutoff_7d = datetime.now(timezone.utc) - timedelta(days=7)
+    cutoff_24h = datetime.now(UTC) - timedelta(hours=24)
+    datetime.now(UTC) - timedelta(days=7)
 
     # Event count
     event_count = (
@@ -247,7 +247,7 @@ def _get_siem_data(ip: str, db: Session) -> dict:
         key = ts.strftime("%Y-%m-%dT%H:00:00Z")
         hour_buckets[key] = hour_buckets.get(key, 0) + 1
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     timeline = []
     for i in range(24):
         t = cutoff_24h + timedelta(hours=i)

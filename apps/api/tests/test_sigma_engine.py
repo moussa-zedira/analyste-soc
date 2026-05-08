@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
-
 
 pytestmark = pytest.mark.integration
 
@@ -29,16 +28,16 @@ detection:
 def _make_event(event_type: str = "auth.fail", **kwargs):
     from apps.api.models.event import Event
 
-    base = dict(
-        ts=datetime.now(timezone.utc),
-        source="test",
-        event_type=event_type,
-        severity="medium",
-        src_ip="10.0.0.1",
-        username="alice",
-        message="failed login",
-        raw="{}",
-    )
+    base = {
+        "ts": datetime.now(UTC),
+        "source": "test",
+        "event_type": event_type,
+        "severity": "medium",
+        "src_ip": "10.0.0.1",
+        "username": "alice",
+        "message": "failed login",
+        "raw": "{}",
+    }
     base.update(kwargs)
     return Event(**base)
 

@@ -112,10 +112,10 @@ class VirusTotalProvider:
             reputation = attrs.get("reputation", 0)
 
             tags = attrs.get("tags", [])[:10]
-            categories = list(set(
+            list({
                 v for v in (attrs.get("last_analysis_results") or {}).values()
                 if isinstance(v, dict) and v.get("category") == "malicious"
-            ))[:5]
+            })[:5]
 
             return TIResult(
                 indicator=ip,

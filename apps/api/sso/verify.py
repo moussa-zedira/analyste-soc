@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 import httpx
 from jose import jwt
@@ -32,7 +31,7 @@ async def _fetch_jwks(jwks_uri: str) -> dict:
     return doc
 
 
-def _select_key(jwks: dict, kid: Optional[str]) -> dict:
+def _select_key(jwks: dict, kid: str | None) -> dict:
     keys = jwks.get("keys", [])
     if kid:
         for k in keys:

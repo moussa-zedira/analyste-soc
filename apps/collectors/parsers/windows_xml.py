@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import re
 import xml.etree.ElementTree as ET
+
 from apps.collectors.normalizer import NormalizedEvent
 
 _NS = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}

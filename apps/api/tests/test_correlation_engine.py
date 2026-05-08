@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
-
 
 pytestmark = pytest.mark.integration
 
@@ -13,16 +12,16 @@ pytestmark = pytest.mark.integration
 def _evt(ts, **kwargs):
     from apps.api.models.event import Event
 
-    base = dict(
-        ts=ts,
-        source="test",
-        event_type="auth.fail",
-        severity="medium",
-        src_ip="10.0.0.1",
-        username="alice",
-        message="failed",
-        raw="{}",
-    )
+    base = {
+        "ts": ts,
+        "source": "test",
+        "event_type": "auth.fail",
+        "severity": "medium",
+        "src_ip": "10.0.0.1",
+        "username": "alice",
+        "message": "failed",
+        "raw": "{}",
+    }
     base.update(kwargs)
     return Event(**base)
 
@@ -50,7 +49,7 @@ def test_threshold_correlation_fires_above_threshold():
     )
     engine.register_rule(rule)
 
-    base_ts = datetime.now(timezone.utc)
+    base_ts = datetime.now(UTC)
     events = [_evt(base_ts + timedelta(seconds=i * 5)) for i in range(6)]
 
     matches = engine.evaluate(events)
@@ -81,7 +80,7 @@ def test_threshold_correlation_below_threshold_no_match():
         threshold=5,
     ))
 
-    base_ts = datetime.now(timezone.utc)
+    base_ts = datetime.now(UTC)
     events = [_evt(base_ts + timedelta(seconds=i * 5)) for i in range(3)]
 
     assert engine.evaluate(events) == []
@@ -107,7 +106,7 @@ def test_threshold_correlation_groups_by_src_ip():
         threshold=3,
     ))
 
-    base = datetime.now(timezone.utc)
+    base = datetime.now(UTC)
     events = [
         _evt(base + timedelta(seconds=1), src_ip="10.0.0.1"),
         _evt(base + timedelta(seconds=2), src_ip="10.0.0.1"),
@@ -142,7 +141,7 @@ def test_temporal_correlation_two_patterns():
         group_by=["src_ip"],
     ))
 
-    base = datetime.now(timezone.utc)
+    base = datetime.now(UTC)
     events = [
         _evt(base, event_type="auth.fail"),
         _evt(base + timedelta(seconds=5), event_type="auth.success"),
@@ -172,7 +171,7 @@ def test_evaluate_dedup_per_rule_and_group():
         threshold=3,
     ))
 
-    base = datetime.now(timezone.utc)
+    base = datetime.now(UTC)
     events = [_evt(base + timedelta(seconds=i)) for i in range(10)]
 
     matches = engine.evaluate(events)

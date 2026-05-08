@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -57,18 +56,18 @@ class ShodanSearchRequest(BaseModel):
 
 
 class MISPSearchRequest(BaseModel):
-    value: Optional[str] = None
-    eventinfo: Optional[str] = None
-    tags: Optional[list[str]] = None
-    type_attribute: Optional[str] = None
-    category: Optional[str] = None
+    value: str | None = None
+    eventinfo: str | None = None
+    tags: list[str] | None = None
+    type_attribute: str | None = None
+    category: str | None = None
     limit: int = 25
 
 
 class MISPExportRequest(BaseModel):
-    event_id: Optional[str] = None
-    tags: Optional[list[str]] = None
-    type_attribute: Optional[str] = None
+    event_id: str | None = None
+    tags: list[str] | None = None
+    type_attribute: str | None = None
     limit: int = 500
 
 
@@ -77,8 +76,8 @@ class URLhausTagRequest(BaseModel):
 
 
 class PayloadLookupRequest(BaseModel):
-    sha256: Optional[str] = None
-    md5: Optional[str] = None
+    sha256: str | None = None
+    md5: str | None = None
 
 
 # ======================================================================

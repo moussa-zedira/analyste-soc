@@ -4,18 +4,24 @@ from __future__ import annotations
 
 import re
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func as sa_func, or_, and_, not_ as sa_not
+from sqlalchemy import and_, not_ as sa_not, or_
 from sqlalchemy.orm import Session
 
-from apps.api.cql.lexer import Lexer, LexerError
+from apps.api.cql.commands import execute_command
+from apps.api.cql.lexer import LexerError
 from apps.api.cql.parser import (
-    ASTNode, BoolOp, Comparison, FieldRef, Literal, NotExpr,
-    ParseError, Parser, Query, ValueList,
+    ASTNode,
+    BoolOp,
+    Comparison,
+    Literal,
+    NotExpr,
+    ParseError,
+    Parser,
+    ValueList,
 )
-from apps.api.cql.commands import execute_command, list_commands
 from apps.api.models.event import Event
 
 # ---------------------------------------------------------------------------
@@ -85,14 +91,14 @@ def _get_column(field_name: str):
 def _parse_relative_time(s: str) -> datetime:
     """Parse relative time like '-24h', '-7d', '-30m', 'now'."""
     if s.lower() == "now":
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     m = re.match(r"^-(\d+)(s|m|h|d|w)$", s.strip())
     if m:
         val, unit = int(m.group(1)), m.group(2)
         mapping = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days", "w": "weeks"}
         delta = timedelta(**{mapping[unit]: val})
-        return datetime.now(timezone.utc) - delta
+        return datetime.now(UTC) - delta
 
     # Try ISO format
     try:
@@ -283,7 +289,6 @@ def execute_cql(
         q = q.order_by(Event.ts.desc())
 
     # Fetch from DB
-    total_q = q
     db_limit = MAX_DB_ROWS if has_stats else min(limit + offset + 1000, MAX_DB_ROWS)
     events = q.limit(db_limit).all()
 
@@ -303,7 +308,7 @@ def execute_cql(
 
     # Convert to dicts
     rows = [_event_to_dict(e) for e in events]
-    total_before_commands = len(rows)
+    len(rows)
 
     # Apply pipe commands
     command_names = []

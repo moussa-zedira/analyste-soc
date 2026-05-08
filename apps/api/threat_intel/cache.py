@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -42,7 +42,7 @@ def get_cached(indicator: str, source: str, db: Session) -> TIResult | None:
             .filter(TICache.indicator == indicator, TICache.source == source)
             .first()
         )
-        if row and row.expires_at > datetime.now(timezone.utc):
+        if row and row.expires_at > datetime.now(UTC):
             result = TIResult(
                 indicator=row.indicator,
                 source=row.source,
@@ -90,7 +90,7 @@ def _set_db(result: TIResult, db: Session) -> None:
     try:
         from apps.api.models.ti_cache import TICache
 
-        expires = datetime.now(timezone.utc) + timedelta(hours=DB_TTL_HOURS)
+        expires = datetime.now(UTC) + timedelta(hours=DB_TTL_HOURS)
 
         existing = (
             db.query(TICache)
@@ -104,7 +104,7 @@ def _set_db(result: TIResult, db: Session) -> None:
             existing.tags_json = json.dumps(result.tags)
             existing.total_reports = result.total_reports
             existing.expires_at = expires
-            existing.updated_at = datetime.now(timezone.utc)
+            existing.updated_at = datetime.now(UTC)
         else:
             db.add(TICache(
                 indicator=result.indicator,

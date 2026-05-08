@@ -10,10 +10,10 @@ Features:
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from apps.api.parsers import BaseParser, _normalize_severity
+from apps.api.parsers import BaseParser
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -166,10 +166,10 @@ def _extract_username(message: str) -> str | None:
 
 def _parse_bsd_timestamp(ts_str: str) -> datetime | None:
     """Parse RFC 3164 timestamp (no year — assume current year)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     try:
         dt = datetime.strptime(ts_str, "%b %d %H:%M:%S")
-        dt = dt.replace(year=now.year, tzinfo=timezone.utc)
+        dt = dt.replace(year=now.year, tzinfo=UTC)
         if dt > now:
             dt = dt.replace(year=now.year - 1)
         return dt
@@ -232,7 +232,7 @@ class SyslogParser(BaseParser):
         facility_code, severity_code, facility_name, severity = _decode_pri(pri)
 
         return {
-            "ts": _parse_bsd_timestamp(ts_str) or datetime.now(timezone.utc),
+            "ts": _parse_bsd_timestamp(ts_str) or datetime.now(UTC),
             "source": f"syslog:{hostname}",
             "event_type": _classify_syslog(app, message),
             "severity": severity,
@@ -273,7 +273,7 @@ class SyslogParser(BaseParser):
         ips = _IP_RE.findall(message)
 
         return {
-            "ts": _parse_5424_timestamp(ts_str) or datetime.now(timezone.utc),
+            "ts": _parse_5424_timestamp(ts_str) or datetime.now(UTC),
             "source": f"syslog:{hostname}",
             "event_type": _classify_syslog(app, message),
             "severity": severity,

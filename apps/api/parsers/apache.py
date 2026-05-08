@@ -11,7 +11,7 @@ Supports:
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from apps.api.parsers import BaseParser
@@ -101,7 +101,7 @@ def _parse_clf_ts(ts_str: str) -> datetime | None:
         try:
             dt = datetime.strptime(ts_str, fmt)
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
             return dt
         except ValueError:
             continue
@@ -161,9 +161,7 @@ class ApacheParser(BaseParser):
             return True
         if _APACHE_ERROR_RE.match(raw):
             return True
-        if _NGINX_ERROR_RE.match(raw):
-            return True
-        return False
+        return bool(_NGINX_ERROR_RE.match(raw))
 
     def parse(self, raw: str) -> dict[str, Any] | None:
         # Try combined / CLF first
@@ -193,7 +191,7 @@ class ApacheParser(BaseParser):
         referer = groups[9] if len(groups) > 9 else None
         ua = groups[10] if len(groups) > 10 else None
 
-        ts = _parse_clf_ts(ts_str) or datetime.now(timezone.utc)
+        ts = _parse_clf_ts(ts_str) or datetime.now(UTC)
         event_type, severity = _classify_access(method, path, status, ua)
 
         return {
@@ -229,7 +227,7 @@ class ApacheParser(BaseParser):
         ts = None
         for fmt in ("%a %b %d %H:%M:%S %Y", "%a %b %d %H:%M:%S.%f %Y"):
             try:
-                ts = datetime.strptime(ts_str, fmt).replace(tzinfo=timezone.utc)
+                ts = datetime.strptime(ts_str, fmt).replace(tzinfo=UTC)
                 break
             except ValueError:
                 continue
@@ -237,7 +235,7 @@ class ApacheParser(BaseParser):
         severity = _classify_error_level(level)
 
         return {
-            "ts": ts or datetime.now(timezone.utc),
+            "ts": ts or datetime.now(UTC),
             "source": "apache:error",
             "event_type": "web.error",
             "severity": severity,
@@ -260,9 +258,9 @@ class ApacheParser(BaseParser):
         message = m.group(3)
 
         try:
-            ts = datetime.strptime(ts_str, "%Y/%m/%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            ts = datetime.strptime(ts_str, "%Y/%m/%d %H:%M:%S").replace(tzinfo=UTC)
         except ValueError:
-            ts = datetime.now(timezone.utc)
+            ts = datetime.now(UTC)
 
         # Extract client IP from message
         client_match = re.search(r"client:\s*(\S+)", message)

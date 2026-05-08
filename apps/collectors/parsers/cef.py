@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+
 from apps.collectors.normalizer import NormalizedEvent
 
 # CEF:Version|Device Vendor|Device Product|Device Version|Signature ID|Name|Severity|Extension

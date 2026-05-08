@@ -24,7 +24,7 @@ import os
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -156,7 +156,7 @@ def _log_cost(
         c_in, c_out, total = _compute_cost(model, tokens_in, tokens_out)
         row = AiCostLog(
             id=str(uuid.uuid4()),
-            ts=datetime.now(timezone.utc),
+            ts=datetime.now(UTC),
             provider=provider,
             model=model,
             operation=operation,
@@ -192,11 +192,11 @@ def _refresh_daily_cost_cache(day: str | None = None) -> dict[str, Any] | None:
         from apps.api.models.ai_cost import AiCostLog
 
         if day is None:
-            day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            day = datetime.now(UTC).strftime("%Y-%m-%d")
 
         db = SessionLocal()
         try:
-            day_start = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            day_start = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=UTC)
             day_end_iso = f"{day} 23:59:59"
             rows = (
                 db.query(
@@ -207,7 +207,7 @@ def _refresh_daily_cost_cache(day: str | None = None) -> dict[str, Any] | None:
                     func.sum(AiCostLog.cost_usd_total),
                 )
                 .filter(AiCostLog.ts >= day_start)
-                .filter(AiCostLog.ts < datetime.strptime(day_end_iso, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc))
+                .filter(AiCostLog.ts < datetime.strptime(day_end_iso, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC))
                 .group_by(AiCostLog.provider)
                 .all()
             )
@@ -643,7 +643,7 @@ def get_daily_cost(day: str | None = None) -> dict[str, Any]:
     try:
         from apps.api.cache import _get_redis
         if day is None:
-            day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            day = datetime.now(UTC).strftime("%Y-%m-%d")
         r = _get_redis()
         if r is not None:
             try:

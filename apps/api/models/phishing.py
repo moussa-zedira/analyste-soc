@@ -87,13 +87,13 @@ class PhishingCampaign(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    targets: Mapped[list["PhishingTarget"]] = relationship(
+    targets: Mapped[list[PhishingTarget]] = relationship(
         "PhishingTarget",
         back_populates="campaign",
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    results: Mapped[list["PhishingResult"]] = relationship(
+    results: Mapped[list[PhishingResult]] = relationship(
         "PhishingResult",
         back_populates="campaign",
         cascade="all, delete-orphan",

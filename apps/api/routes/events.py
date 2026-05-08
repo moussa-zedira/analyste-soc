@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -78,7 +78,7 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)) -> Event:
 
     event = Event(
         id=str(uuid.uuid4()),
-        ts=datetime.now(timezone.utc),
+        ts=datetime.now(UTC),
         source=payload.source,
         event_type=payload.event_type,
         severity=payload.severity,
@@ -146,7 +146,7 @@ def create_events_batch(
 
         event = Event(
             id=str(uuid.uuid4()),
-            ts=datetime.now(timezone.utc),
+            ts=datetime.now(UTC),
             source=payload.source,
             event_type=payload.event_type,
             severity=payload.severity,

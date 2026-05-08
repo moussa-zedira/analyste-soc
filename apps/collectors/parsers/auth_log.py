@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+
 from apps.collectors.normalizer import NormalizedEvent
 
 # Mar 26 22:00:00 hostname sshd[12345]: Failed password for root from 1.2.3.4 port 22 ssh2

@@ -19,8 +19,7 @@ import asyncio
 import logging
 import re
 import uuid
-from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -263,7 +262,7 @@ def _persist(
             cost_usd=cost_usd,
             latency_ms=latency_ms,
             context_labels=context_labels,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         db.add(row)
         db.commit()

@@ -10,9 +10,8 @@ Features:
 
 from __future__ import annotations
 
-import re
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from apps.api.parsers import BaseParser
@@ -188,7 +187,7 @@ class WindowsEventParser(BaseParser):
         # Timestamp
         time_el = _find(system, "TimeCreated")
         ts_str = time_el.get("SystemTime", "") if time_el is not None else ""
-        ts = _parse_xml_timestamp(ts_str) or datetime.now(timezone.utc)
+        ts = _parse_xml_timestamp(ts_str) or datetime.now(UTC)
 
         # Event data
         fields = _extract_event_data(root)

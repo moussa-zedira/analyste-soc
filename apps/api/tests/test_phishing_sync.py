@@ -6,7 +6,7 @@ extraction browser) pour ne pas dependre de la DB.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from apps.api.pentest.phishing.sync import (
     EVENT_TYPE_MAP,
@@ -43,16 +43,16 @@ def test_parse_ts_handles_no_fraction() -> None:
 
 
 def test_parse_ts_falls_back_on_garbage() -> None:
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     ts = _parse_ts("not-a-date")
-    after = datetime.now(timezone.utc)
+    after = datetime.now(UTC)
     assert before <= ts <= after
 
 
 def test_parse_ts_empty_returns_now() -> None:
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     ts = _parse_ts(None)
-    after = datetime.now(timezone.utc)
+    after = datetime.now(UTC)
     assert before <= ts <= after
 
 

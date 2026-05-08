@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -16,19 +16,14 @@ from sqlalchemy.orm import Session
 
 from apps.api.models.ioc import ThreatFeed
 from apps.api.threat_intel.ioc_manager import (
-    create_ioc,
     bulk_import_stix,
-    bulk_import_csv,
-    bulk_import_text,
-    IOC_TYPES,
+    create_ioc,
 )
 from apps.api.threat_intel.observability import (
-    CircuitOpenError,
     get_circuit_breaker,
     instrument,
 )
 from apps.api.threat_intel.taxii import TAXIIClient
-from apps.api.threat_intel.stix import parse_bundle
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +189,7 @@ async def poll_feed(db: Session, feed_id: int) -> dict:
     if not feed:
         return {"error": "Feed not found"}
 
-    feed.last_poll = datetime.now(timezone.utc)
+    feed.last_poll = datetime.now(UTC)
     db.commit()
 
     try:
@@ -219,7 +214,7 @@ async def poll_feed(db: Session, feed_id: int) -> dict:
             stats = {"error": f"Unknown feed type: {feed.feed_type}"}
 
         if "error" not in stats:
-            feed.last_success = datetime.now(timezone.utc)
+            feed.last_success = datetime.now(UTC)
             feed.last_error = None
             new_count = stats.get("created", 0) + stats.get("updated", 0)
             feed.ioc_count = (feed.ioc_count or 0) + new_count

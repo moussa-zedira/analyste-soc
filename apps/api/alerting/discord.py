@@ -7,8 +7,6 @@ from typing import Any
 
 import httpx
 
-from apps.api.alerting import SEVERITY_COLORS
-
 logger = logging.getLogger(__name__)
 
 _SEVERITY_INT_COLORS = {

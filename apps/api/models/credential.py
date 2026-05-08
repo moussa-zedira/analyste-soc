@@ -18,7 +18,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
-    Integer,
     Text,
     UniqueConstraint,
 )

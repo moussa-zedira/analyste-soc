@@ -22,7 +22,7 @@ _SEVERITY_STYLE = {
 def _build_adaptive_card(incident: dict[str, Any]) -> dict:
     """Build a Microsoft Adaptive Card payload."""
     severity = incident.get("severity", "medium")
-    color = SEVERITY_COLORS.get(severity, "#808080")
+    SEVERITY_COLORS.get(severity, "#808080")
     style = _SEVERITY_STYLE.get(severity, "default")
 
     facts = [

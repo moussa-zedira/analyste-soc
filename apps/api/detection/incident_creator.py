@@ -5,16 +5,16 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from apps.api.broadcast import broadcaster
 from apps.api.detection.evaluator import RuleMatch
 from apps.api.detection.rules import Rule
+from apps.api.middleware.metrics import incidents_created_total
 from apps.api.models.incident import Incident
 from apps.api.models.incident_event import IncidentEvent
-from apps.api.broadcast import broadcaster
-from apps.api.middleware.metrics import incidents_created_total
 from apps.api.notifications.webhook import notify_incident_created
 from apps.api.observability import record_incident_created
 
@@ -79,7 +79,7 @@ def create_incident(db: Session, rule: Rule, match: RuleMatch) -> bool:
         )
         return False
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     incident_id = str(uuid.uuid4())
 
     incident = Incident(

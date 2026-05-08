@@ -5,8 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import (
     APIRouter,
@@ -53,23 +52,23 @@ class EngagementCreate(BaseModel):
     client_name: str = Field(min_length=1, max_length=256)
     scope_targets: list[str] = Field(default_factory=list)
     excluded_targets: list[str] = Field(default_factory=list)
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
     notes: str = ""
     mitre_tactics_authorized: list[str] = Field(default_factory=list)
     status: str = "draft"
 
 
 class EngagementUpdate(BaseModel):
-    name: Optional[str] = None
-    client_name: Optional[str] = None
-    scope_targets: Optional[list[str]] = None
-    excluded_targets: Optional[list[str]] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    notes: Optional[str] = None
-    mitre_tactics_authorized: Optional[list[str]] = None
-    status: Optional[str] = None
+    name: str | None = None
+    client_name: str | None = None
+    scope_targets: list[str] | None = None
+    excluded_targets: list[str] | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    notes: str | None = None
+    mitre_tactics_authorized: list[str] | None = None
+    status: str | None = None
 
 
 class EngagementOut(BaseModel):
@@ -81,11 +80,11 @@ class EngagementOut(BaseModel):
     status: str
     scope_targets: list[str] = []
     excluded_targets: list[str] = []
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    roe_document_path: Optional[str] = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    roe_document_path: str | None = None
     kill_switch_active: bool
-    created_by: Optional[str] = None
+    created_by: str | None = None
     created_at: datetime
     notes: str = ""
     mitre_tactics_authorized: list[str] = []
@@ -102,8 +101,8 @@ class KillSwitchPayload(BaseModel):
 
 class AuditEntryOut(BaseModel):
     id: str
-    engagement_id: Optional[str]
-    user_id: Optional[str]
+    engagement_id: str | None
+    user_id: str | None
     action_type: str
     target: str
     command: str
@@ -189,7 +188,7 @@ def create_engagement(
         end_date=payload.end_date,
         kill_switch_active=False,
         created_by=user.id,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
         notes=payload.notes or "",
         mitre_tactics_authorized=list(payload.mitre_tactics_authorized or []),
     )
@@ -200,7 +199,7 @@ def create_engagement(
             engagement_id=eng_id,
             user_id=user.id,
             role="lead",
-            added_at=datetime.now(timezone.utc),
+            added_at=datetime.now(UTC),
         )
     )
     db.commit()
@@ -220,8 +219,8 @@ def create_engagement(
 
 @router.get("", response_model=list[EngagementOut])
 def list_engagements(
-    status_filter: Optional[str] = Query(None, alias="status"),
-    client_name: Optional[str] = None,
+    status_filter: str | None = Query(None, alias="status"),
+    client_name: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[EngagementOut]:
@@ -347,7 +346,7 @@ def add_member(
             engagement_id=engagement_id,
             user_id=payload.user_id,
             role=payload.role,
-            added_at=datetime.now(timezone.utc),
+            added_at=datetime.now(UTC),
         )
     )
     db.commit()
@@ -463,10 +462,10 @@ def close_engagement(
 @router.get("/{engagement_id}/audit-log")
 def list_audit_log(
     engagement_id: str,
-    action_type: Optional[str] = None,
-    in_scope: Optional[bool] = None,
-    since: Optional[datetime] = None,
-    until: Optional[datetime] = None,
+    action_type: str | None = None,
+    in_scope: bool | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),

@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -111,9 +111,9 @@ async def dispatch_to_integrations(db: Session, incident: dict[str, Any]) -> lis
 
     results = await asyncio.gather(*[_run(conn) for _, conn in eligible], return_exceptions=False)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     persisted: list[dict[str, Any]] = []
-    for (integ, _conn), (ok, payload) in zip(eligible, results):
+    for (integ, _conn), (ok, payload) in zip(eligible, results, strict=False):
         existing = (
             db.query(IncidentTicket)
             .filter(
@@ -173,7 +173,7 @@ async def sync_ticket_status(db: Session, ticket_id: str) -> dict[str, Any] | No
     try:
         new_status = await connector.sync_status(_ticket_to_dict(ticket))
         ticket.ticket_status = new_status
-        ticket.last_synced_at = datetime.now(timezone.utc)
+        ticket.last_synced_at = datetime.now(UTC)
         ticket.last_error = None
     except Exception as exc:
         ticket.last_error = str(exc)[:500]
@@ -194,7 +194,7 @@ async def sync_all_open_tickets(db: Session, max_age_minutes: int = 60) -> dict[
     Skips tickets attached to integrations with auto_sync_status=False.
     Returns a summary dict.
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=max_age_minutes)
+    cutoff = datetime.now(UTC) - timedelta(minutes=max_age_minutes)
 
     tickets: list[IncidentTicket] = (
         db.query(IncidentTicket)
@@ -227,7 +227,7 @@ async def sync_all_open_tickets(db: Session, max_age_minutes: int = 60) -> dict[
             new_status = await connector.sync_status(_ticket_to_dict(ticket))
             if new_status and new_status != ticket.ticket_status:
                 ticket.ticket_status = new_status
-            ticket.last_synced_at = datetime.now(timezone.utc)
+            ticket.last_synced_at = datetime.now(UTC)
             ticket.last_error = None
             synced += 1
         except Exception as exc:

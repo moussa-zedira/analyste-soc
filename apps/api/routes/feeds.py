@@ -9,16 +9,16 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from apps.api.db.session import get_db
-from apps.api.security import require_api_key
 from apps.api.models.ioc import ThreatFeed
+from apps.api.security import require_api_key
 from apps.api.threat_intel.feed_manager import (
-    create_feed,
-    list_feeds,
-    update_feed,
-    delete_feed,
-    poll_feed,
-    get_feed_stats,
     BUILTIN_FEEDS,
+    create_feed,
+    delete_feed,
+    get_feed_stats,
+    list_feeds,
+    poll_feed,
+    update_feed,
 )
 
 router = APIRouter(prefix="/feeds", dependencies=[Depends(require_api_key)])

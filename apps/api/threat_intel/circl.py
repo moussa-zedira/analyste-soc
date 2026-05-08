@@ -8,7 +8,6 @@ import httpx
 
 from apps.api.threat_intel.base import TIResult
 from apps.api.threat_intel.observability import (
-    CircuitOpenError,
     get_circuit_breaker,
     instrument,
 )
@@ -75,7 +74,7 @@ class CIRCLProvider:
 
         records = result.get("records", [])
         count = len(records)
-        unique_domains = list(set(r.get("rrname", "") for r in records))[:20]
+        unique_domains = list({r.get("rrname", "") for r in records})[:20]
 
         # Heuristic: more passive DNS records = more exposure
         score = min(count * 2, 60)

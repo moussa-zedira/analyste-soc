@@ -17,7 +17,9 @@ to the in-process regex scanner.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import logging
 import os
 import shutil
 import tempfile
@@ -25,7 +27,6 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ async def _run(
 
     try:
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         proc.kill()
         try:
             await proc.wait()
@@ -290,10 +291,8 @@ async def gitleaks_scan(target: str) -> list[dict] | None:
             ))
         return findings
     finally:
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(report_path)
-        except OSError:
-            pass
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

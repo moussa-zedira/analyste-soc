@@ -13,12 +13,12 @@ Available connectors:
 - PanoramaConnector        (palo_alto)
 """
 
+from apps.api.soar.connectors.aws_iam import AWSConnector
 from apps.api.soar.connectors.base import Connector
+from apps.api.soar.connectors.crowdstrike import FalconConnector
 from apps.api.soar.connectors.iptables import IPTablesConnector
 from apps.api.soar.connectors.ldap_ad import LDAPConnector
-from apps.api.soar.connectors.aws_iam import AWSConnector
 from apps.api.soar.connectors.ms_defender import DefenderConnector
-from apps.api.soar.connectors.crowdstrike import FalconConnector
 from apps.api.soar.connectors.palo_alto import PanoramaConnector
 
 __all__ = [

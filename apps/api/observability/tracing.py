@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 _INITIALISED = False
 
 
-def setup_tracing(app: "FastAPI") -> bool:
+def setup_tracing(app: FastAPI) -> bool:
     """Initialise OTel si un endpoint OTLP est configure. Retourne True si actif.
 
     Idempotent : appels multiples sans effet.
@@ -40,14 +40,14 @@ def setup_tracing(app: "FastAPI") -> bool:
     try:
         from opentelemetry import trace
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+        from opentelemetry.instrumentation.redis import RedisInstrumentor
+        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
         from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-        from opentelemetry.instrumentation.redis import RedisInstrumentor
-        from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
     except ImportError as exc:
         logger.warning("otel_import_failed", extra={"error": str(exc)})
         return False
@@ -189,12 +189,12 @@ def setup_celery_tracing() -> bool:
     try:
         from opentelemetry import trace
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        from opentelemetry.instrumentation.celery import CeleryInstrumentor
+        from opentelemetry.instrumentation.redis import RedisInstrumentor
+        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.instrumentation.celery import CeleryInstrumentor
-        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-        from opentelemetry.instrumentation.redis import RedisInstrumentor
     except ImportError:
         return False
 

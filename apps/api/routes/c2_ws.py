@@ -15,7 +15,6 @@ c'est la route Next ``/api/auth/ws-token`` qui l'expose au navigateur.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status

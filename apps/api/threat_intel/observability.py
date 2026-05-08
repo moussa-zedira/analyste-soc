@@ -21,8 +21,9 @@ import asyncio
 import functools
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from enum import IntEnum
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, TypeVar
 
 import httpx
 from prometheus_client import Counter, Gauge, Histogram
@@ -219,7 +220,7 @@ class CircuitBreaker:
             result = await func(*args, **kwargs)
         except CircuitOpenError:
             raise
-        except (httpx.HTTPError, asyncio.TimeoutError, OSError) as exc:
+        except (TimeoutError, httpx.HTTPError, OSError) as exc:
             await self.record_failure()
             # Si c'est une reponse HTTP, on regarde le code pour distinguer
             # rate-limit (429) vs erreur reseau.
@@ -329,7 +330,7 @@ def instrument(
                 else:
                     result_label = "error"
                 raise
-            except (httpx.HTTPError, asyncio.TimeoutError, OSError):
+            except (TimeoutError, httpx.HTTPError, OSError):
                 result_label = "error"
                 raise
             except Exception:

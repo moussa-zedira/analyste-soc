@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
-    Boolean, DateTime, Float, Integer, String, Text, ForeignKey, JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,20 +35,20 @@ class IOC(Base):
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON dict
     stix_id: Mapped[str | None] = mapped_column(String(128), nullable=True, unique=True)
     first_seen: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     last_seen: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     expiry: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
-    sightings: Mapped[list["IOCSighting"]] = relationship(back_populates="ioc", cascade="all, delete-orphan")
+    sightings: Mapped[list[IOCSighting]] = relationship(back_populates="ioc", cascade="all, delete-orphan")
 
 
 class IOCRelationship(Base):
@@ -58,7 +63,7 @@ class IOCRelationship(Base):
     confidence: Mapped[int] = mapped_column(Integer, default=50)
     stix_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
 
@@ -73,10 +78,10 @@ class IOCSighting(Base):
     source: Mapped[str] = mapped_column(String(255), default="internal")
     count: Mapped[int] = mapped_column(Integer, default=1)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
-    ioc: Mapped["IOC"] = relationship(back_populates="sightings")
+    ioc: Mapped[IOC] = relationship(back_populates="sightings")
 
 
 class ThreatFeed(Base):
@@ -100,7 +105,7 @@ class ThreatFeed(Base):
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     ioc_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
 
@@ -117,7 +122,7 @@ class STIXCollection(Base):
     can_write: Mapped[bool] = mapped_column(Boolean, default=False)
     media_types_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
 
@@ -134,5 +139,5 @@ class STIXObject(Base):
     stix_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     object_json: Mapped[str] = mapped_column(Text)  # full STIX JSON
     added: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

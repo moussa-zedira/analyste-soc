@@ -179,7 +179,7 @@ _GENERATORS = [
 
 def _pick_generator():
     """Sélectionne un générateur d'événements selon les poids définis."""
-    funcs, weights = zip(*_GENERATORS)
+    funcs, weights = zip(*_GENERATORS, strict=False)
     return random.choices(funcs, weights=weights, k=1)[0]
 
 
@@ -214,7 +214,7 @@ def run(eps: float = DEFAULT_EPS, duration: int | None = None) -> None:
     """Lance le simulateur. *eps* = événements par seconde."""
     print(f"[SIMULATOR] Starting at ~{eps} events/sec")
     print(f"[SIMULATOR] Attack bursts every ~{BURST_INTERVAL}s")
-    print(f"[SIMULATOR] Rules evaluated every ~30s")
+    print("[SIMULATOR] Rules evaluated every ~30s")
     print("[SIMULATOR] Ctrl+C to stop\n")
 
     threading.Thread(target=_rules_loop, args=(30,), daemon=True).start()

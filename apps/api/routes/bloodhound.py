@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Optional
 
 from fastapi import (
     APIRouter,
@@ -22,12 +21,12 @@ from fastapi import (
     status,
 )
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import and_, desc, or_, select
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from apps.api.auth import get_current_user
 from apps.api.db.session import get_db
-from apps.api.models.bloodhound import BHDataset, BHEdge, BHNode
+from apps.api.models.bloodhound import BHDataset, BHNode
 from apps.api.models.engagement import Engagement
 from apps.api.models.sliver import SliverSession
 from apps.api.models.user import User
@@ -64,11 +63,11 @@ class BHDatasetOut(BaseModel):
     id: str
     name: str
     source_filename: str
-    engagement_id: Optional[str]
+    engagement_id: str | None
     bh_schema_version: int
     nodes_count: int
     edges_count: int
-    uploaded_by: Optional[str]
+    uploaded_by: str | None
     uploaded_at: datetime
     notes: str = ""
 
@@ -82,13 +81,13 @@ class BHNodeOut(BaseModel):
     name: str
     domain: str
     high_value: bool
-    props: Optional[dict] = None
+    props: dict | None = None
 
 
 class PivotPayload(BaseModel):
-    session_id: Optional[str] = None
-    hostname: Optional[str] = None
-    username: Optional[str] = None
+    session_id: str | None = None
+    hostname: str | None = None
+    username: str | None = None
     max_hops: int = Field(default=5, ge=1, le=8)
     max_paths: int = Field(default=20, ge=1, le=100)
 
@@ -145,7 +144,7 @@ def _get_dataset_or_404(db: Session, dataset_id: str) -> BHDataset:
 async def upload_dataset(
     file: UploadFile = File(...),
     name: str = Form(...),
-    engagement_id: Optional[str] = Form(None),
+    engagement_id: str | None = Form(None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> BHDatasetOut:
@@ -193,7 +192,7 @@ async def upload_dataset(
 
 @router.get("/datasets", response_model=list[BHDatasetOut])
 def list_datasets(
-    engagement_id: Optional[str] = Query(None),
+    engagement_id: str | None = Query(None),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -251,9 +250,9 @@ def delete_dataset(
 @router.get("/datasets/{dataset_id}/nodes", response_model=list[BHNodeOut])
 def list_nodes(
     dataset_id: str,
-    object_type: Optional[str] = Query(None),
-    high_value: Optional[bool] = Query(None),
-    name: Optional[str] = Query(None),
+    object_type: str | None = Query(None),
+    high_value: bool | None = Query(None),
+    name: str | None = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),

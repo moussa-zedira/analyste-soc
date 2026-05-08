@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -151,7 +150,7 @@ async def list_stages() -> list[dict[str, Any]]:
 @router.put("/stages/{name}/toggle")
 async def toggle_stage(name: str) -> dict[str, Any]:
     """Enable or disable a specific pipeline stage."""
-    from apps.api.pipeline.config import get_pipeline_config, STAGE_ORDER, StageConfig
+    from apps.api.pipeline.config import STAGE_ORDER, StageConfig, get_pipeline_config
 
     if name not in STAGE_ORDER:
         raise HTTPException(404, f"Stage '{name}' not found")

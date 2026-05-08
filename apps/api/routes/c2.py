@@ -13,8 +13,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -69,7 +68,7 @@ class GenerateImplantRequest(BaseModel):
 
 
 async def _engagement_guard(
-    db: Session, engagement_id: Optional[str], target: Optional[str]
+    db: Session, engagement_id: str | None, target: str | None
 ) -> None:
     """Si V4.3b est disponible, applique assert_engagement_allows."""
     try:
@@ -83,8 +82,8 @@ async def _engagement_guard(
 def _record_audit(
     db: Session,
     *,
-    engagement_id: Optional[str],
-    user_id: Optional[str],
+    engagement_id: str | None,
+    user_id: str | None,
     action_type: str,
     target: str,
     command: str,
@@ -248,7 +247,7 @@ async def exec_command_route(
     target_label = session_id
     await _engagement_guard(db, engagement_id, target_label)
 
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     try:
         result = await sliver_client.execute_command(
             session_id, payload.command, timeout=payload.timeout
@@ -261,7 +260,7 @@ async def exec_command_route(
     except Exception:  # noqa: BLE001
         logger.exception("c2_exec_failed")
         raise HTTPException(status_code=502, detail="Sliver exec failed")
-    completed = datetime.now(timezone.utc)
+    completed = datetime.now(UTC)
     duration_ms = int((completed - started).total_seconds() * 1000)
 
     # Persiste la session si premiere fois
@@ -423,7 +422,7 @@ async def generate_implant_route(
         build_path=result.get("build_path"),
         size_bytes=int(result.get("size_bytes", 0) or 0),
         engagement_id=engagement_id,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
         created_by=user.id,
     )
     db.add(build)

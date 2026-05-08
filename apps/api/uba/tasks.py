@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.exc import DBAPIError, OperationalError
 
@@ -35,7 +35,7 @@ def recompute_all_baselines_task(lookback_hours: int = 24) -> dict:
     """
     db = SessionLocal()
     try:
-        since = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+        since = datetime.now(UTC) - timedelta(hours=lookback_hours)
         result = update_baselines(db, since=since)
         stats = compute_peer_stats(db)
         peers = assign_peer_groups(db, stats=stats)

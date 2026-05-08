@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 import secrets
-from typing import Iterator
+from collections.abc import Iterator
 
 import pytest
 
@@ -97,10 +97,11 @@ def _configure_env(_postgres_url: str, _redis_url: str) -> Iterator[None]:
 def _engine(_configure_env):
     """Recree le moteur SQLAlchemy contre la DB testcontainer + applique le schema."""
     from sqlalchemy import create_engine
-    from apps.api.config import get_settings
-    from apps.api.db.base import Base
+
     # Import obligatoire pour que tous les models soient enregistres dans Base.metadata
     import apps.api.models  # noqa: F401
+    from apps.api.config import get_settings
+    from apps.api.db.base import Base
 
     settings = get_settings()
     engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
@@ -156,6 +157,7 @@ def db_session(_engine):
 def redis_client(_configure_env):
     """Client Redis branche sur le container, FLUSHDB entre les tests."""
     import redis
+
     from apps.api.config import get_settings
     client = redis.Redis.from_url(get_settings().REDIS_URL, decode_responses=True)
     client.flushdb()
@@ -167,6 +169,7 @@ def redis_client(_configure_env):
 def api_client(_engine, db_session, redis_client):
     """TestClient FastAPI partageant la session test (voit les fixtures insérées)."""
     from fastapi.testclient import TestClient
+
     from apps.api.db.session import get_db
     from apps.api.main import create_app
 

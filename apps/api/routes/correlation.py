@@ -3,23 +3,20 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from apps.api.db.session import get_db
 from apps.api.detection.correlation import (
-    ActionType,
-    CorrelationEngine,
     CorrelationMatch,
     CorrelationRule,
     CorrelationType,
     EventPattern,
     get_correlation_engine,
-    run_correlation,
 )
 from apps.api.detection.state_machine import (
     get_state_machine_engine,
@@ -285,7 +282,7 @@ def get_recent_matches(
 ) -> list[CorrelationMatchRead]:
     """Retourne les correspondances de correlation recentes."""
     engine = get_correlation_engine()
-    since = datetime.now(timezone.utc) - timedelta(hours=hours_back)
+    since = datetime.now(UTC) - timedelta(hours=hours_back)
 
     events = (
         db.query(Event)
@@ -307,7 +304,7 @@ def simulate_correlation(
     import time
 
     engine = get_correlation_engine()
-    since = datetime.now(timezone.utc) - timedelta(hours=body.hours_back)
+    since = datetime.now(UTC) - timedelta(hours=body.hours_back)
 
     events = (
         db.query(Event)

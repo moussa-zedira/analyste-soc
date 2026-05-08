@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.db.base import Base
+
+if TYPE_CHECKING:
+    from apps.api.models.event import Event
 
 
 class Incident(Base):
@@ -31,7 +35,7 @@ class Incident(Base):
     dedup_hash: Mapped[str] = mapped_column(Text, unique=True)
     suggested_severity: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
-    events: Mapped[list["Event"]] = relationship(
+    events: Mapped[list[Event]] = relationship(
         "Event",
         secondary="incident_events",
         back_populates="incidents",

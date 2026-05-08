@@ -13,7 +13,7 @@ are handled by the json_log parser which auto-detects the schema.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from apps.api.parsers import BaseParser
@@ -58,7 +58,7 @@ def _parse_vpc_flow(raw: str) -> dict[str, Any] | None:
     if not m:
         return None
 
-    version = m.group(1)
+    m.group(1)
     account_id = m.group(2)
     eni = m.group(3)
     src_addr = m.group(4)
@@ -69,12 +69,12 @@ def _parse_vpc_flow(raw: str) -> dict[str, Any] | None:
     packets = m.group(9)
     bytes_count = m.group(10)
     start_epoch = int(m.group(11))
-    end_epoch = int(m.group(12))
+    int(m.group(12))
     action = m.group(13)
     log_status = m.group(14)
 
     proto_name = _PROTO_MAP.get(protocol, protocol)
-    ts = datetime.fromtimestamp(start_epoch, tz=timezone.utc)
+    ts = datetime.fromtimestamp(start_epoch, tz=UTC)
 
     if action == "REJECT":
         event_type = "network.blocked"
@@ -152,7 +152,7 @@ def _parse_azure_nsg(raw: str) -> dict[str, Any] | None:
         severity = "low"
 
     return {
-        "ts": datetime.now(timezone.utc),
+        "ts": datetime.now(UTC),
         "source": "azure:nsg",
         "event_type": event_type,
         "severity": severity,
@@ -197,7 +197,7 @@ def _parse_gcp_flow(raw: str) -> dict[str, Any] | None:
     protocol = fields.get("connection.protocol", "")
 
     return {
-        "ts": datetime.now(timezone.utc),
+        "ts": datetime.now(UTC),
         "source": "gcp:vpc_flow",
         "event_type": "network.flow",
         "severity": "low",
@@ -230,9 +230,7 @@ class CloudLogParser(BaseParser):
         if _AZURE_NSG_RE.match(stripped):
             return True
         # GCP flow (key=value with connection.* keys)
-        if "connection.src_ip=" in stripped or "connection.dest_ip=" in stripped:
-            return True
-        return False
+        return bool("connection.src_ip=" in stripped or "connection.dest_ip=" in stripped)
 
     def parse(self, raw: str) -> dict[str, Any] | None:
         stripped = raw.strip()

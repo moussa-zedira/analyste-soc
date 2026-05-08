@@ -7,7 +7,7 @@ Indexees par `rule_id` (UUID Sigma) pour eviter les doublons.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, Index, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -35,7 +35,7 @@ class SigmaRuleCache(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     source_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     imported_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
     __table_args__ = (

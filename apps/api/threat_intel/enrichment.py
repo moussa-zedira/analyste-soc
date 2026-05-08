@@ -204,7 +204,7 @@ async def lookup_ip_manual(ip: str, db: Session) -> dict:
     # Aggregate
     max_score = max((r["risk_score"] for r in results), default=0)
     is_malicious = any(r["is_malicious"] for r in results)
-    all_tags = list(set(t for r in results for t in r.get("tags", [])))
+    all_tags = list({t for r in results for t in r.get("tags", [])})
 
     return {
         "ip": ip,

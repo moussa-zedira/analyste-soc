@@ -101,7 +101,7 @@ def watch_files(patterns: list[str]) -> None:
                         }
                         continue
 
-                    with open(filepath, "r", errors="replace") as f:
+                    with open(filepath, errors="replace") as f:
                         f.seek(saved.get("offset", 0))
                         new_lines = f.readlines()
                         new_offset = f.tell()

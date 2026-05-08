@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import socket
 import ssl
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,7 +20,6 @@ from sqlalchemy.orm import Session
 from apps.api.db.session import get_db
 from apps.api.models.scan_history import ScanHistory
 from apps.api.security import require_api_key
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +210,7 @@ def _scan_single_port(ip: str, port: int, timeout: float = 1.5) -> PortResult:
         else:
             sock.close()
             return PortResult(port=port, service=service, state="closed")
-    except socket.timeout:
+    except TimeoutError:
         return PortResult(port=port, service=service, state="filtered")
     except Exception:
         return PortResult(port=port, service=service, state="closed")
@@ -569,13 +569,13 @@ def _check_ip_reputation(ip: str) -> tuple[ReputationResult | None, list[str]]:
                     )
                     if resp2.status_code == 200:
                         data2 = resp2.json()
-                        rir = data2.get("rir", {})
-                        company = data2.get("company", {})
+                        data2.get("rir", {})
+                        data2.get("company", {})
                         is_abuser = data2.get("is_abuser", False)
                         is_tor_node = data2.get("is_tor", False)
                         is_proxy_2 = data2.get("is_proxy", False)
                         is_vpn = data2.get("is_vpn", False)
-                        is_datacenter = data2.get("is_datacenter", False)
+                        data2.get("is_datacenter", False)
                         is_bot = data2.get("is_bot", False)
 
                         abuse_score = 0
@@ -730,12 +730,11 @@ def analyze_target(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Cible invalide : {target}",
             )
-    elif target_type == "ip":
-        if not _IP_RE.match(target):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Adresse IP invalide : {target}",
-            )
+    elif target_type == "ip" and not _IP_RE.match(target):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Adresse IP invalide : {target}",
+        )
 
     scan_id = str(uuid.uuid4())
     result = ScannerResult(id=scan_id, target=target, target_type=target_type)
@@ -822,7 +821,7 @@ def analyze_target(
             security_score=result.security_score,
             open_ports_count=len(result.open_ports),
             scan_duration_ms=result.scan_duration_ms,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         db.add(history_entry)
         db.commit()

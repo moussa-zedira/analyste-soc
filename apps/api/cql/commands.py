@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import math
+import contextlib
 import re
 import statistics
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -52,7 +53,7 @@ def _set_field(row: dict, field: str, value: Any) -> None:
 
 def _bucket_time(ts: datetime, span: timedelta) -> str:
     """Bucket a timestamp to the nearest span boundary."""
-    epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    epoch = datetime(2000, 1, 1, tzinfo=UTC)
     delta = ts - epoch
     seconds = delta.total_seconds()
     span_secs = span.total_seconds()
@@ -115,19 +116,7 @@ def cmd_where(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
         if fval is None:
             continue
         try:
-            if op == ">" and _safe_float(fval) is not None and _safe_float(fval) > float(value_str):
-                result.append(row)
-            elif op == ">=" and _safe_float(fval) is not None and _safe_float(fval) >= float(value_str):
-                result.append(row)
-            elif op == "<" and _safe_float(fval) is not None and _safe_float(fval) < float(value_str):
-                result.append(row)
-            elif op == "<=" and _safe_float(fval) is not None and _safe_float(fval) <= float(value_str):
-                result.append(row)
-            elif op in ("=", "==") and str(fval) == value_str:
-                result.append(row)
-            elif op == "!=" and str(fval) != value_str:
-                result.append(row)
-            elif op.upper() == "CONTAINS" and value_str.lower() in str(fval).lower():
+            if op == ">" and _safe_float(fval) is not None and _safe_float(fval) > float(value_str) or op == ">=" and _safe_float(fval) is not None and _safe_float(fval) >= float(value_str) or op == "<" and _safe_float(fval) is not None and _safe_float(fval) < float(value_str) or op == "<=" and _safe_float(fval) is not None and _safe_float(fval) <= float(value_str) or op in ("=", "==") and str(fval) == value_str or op == "!=" and str(fval) != value_str or op.upper() == "CONTAINS" and value_str.lower() in str(fval).lower():
                 result.append(row)
         except (ValueError, TypeError):
             continue
@@ -234,10 +223,10 @@ def _compute_agg(func: str, field: str, rows: list[dict]) -> Any:
         return max(nums) if nums else None
 
     if func in ("dc", "distinct_count"):
-        return len(set(str(v) for v in values))
+        return len({str(v) for v in values})
 
     if func == "values":
-        return list(set(str(v) for v in values))
+        return list({str(v) for v in values})
 
     if func == "first":
         return values[0] if values else None
@@ -275,10 +264,8 @@ def cmd_head(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
     n = 10
     parts = raw_text.strip().split()
     if parts:
-        try:
+        with contextlib.suppress(ValueError):
             n = int(parts[0])
-        except ValueError:
-            pass
     return rows[:n]
 
 
@@ -288,10 +275,8 @@ def cmd_tail(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
     n = 10
     parts = raw_text.strip().split()
     if parts:
-        try:
+        with contextlib.suppress(ValueError):
             n = int(parts[0])
-        except ValueError:
-            pass
     return rows[-n:] if len(rows) >= n else rows
 
 
@@ -459,7 +444,7 @@ def _eval_expression(expr: str, row: dict) -> Any:
 
     # now()
     if expr.strip() == "now()":
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     # Simple arithmetic: field + field, field - field, etc.
     for op in ["+", "-", "*", "/"]:
@@ -562,7 +547,7 @@ def cmd_fields(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
         return rows
 
     exclude = parts[0].startswith("-")
-    include = parts[0].startswith("+")
+    parts[0].startswith("+")
 
     if exclude:
         fields_list = [p.lstrip("-").strip(",") for p in parts]

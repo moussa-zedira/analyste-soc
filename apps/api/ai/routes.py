@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -14,10 +14,8 @@ from apps.api.ai.llm_client import (
     call,
     get_daily_cost,
     llm_status,
-    parse_json_response,
 )
 from apps.api.ai.rag import collect_corpus, get_rag, rag_search, rag_summary
-from apps.api.security import require_admin
 from apps.api.ai.rule_generator import (
     RuleSeed,
     build_sigma_rule,
@@ -32,6 +30,7 @@ from apps.api.ai.triage import (
     triage_input_async,
 )
 from apps.api.db.session import get_db
+from apps.api.security import require_admin
 
 router = APIRouter(prefix="/ai", tags=["AI Native"])
 
@@ -320,7 +319,7 @@ def rules_from_event(
 @router.get("/cost")
 def ai_cost() -> dict[str, Any]:
     """Couts LLM : aujourd'hui + 7 derniers jours + pricing de reference."""
-    today = datetime.now(timezone.utc)
+    today = datetime.now(UTC)
     days: list[dict[str, Any]] = []
     total_7d = 0.0
     for i in range(7):

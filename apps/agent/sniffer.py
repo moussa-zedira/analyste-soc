@@ -9,7 +9,7 @@ from collections import defaultdict
 from apps.agent.api_client import post_event, trigger_rules
 
 try:
-    from scapy.all import DNS, DNSQR, IP, TCP, sniff  # type: ignore[import-untyped]
+    from scapy.all import DNS, DNSQR, IP, TCP, sniff  # type: ignore[import-untyped]  # noqa: F401
 except ImportError:
     sniff = None  # handled in run()
 

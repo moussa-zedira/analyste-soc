@@ -8,27 +8,27 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api.db.session import get_db
-from apps.api.security import require_api_key
+from apps.api.cql.autocomplete import autocomplete_cql
+from apps.api.cql.commands import list_commands
 from apps.api.cql.executor import (
     EVENT_FIELDS,
     FIELD_ALIASES,
     execute_cql,
     explain_cql,
 )
-from apps.api.cql.validator import validate_cql
-from apps.api.cql.autocomplete import autocomplete_cql
-from apps.api.cql.commands import list_commands
-from apps.api.cql.saved_queries import (
-    save_query,
-    get_query,
-    delete_query,
-    list_queries,
-    seed_builtin_queries,
-    EXAMPLE_QUERIES,
-    CATEGORIES,
-)
 from apps.api.cql.query_library import LIBRARY as QUERY_LIBRARY
+from apps.api.cql.saved_queries import (
+    CATEGORIES,
+    EXAMPLE_QUERIES,
+    delete_query,
+    get_query,
+    list_queries,
+    save_query,
+    seed_builtin_queries,
+)
+from apps.api.cql.validator import validate_cql
+from apps.api.db.session import get_db
+from apps.api.security import require_api_key
 
 router = APIRouter(
     prefix="/cql",

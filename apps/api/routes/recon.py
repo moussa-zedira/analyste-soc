@@ -10,16 +10,13 @@ import re
 import socket
 import ssl
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
-from apps.api.db.session import get_db
 from apps.api.security import require_api_key
-from apps.api.middleware.rate_limit import limiter
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 logger = logging.getLogger(__name__)
@@ -321,8 +318,8 @@ async def _get_ssl(hostname: str) -> dict | None:
                     expired = False
                     if not_after:
                         try:
-                            exp = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
-                            days = (exp - datetime.now(timezone.utc)).days
+                            exp = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=UTC)
+                            days = (exp - datetime.now(UTC)).days
                             expired = days < 0
                         except Exception:
                             logger.debug("recon: ignored exception", exc_info=True)
@@ -419,7 +416,7 @@ async def _get_wayback(domain: str) -> dict | None:
         data = rows[1:]
         urls = []
         for row in data:
-            entry = dict(zip(header, row))
+            entry = dict(zip(header, row, strict=False))
             urls.append({
                 "timestamp": entry.get("timestamp", ""),
                 "url": entry.get("original", ""),

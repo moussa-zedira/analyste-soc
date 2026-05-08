@@ -7,9 +7,8 @@ import json
 import logging
 import time
 import uuid
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
-from enum import Enum
+from dataclasses import asdict, dataclass, field
+from enum import StrEnum
 from typing import Any
 
 from apps.api.models.event import Event
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class TransitionResult(str, Enum):
+class TransitionResult(StrEnum):
     """Resultat d'une tentative de transition."""
     ADVANCED = "advanced"
     COMPLETED = "completed"

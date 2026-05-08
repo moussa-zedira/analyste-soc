@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC
 
 from sqlalchemy.exc import DBAPIError, OperationalError
 
@@ -126,12 +127,13 @@ def task_enrich_event(event_id: str) -> dict:
 @celery.task(name="apps.api.tasks.task_refresh_ti_cache", **_RETRY_KW)
 def task_refresh_ti_cache() -> dict:
     """Rafraichit le cache TI expire."""
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from apps.api.models.ti_cache import TICache
 
     db = SessionLocal()
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expired = db.query(TICache).filter(TICache.expires_at < now).count()
         db.query(TICache).filter(TICache.expires_at < now).delete()
         db.commit()
@@ -177,6 +179,7 @@ def task_send_alert(incident_data: dict) -> dict:
 def task_process_event(raw_event) -> dict:
     """Process a single event through the full pipeline."""
     import asyncio
+
     from apps.api.pipeline.engine import get_pipeline_engine
 
     try:
@@ -205,6 +208,7 @@ def task_process_event(raw_event) -> dict:
 def task_process_batch(events: list) -> dict:
     """Process a batch of events through the pipeline."""
     import asyncio
+
     from apps.api.pipeline.engine import get_pipeline_engine
 
     try:
@@ -238,7 +242,8 @@ def task_pipeline_replay(
 ) -> dict:
     """Replay historical events through the pipeline."""
     import asyncio
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from apps.api.pipeline.engine import get_pipeline_engine
 
     try:

@@ -5,10 +5,11 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import logging
 import secrets as stdsecrets
 import uuid
 from base64 import b64encode
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pyotp
 import qrcode
@@ -35,7 +36,6 @@ from apps.api.models.user import User
 from apps.api.models.user_api_key import UserApiKey
 from apps.api.models.user_preferences import UserPreferences
 from apps.api.observability import record_login
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ def _write_audit(
                 target=target,
                 details=json.dumps(details or {}),
                 ip_address=ip_address,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
         )
         db.commit()
@@ -160,7 +160,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
         hashed_password=hash_password(payload.password),
         role=payload.role,
         is_active=True,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(user)
     db.commit()
@@ -446,7 +446,7 @@ def _get_or_create_preferences(db: Session, user_id: str) -> UserPreferences:
             notif_critical_only=False,
             default_layout="grid",
             timezone="UTC",
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
         )
         db.add(prefs)
         db.commit()
@@ -481,7 +481,7 @@ def update_preferences(
     prefs.notif_critical_only = payload.notif_critical_only
     prefs.default_layout = payload.default_layout
     prefs.timezone = payload.timezone
-    prefs.updated_at = datetime.now(timezone.utc)
+    prefs.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(prefs)
     return prefs
@@ -547,7 +547,7 @@ def create_api_key(
         )
     raw = f"cd_{stdsecrets.token_urlsafe(32)}"
     prefix = raw[:10]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expires_at: datetime | None = None
     if payload.expires_in_days and payload.expires_in_days > 0:
         from datetime import timedelta

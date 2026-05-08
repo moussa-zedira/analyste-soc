@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from apps.api.config import get_settings
-
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+from apps.api.config import get_settings
 
 _settings = get_settings()
 

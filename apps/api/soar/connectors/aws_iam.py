@@ -5,10 +5,10 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from datetime import UTC
 from typing import Any
 
 from apps.api.soar.connectors.base import Connector
-
 
 DENY_ALL_POLICY = {
     "Version": "2012-10-17",
@@ -89,8 +89,8 @@ class AWSConnector(Connector):
         if not self.configured:
             return {"applied": False, "reason": "aws_not_configured"}
 
-        from datetime import datetime, timezone
-        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        from datetime import datetime
+        now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
         revoke_policy = {
             "Version": "2012-10-17",
             "Statement": [

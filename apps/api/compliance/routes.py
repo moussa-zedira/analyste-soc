@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from apps.api.compliance import storage
 from apps.api.compliance.frameworks import (
     ALL_FRAMEWORKS,
     get_framework,
@@ -21,7 +22,6 @@ from apps.api.compliance.reporter import (
     evaluate_all,
     evaluate_framework,
 )
-from apps.api.compliance import storage
 from apps.api.db.session import get_db
 from apps.api.security import require_api_key
 

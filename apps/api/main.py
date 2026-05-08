@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 import time
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from datetime import UTC
 
 import structlog
 from fastapi import Depends, FastAPI, Request
@@ -18,11 +18,116 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 
+# Import all models so Base.metadata knows about them.
+import apps.api.models  # noqa: F401
+from apps.api.ai.routes import router as ai_router
+from apps.api.cases.routes import router as cases_router
+from apps.api.compliance.routes import router as compliance_router
 from apps.api.config import get_settings
 from apps.api.db.base import Base
-from apps.api.db.session import engine, SessionLocal
-from apps.api.logging_config import setup_logging, generate_request_id
+from apps.api.db.session import SessionLocal, engine
+from apps.api.logging_config import generate_request_id, setup_logging
 from apps.api.middleware.rate_limit import limiter
+from apps.api.pentest.automation.ai_assistant import router as pentest_ai_router
+from apps.api.pentest.automation.ai_vuln_analyzer import router as pentest_ai_vuln_router
+from apps.api.pentest.automation.auto_exploit import router as pentest_autoexploit_router
+from apps.api.pentest.automation.autochain import router as pentest_autochain_router
+from apps.api.pentest.automation.chain_engine import router as pentest_chain_router
+from apps.api.pentest.automation.compliance import router as pentest_compliance_router
+from apps.api.pentest.automation.exploit_dev import router as pentest_exploitdev_router
+from apps.api.pentest.automation.exploit_dispatcher import router as pentest_dispatcher_router
+from apps.api.pentest.automation.killchain import router as pentest_killchain_router
+from apps.api.pentest.automation.pipeline import router as pentest_pipeline_router
+from apps.api.pentest.automation.threat_model import router as pentest_threat_model_router
+from apps.api.pentest.automation.workflows import router as pentest_workflows_router
+from apps.api.pentest.campaign.routes import (
+    router as campaign_router,
+    ws_router as campaign_ws_router,
+)
+from apps.api.pentest.evasion.evasion import router as pentest_evasion_router
+from apps.api.pentest.evasion.network_evasion import router as pentest_network_evasion_router
+from apps.api.pentest.evasion.payload_obfuscation import router as pentest_obfuscation_router
+from apps.api.pentest.evasion.stealth import router as pentest_stealth_router
+from apps.api.pentest.evasion.traffic_shaping import router as pentest_traffic_router
+from apps.api.pentest.evasion.waf_bypass import router as pentest_waf_bypass_router
+from apps.api.pentest.exploitation.api_fuzzer import router as pentest_api_fuzzer_router
+from apps.api.pentest.exploitation.blind_extract import router as pentest_blind_router
+from apps.api.pentest.exploitation.deserialization import router as pentest_deser_router
+from apps.api.pentest.exploitation.jwt_attack import router as pentest_jwt_router
+from apps.api.pentest.exploitation.lfi_rce import router as pentest_lfi_rce_router
+from apps.api.pentest.exploitation.protocol_exploit import router as pentest_protocols_router
+from apps.api.pentest.exploitation.race_condition import router as pentest_race_router
+from apps.api.pentest.exploitation.shellcode_encoder import router as shellcode_router
+from apps.api.pentest.exploitation.smart_payload import router as pentest_smart_payload_router
+from apps.api.pentest.exploitation.sqli_engine import router as pentest_sqli_router
+from apps.api.pentest.exploitation.ssrf_advanced import router as pentest_ssrf_router
+from apps.api.pentest.exploitation.ssti_engine import router as pentest_ssti_router
+from apps.api.pentest.exploitation.websocket import router as pentest_ws_security_router
+from apps.api.pentest.exploitation.xss_engine import router as pentest_xss_engine_router
+from apps.api.pentest.implants.payload_engine import router as pentest_payload_engine_router
+from apps.api.pentest.post_exploit.ad_attack import router as pentest_ad_router
+from apps.api.pentest.post_exploit.adversary_emulation import router as pentest_adversary_router
+from apps.api.pentest.post_exploit.antiforensics import router as pentest_antiforensics_router
+from apps.api.pentest.post_exploit.bloodhound_export import router as bloodhound_router
+from apps.api.pentest.post_exploit.c2_server import (
+    beacon_router as c2_beacon_router,
+    router as pentest_c2_router,
+)
+from apps.api.pentest.post_exploit.cred_harvester import router as pentest_creds_router
+from apps.api.pentest.post_exploit.executor import (
+    router as pentest_executor_router,
+    ws_router as executor_ws_router,
+)
+from apps.api.pentest.post_exploit.exfiltration import router as pentest_exfil_router
+from apps.api.pentest.post_exploit.lateral import router as pentest_lateral_router
+from apps.api.pentest.post_exploit.persistence import router as pentest_persist_router
+from apps.api.pentest.post_exploit.phishing import router as pentest_phishing_router
+from apps.api.pentest.post_exploit.privesc import router as pentest_privesc_router
+from apps.api.pentest.post_exploit.shell_bridge import router as pentest_bridge_router
+from apps.api.pentest.post_exploit.shell_handler import (
+    router as pentest_shell_router,
+    ws_router as shell_ws_router,
+)
+from apps.api.pentest.post_exploit.social_engineering import router as pentest_social_router
+from apps.api.pentest.recon.auth_scanner import router as pentest_auth_scanner_router
+from apps.api.pentest.recon.cloud_scanner import router as pentest_cloud_router
+from apps.api.pentest.recon.deep_scan import router as pentest_deep_scan_router
+from apps.api.pentest.recon.headless_scanner import router as pentest_headless_router
+from apps.api.pentest.recon.iot_analyzer import router as pentest_iot_router
+from apps.api.pentest.recon.k8s_rbac import router as k8s_rbac_router
+from apps.api.pentest.recon.mobile_tester import router as pentest_mobile_router
+from apps.api.pentest.recon.net_scanner import router as pentest_netscan_router
+from apps.api.pentest.recon.network_exec import router as pentest_network_exec_router
+from apps.api.pentest.recon.network_mapper import router as pentest_netmap_router
+from apps.api.pentest.recon.nvd import router as pentest_nvd_router
+from apps.api.pentest.recon.subdomain_discovery import router as pentest_subdomain_router
+from apps.api.pentest.recon.vuln_correlator import router as pentest_correlator_router
+from apps.api.pentest.recon.vuln_scanner import router as pentest_vuln_scanner_router
+from apps.api.pentest.recon.web_crawler import router as pentest_web_crawler_router
+from apps.api.pentest.reporting.live_dashboard import router as pentest_live_router
+from apps.api.pentest.reporting.report import router as pentest_report_router
+from apps.api.pentest.reporting.stream import router as pentest_stream_router
+from apps.api.pentest.reporting.templates import router as pentest_templates_router
+from apps.api.pentest.tools.brute import router as pentest_brute_router
+from apps.api.pentest.tools.curl_client import router as pentest_curl_router
+from apps.api.pentest.tools.fuzzer import router as pentest_fuzzer_router
+from apps.api.pentest.tools.hash_cracker import router as pentest_hash_cracker_router
+from apps.api.pentest.tools.http_history import router as pentest_http_history_router
+from apps.api.pentest.tools.http_proxy import (
+    router as pentest_proxy_router,
+    ws_router as proxy_ws_router,
+)
+from apps.api.pentest.tools.interceptor import (
+    router as pentest_interceptor_router,
+    ws_router as interceptor_ws_router,
+)
+from apps.api.pentest.tools.oob_server import (
+    callback_router as oob_callback_router,
+    router as pentest_oob_router,
+)
+from apps.api.pentest.tools.session_manager import router as pentest_sessmgr_router
+from apps.api.pentest.tools.sessions import router as pentest_sessions_router
+from apps.api.pentest.tools.wordlist_gen import router as pentest_wordgen_router
 from apps.api.routes import (
     admin,
     alerts,
@@ -37,10 +142,10 @@ from apps.api.routes import (
     investigate,
     log_sources,
     mitre,
+    ml,
     parsers,
     pentest,
     recon,
-    ml,
     rules,
     scan_history,
     scanner,
@@ -53,103 +158,13 @@ from apps.api.routes import (
     wordlists,
     ws,
 )
-from apps.api.pentest.recon.nvd import router as pentest_nvd_router
-from apps.api.pentest.automation.pipeline import router as pentest_pipeline_router
-from apps.api.pentest.tools.sessions import router as pentest_sessions_router
-from apps.api.pentest.reporting.stream import router as pentest_stream_router
-from apps.api.pentest.evasion.stealth import router as pentest_stealth_router
-from apps.api.pentest.evasion.network_evasion import router as pentest_network_evasion_router
-from apps.api.pentest.reporting.templates import router as pentest_templates_router
-from apps.api.pentest.tools.hash_cracker import router as pentest_hash_cracker_router
-from apps.api.pentest.reporting.report import router as pentest_report_router
-from apps.api.pentest.tools.wordlist_gen import router as pentest_wordgen_router
-from apps.api.pentest.recon.deep_scan import router as pentest_deep_scan_router
-from apps.api.pentest.exploitation.blind_extract import router as pentest_blind_router
-from apps.api.pentest.tools.oob_server import router as pentest_oob_router
-from apps.api.pentest.tools.oob_server import callback_router as oob_callback_router
-from apps.api.pentest.exploitation.ssrf_advanced import router as pentest_ssrf_router
-from apps.api.pentest.recon.subdomain_discovery import router as pentest_subdomain_router
-from apps.api.pentest.evasion.waf_bypass import router as pentest_waf_bypass_router
-from apps.api.pentest.post_exploit.exfiltration import router as pentest_exfil_router
-from apps.api.pentest.post_exploit.persistence import router as pentest_persist_router
-from apps.api.pentest.post_exploit.antiforensics import router as pentest_antiforensics_router
-from apps.api.pentest.automation.killchain import router as pentest_killchain_router
-from apps.api.pentest.post_exploit.shell_handler import router as pentest_shell_router
-from apps.api.pentest.post_exploit.shell_handler import ws_router as shell_ws_router
-from apps.api.pentest.automation.chain_engine import router as pentest_chain_router
-from apps.api.pentest.exploitation.sqli_engine import router as pentest_sqli_router
-from apps.api.pentest.tools.session_manager import router as pentest_sessmgr_router
-from apps.api.pentest.post_exploit.privesc import router as pentest_privesc_router
-from apps.api.pentest.post_exploit.cred_harvester import router as pentest_creds_router
-from apps.api.pentest.post_exploit.lateral import router as pentest_lateral_router
-from apps.api.pentest.exploitation.xss_engine import router as pentest_xss_engine_router
-from apps.api.pentest.exploitation.lfi_rce import router as pentest_lfi_rce_router
-from apps.api.pentest.exploitation.protocol_exploit import router as pentest_protocols_router
-from apps.api.pentest.post_exploit.shell_bridge import router as pentest_bridge_router
-from apps.api.pentest.post_exploit.c2_server import router as pentest_c2_router
-from apps.api.pentest.post_exploit.c2_server import beacon_router as c2_beacon_router
-from apps.api.pentest.tools.http_proxy import router as pentest_proxy_router
-from apps.api.pentest.tools.http_proxy import ws_router as proxy_ws_router
-from apps.api.pentest.evasion.evasion import router as pentest_evasion_router
-from apps.api.pentest.tools.fuzzer import router as pentest_fuzzer_router
-from apps.api.pentest.recon.net_scanner import router as pentest_netscan_router
-from apps.api.pentest.automation.exploit_dev import router as pentest_exploitdev_router
-from apps.api.pentest.automation.ai_assistant import router as pentest_ai_router
-from apps.api.pentest.automation.workflows import router as pentest_workflows_router
-from apps.api.pentest.reporting.live_dashboard import router as pentest_live_router
-from apps.api.pentest.recon.headless_scanner import router as pentest_headless_router
-from apps.api.pentest.automation.auto_exploit import router as pentest_autoexploit_router
-from apps.api.pentest.automation.autochain import router as pentest_autochain_router
-from apps.api.pentest.tools.curl_client import router as pentest_curl_router
-from apps.api.pentest.tools.http_history import router as pentest_http_history_router
-from apps.api.pentest.evasion.payload_obfuscation import router as pentest_obfuscation_router
-from apps.api.pentest.evasion.traffic_shaping import router as pentest_traffic_router
 from apps.api.routes.findings import router as findings_router
-from apps.api.pentest.recon.vuln_correlator import router as pentest_correlator_router
-from apps.api.pentest.automation.exploit_dispatcher import router as pentest_dispatcher_router
-from apps.api.pentest.exploitation.race_condition import router as pentest_race_router
-from apps.api.pentest.exploitation.websocket import router as pentest_ws_security_router
-from apps.api.pentest.exploitation.api_fuzzer import router as pentest_api_fuzzer_router
-from apps.api.pentest.exploitation.jwt_attack import router as pentest_jwt_router
-from apps.api.pentest.exploitation.ssti_engine import router as pentest_ssti_router
-from apps.api.pentest.exploitation.deserialization import router as pentest_deser_router
-from apps.api.pentest.recon.cloud_scanner import router as pentest_cloud_router
-from apps.api.pentest.post_exploit.ad_attack import router as pentest_ad_router
-from apps.api.pentest.automation.ai_vuln_analyzer import router as pentest_ai_vuln_router
-from apps.api.pentest.exploitation.smart_payload import router as pentest_smart_payload_router
-from apps.api.pentest.recon.iot_analyzer import router as pentest_iot_router
-from apps.api.pentest.recon.mobile_tester import router as pentest_mobile_router
-from apps.api.pentest.post_exploit.adversary_emulation import router as pentest_adversary_router
-from apps.api.pentest.post_exploit.phishing import router as pentest_phishing_router
-from apps.api.pentest.post_exploit.social_engineering import router as pentest_social_router
-from apps.api.pentest.recon.network_mapper import router as pentest_netmap_router
-from apps.api.pentest.automation.compliance import router as pentest_compliance_router
-from apps.api.pentest.automation.threat_model import router as pentest_threat_model_router
-from apps.api.pentest.post_exploit.executor import router as pentest_executor_router
-from apps.api.pentest.post_exploit.executor import ws_router as executor_ws_router
-from apps.api.pentest.recon.network_exec import router as pentest_network_exec_router
-from apps.api.pentest.recon.web_crawler import router as pentest_web_crawler_router
-from apps.api.pentest.recon.auth_scanner import router as pentest_auth_scanner_router
-from apps.api.pentest.tools.interceptor import router as pentest_interceptor_router
-from apps.api.pentest.tools.interceptor import ws_router as interceptor_ws_router
-from apps.api.pentest.implants.payload_engine import router as pentest_payload_engine_router
-from apps.api.pentest.recon.vuln_scanner import router as pentest_vuln_scanner_router
-from apps.api.pentest.tools.brute import router as pentest_brute_router
-from apps.api.routes.orchestrator import router as orchestrator_router
-from apps.api.routes.orchestrator import ws_router as orchestrator_ws_router
-from apps.api.pentest.campaign.routes import router as campaign_router
-from apps.api.pentest.campaign.routes import ws_router as campaign_ws_router
-from apps.api.uba.routes import router as uba_router
-from apps.api.cases.routes import router as cases_router
-from apps.api.compliance.routes import router as compliance_router
-from apps.api.pentest.post_exploit.bloodhound_export import router as bloodhound_router
-from apps.api.pentest.recon.k8s_rbac import router as k8s_rbac_router
-from apps.api.pentest.exploitation.shellcode_encoder import router as shellcode_router
-from apps.api.ai.routes import router as ai_router
+from apps.api.routes.orchestrator import (
+    router as orchestrator_router,
+    ws_router as orchestrator_ws_router,
+)
 from apps.api.security import require_api_key
-
-# Import all models so Base.metadata knows about them.
-import apps.api.models  # noqa: F401
+from apps.api.uba.routes import router as uba_router
 
 # ---------------------------------------------------------------------------
 # Structured logging
@@ -179,6 +194,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     try:
         from alembic.config import Config
+
         from alembic import command
 
         alembic_cfg = Config("alembic.ini")
@@ -214,8 +230,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # et passe en mode "sleep long".
     redteam_listener_task = None
     try:
-        from apps.api.pentest.c2_sliver.poller import sliver_poller
         from apps.api.pentest.c2_sliver.notifier import redteam_event_listener
+        from apps.api.pentest.c2_sliver.poller import sliver_poller
 
         await sliver_poller.start()
         redteam_listener_task = asyncio.create_task(
@@ -248,7 +264,8 @@ def _seed_default_admin() -> None:
     import os
     import secrets
     import uuid
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from apps.api.auth import hash_password
     from apps.api.models.user import User
 
@@ -266,7 +283,7 @@ def _seed_default_admin() -> None:
             hashed_password=hash_password(bootstrap_password),
             role="admin",
             is_active=True,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         db.add(admin)
         db.commit()
@@ -653,8 +670,8 @@ def create_app() -> FastAPI:
     app.include_router(pipeline_router, tags=["Pipeline"])
 
     # ── IOC & Threat Feeds ──
-    from apps.api.routes.ioc import router as ioc_router
     from apps.api.routes.feeds import router as feeds_router
+    from apps.api.routes.ioc import router as ioc_router
     app.include_router(ioc_router, tags=["IOC Management"])
     app.include_router(feeds_router, tags=["Threat Feeds"])
 

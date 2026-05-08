@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class BaseParser:
 
     def normalize(self, parsed: dict[str, Any], raw: str | None = None) -> dict[str, Any]:
         """Map *parsed* dict to unified Event-compatible dict."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return {
             "id": parsed.get("id") or str(uuid.uuid4()),
             "ts": parsed.get("ts") or parsed.get("timestamp") or now,
@@ -158,15 +158,15 @@ def supported_formats() -> list[dict[str, Any]]:
 
 def _init_parsers() -> None:
     """Import and register all built-in parsers."""
-    from apps.api.parsers.cef import CEFParser
-    from apps.api.parsers.leef import LEEFParser
-    from apps.api.parsers.json_log import JSONLogParser
-    from apps.api.parsers.syslog_parser import SyslogParser
-    from apps.api.parsers.windows_event import WindowsEventParser
     from apps.api.parsers.apache import ApacheParser
-    from apps.api.parsers.firewall import FirewallParser
+    from apps.api.parsers.cef import CEFParser
     from apps.api.parsers.cloud import CloudLogParser
     from apps.api.parsers.csv_parser import CSVLogParser
+    from apps.api.parsers.firewall import FirewallParser
+    from apps.api.parsers.json_log import JSONLogParser
+    from apps.api.parsers.leef import LEEFParser
+    from apps.api.parsers.syslog_parser import SyslogParser
+    from apps.api.parsers.windows_event import WindowsEventParser
 
     for cls in [
         CEFParser,

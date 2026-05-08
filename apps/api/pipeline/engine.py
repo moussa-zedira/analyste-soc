@@ -5,19 +5,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
-from apps.api.pipeline.config import PipelineConfig, get_pipeline_config, STAGE_ORDER
+from apps.api.pipeline.config import STAGE_ORDER, PipelineConfig, get_pipeline_config
 from apps.api.pipeline.context import EventContext, StageMetadata
 from apps.api.pipeline.metrics import get_pipeline_metrics
-from apps.api.pipeline.stages import ALL_STAGES, STAGE_MAP, BaseStage
+from apps.api.pipeline.stages import STAGE_MAP, BaseStage
 
 logger = logging.getLogger(__name__)
 
 
-class PipelineMode(str, Enum):
+class PipelineMode(StrEnum):
     REALTIME = "realtime"
     BATCH = "batch"
     REPLAY = "replay"
@@ -105,7 +106,7 @@ class PipelineEngine:
     ) -> EventContext:
         ctx = EventContext(raw=raw, dry_run=dry_run)
         ctx.metadata["mode"] = self.mode.value
-        ctx.metadata["started_at"] = datetime.now(timezone.utc).isoformat()
+        ctx.metadata["started_at"] = datetime.now(UTC).isoformat()
 
         pipeline_t0 = time.monotonic()
         pipeline_success = True
@@ -149,7 +150,7 @@ class PipelineEngine:
             i += 1
 
         pipeline_elapsed = (time.monotonic() - pipeline_t0) * 1000
-        ctx.metadata["finished_at"] = datetime.now(timezone.utc).isoformat()
+        ctx.metadata["finished_at"] = datetime.now(UTC).isoformat()
         ctx.metadata["total_ms"] = round(pipeline_elapsed, 2)
         ctx.metadata["success"] = pipeline_success
 
@@ -167,7 +168,7 @@ class PipelineEngine:
     ) -> tuple[EventContext, bool]:
         sm = StageMetadata(
             name=stage.name,
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
             status="running",
         )
         ctx.stage_meta.append(sm)
@@ -190,15 +191,15 @@ class PipelineEngine:
                 ctx = await hook(ctx)
 
             elapsed = (time.monotonic() - t0) * 1000
-            sm.finished_at = datetime.now(timezone.utc)
+            sm.finished_at = datetime.now(UTC)
             sm.duration_ms = round(elapsed, 2)
             sm.status = "success"
             self.metrics.record_stage(stage.name, elapsed, "success")
             return ctx, True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed = (time.monotonic() - t0) * 1000
-            sm.finished_at = datetime.now(timezone.utc)
+            sm.finished_at = datetime.now(UTC)
             sm.duration_ms = round(elapsed, 2)
             sm.status = "error"
             sm.error = f"Timeout after {self.config.get_timeout(stage.name)}s"
@@ -211,7 +212,7 @@ class PipelineEngine:
 
         except Exception as exc:
             elapsed = (time.monotonic() - t0) * 1000
-            sm.finished_at = datetime.now(timezone.utc)
+            sm.finished_at = datetime.now(UTC)
             sm.duration_ms = round(elapsed, 2)
             sm.status = "error"
             sm.error = str(exc)[:500]
@@ -236,7 +237,6 @@ class PipelineEngine:
         Each stage gets a copy of enrichments to avoid races, then results
         are merged back.
         """
-        import copy
 
         async def _run_one(stage: BaseStage) -> tuple[str, EventContext, bool]:
             # Shallow-copy ctx for parallel execution

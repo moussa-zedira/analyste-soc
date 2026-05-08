@@ -4,23 +4,20 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import json
 import re
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
 from jose import jwt
-from jose.constants import ALGORITHMS
 
+from apps.api.sso import verify as verify_mod
 from apps.api.sso.oidc_client import (
     code_challenge,
     discover_oidc,
     gen_code_verifier,
 )
-from apps.api.sso import verify as verify_mod
-
 
 PKCE_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
 
@@ -172,7 +169,7 @@ async def test_verify_id_token_rejects_expired(monkeypatch):
     issuer = "https://idp.test"
     audience = "test-client-id"
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expired_claims = {
         "iss": issuer,
         "aud": audience,
@@ -230,7 +227,7 @@ async def test_verify_id_token_accepts_valid(monkeypatch):
 
     issuer = "https://idp.test"
     audience = "client-xyz"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     claims = {
         "iss": issuer,
         "aud": audience,

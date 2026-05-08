@@ -24,7 +24,6 @@ from apps.api.pentest.campaign.loader import (
 )
 from apps.api.pentest.campaign.models import CampaignStatus, Scenario, Stage, StageStatus
 
-
 # ──────────────────────────────────────────────────────────────────────────
 # Interpolation
 # ──────────────────────────────────────────────────────────────────────────

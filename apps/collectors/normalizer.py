@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 logger = logging.getLogger(__name__)
@@ -61,13 +61,13 @@ def parse_line(line: str) -> NormalizedEvent | None:
 
 def init_parsers() -> None:
     """Charge et enregistre tous les parsers disponibles."""
-    from apps.collectors.parsers.syslog_rfc3164 import Rfc3164Parser
-    from apps.collectors.parsers.syslog_rfc5424 import Rfc5424Parser
-    from apps.collectors.parsers.cef import CefParser
-    from apps.collectors.parsers.json_log import JsonLogParser
-    from apps.collectors.parsers.windows_xml import WindowsXmlParser
     from apps.collectors.parsers.apache_combined import ApacheCombinedParser
     from apps.collectors.parsers.auth_log import AuthLogParser
+    from apps.collectors.parsers.cef import CefParser
+    from apps.collectors.parsers.json_log import JsonLogParser
+    from apps.collectors.parsers.syslog_rfc3164 import Rfc3164Parser
+    from apps.collectors.parsers.syslog_rfc5424 import Rfc5424Parser
+    from apps.collectors.parsers.windows_xml import WindowsXmlParser
 
     for cls in [
         Rfc3164Parser,

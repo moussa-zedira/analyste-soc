@@ -15,7 +15,7 @@ import logging
 import os
 import threading
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import func
@@ -68,8 +68,8 @@ def _model_is_stale(meta: dict) -> bool:
     except ValueError:
         return True
     if trained.tzinfo is None:
-        trained = trained.replace(tzinfo=timezone.utc)
-    age = datetime.now(timezone.utc) - trained
+        trained = trained.replace(tzinfo=UTC)
+    age = datetime.now(UTC) - trained
     return age > timedelta(days=MODEL_MAX_AGE_DAYS)
 
 
@@ -109,7 +109,7 @@ def _persist_model(model, n_samples: int, n_features: int) -> None:
         MODEL_DIR.mkdir(parents=True, exist_ok=True)
         joblib.dump(model, MODEL_PATH)
         meta = {
-            "timestamp_train": datetime.now(timezone.utc).isoformat(),
+            "timestamp_train": datetime.now(UTC).isoformat(),
             "n_samples_train": n_samples,
             "n_features": n_features,
             "model_class": type(model).__name__,
@@ -133,7 +133,7 @@ def ensure_model_loaded() -> None:
 
 def _build_feature_vectors(
     db: Session, window_minutes: int = 60,
-) -> tuple["np.ndarray", list[str], dict[str, list[str]]]:
+) -> tuple[np.ndarray, list[str], dict[str, list[str]]]:
     """Construit les vecteurs de caracteristiques par IP a partir des evenements recents.
 
     Caracteristiques par src_ip :
@@ -142,7 +142,7 @@ def _build_feature_vectors(
 
     Retourne (matrice_features, liste_ip, ids_evenements_par_ip).
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
+    cutoff = datetime.now(UTC) - timedelta(minutes=window_minutes)
 
     rows = (
         db.query(
@@ -325,7 +325,7 @@ def train_and_detect(
         scores = model.decision_function(X)
         _persist_model(model, n_samples=len(ips), n_features=int(X.shape[1]))
         info = {
-            "timestamp_train": datetime.now(timezone.utc).isoformat(),
+            "timestamp_train": datetime.now(UTC).isoformat(),
             "n_samples_train": len(ips),
             "n_features": int(X.shape[1]),
             "model_class": type(model).__name__,
@@ -342,11 +342,11 @@ def train_and_detect(
         predictions = model.predict(X)
         scores = model.decision_function(X)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     anomalies_detected = 0
     incidents_created = 0
 
-    for i, (pred, score) in enumerate(zip(predictions, scores)):
+    for i, (pred, score) in enumerate(zip(predictions, scores, strict=False)):
         if pred == -1:
             anomalies_detected += 1
             ip = ips[i]

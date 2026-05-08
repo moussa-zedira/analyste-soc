@@ -6,7 +6,7 @@ import json
 import logging
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -81,7 +81,7 @@ def provision_or_update_user(
         .first()
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if session is not None:
         user = db.get(User, session.user_id)

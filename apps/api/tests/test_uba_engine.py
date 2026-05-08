@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
-from apps.api.uba.engine import _entity_key, _surprise, _ua_hash, _hour_bucket
-from datetime import datetime, timezone
+from apps.api.uba.engine import _entity_key, _hour_bucket, _surprise, _ua_hash
 
 
 def test_surprise_high_for_rare_event():
@@ -53,5 +53,5 @@ def test_ua_hash_is_deterministic_and_short():
 
 
 def test_hour_bucket_returns_string_in_range():
-    ts = datetime(2026, 4, 17, 14, 30, tzinfo=timezone.utc)
+    ts = datetime(2026, 4, 17, 14, 30, tzinfo=UTC)
     assert _hour_bucket(ts) == "14"

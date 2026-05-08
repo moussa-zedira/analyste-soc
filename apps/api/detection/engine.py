@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -81,7 +81,7 @@ def run_detection(db: Session) -> dict:
 
     Retourne un dictionnaire avec rules_evaluated et incidents_created.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     since = now - LOOKBACK
 
     rules: list[Rule] = get_rules(enabled_only=True)

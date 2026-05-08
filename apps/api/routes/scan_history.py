@@ -6,11 +6,10 @@ import csv
 import io
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -37,8 +36,8 @@ class ScanResultCreate(BaseModel):
     result_json: str  # JSON serialise
     duration_ms: int = 0
     findings_count: int = 0
-    severity_max: Optional[str] = None
-    notes: Optional[str] = None
+    severity_max: str | None = None
+    notes: str | None = None
 
 
 class ScanResultOut(BaseModel):
@@ -52,8 +51,8 @@ class ScanResultOut(BaseModel):
     status: str
     duration_ms: int
     findings_count: int
-    severity_max: Optional[str]
-    notes: Optional[str]
+    severity_max: str | None
+    notes: str | None
 
 
 class ScanResultDetail(ScanResultOut):
@@ -202,12 +201,12 @@ def list_scans(
     db: Session = Depends(get_db),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    module_id: Optional[str] = None,
-    target: Optional[str] = None,
-    severity: Optional[str] = None,
-    status_filter: Optional[str] = Query(None, alias="status"),
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
+    module_id: str | None = None,
+    target: str | None = None,
+    severity: str | None = None,
+    status_filter: str | None = Query(None, alias="status"),
+    date_from: str | None = None,
+    date_to: str | None = None,
 ) -> PaginatedScans:
     """Liste les scans avec filtres et pagination."""
     query = db.query(ScanResult)
@@ -276,7 +275,7 @@ def create_scan(
 
     scan = ScanResult(
         id=str(uuid.uuid4()),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
         module_id=payload.module_id,
         target=payload.target,
         mode=payload.mode,
@@ -508,7 +507,7 @@ def _build_purge_filter(db: Session, req: PurgeRequest):
     """Construit la requete filtree pour la purge."""
     query = db.query(ScanResult)
     if req.older_than_hours is not None:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=req.older_than_hours)
+        cutoff = datetime.now(UTC) - timedelta(hours=req.older_than_hours)
         query = query.filter(ScanResult.created_at < cutoff)
     if req.module_ids:
         query = query.filter(ScanResult.module_id.in_(req.module_ids))

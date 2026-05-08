@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-
 _SEVERITY_TO_SARIF_LEVEL = {
     "critical": "error",
     "high": "error",
@@ -41,7 +40,7 @@ def generate_sarif(
     rules_map: dict[str, dict] = {}
     results: list[dict] = []
 
-    for idx, finding in enumerate(findings):
+    for _idx, finding in enumerate(findings):
         rule_id = _make_rule_id(finding)
 
         if rule_id not in rules_map:

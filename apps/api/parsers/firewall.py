@@ -11,10 +11,10 @@ Supported formats:
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from apps.api.parsers import BaseParser, _normalize_severity
+from apps.api.parsers import BaseParser
 
 # ---------------------------------------------------------------------------
 # Cisco ASA
@@ -77,7 +77,7 @@ def _parse_asa(raw: str) -> dict[str, Any] | None:
     user_m = re.search(r"user '?(\S+?)'?(?:\s|$)", message, re.I)
 
     return {
-        "ts": datetime.now(timezone.utc),
+        "ts": datetime.now(UTC),
         "source": "firewall:cisco_asa",
         "event_type": event_type,
         "severity": _ASA_LEVEL_MAP.get(level, "low"),
@@ -131,7 +131,7 @@ def _parse_iptables(raw: str) -> dict[str, Any] | None:
         action_prefix = "event"
 
     return {
-        "ts": datetime.now(timezone.utc),
+        "ts": datetime.now(UTC),
         "source": "firewall:iptables",
         "event_type": f"network.{action_prefix}",
         "severity": "medium" if action_prefix == "blocked" else "low",
@@ -179,7 +179,7 @@ def _parse_panos(raw: str) -> dict[str, Any] | None:
         ts = None
         for fmt in ("%Y/%m/%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
             try:
-                ts = datetime.strptime(ts_str, fmt).replace(tzinfo=timezone.utc)
+                ts = datetime.strptime(ts_str, fmt).replace(tzinfo=UTC)
                 break
             except ValueError:
                 continue
@@ -206,7 +206,7 @@ def _parse_panos(raw: str) -> dict[str, Any] | None:
     subtype = parts[4].strip() if len(parts) > 4 else ""
 
     return {
-        "ts": ts or datetime.now(timezone.utc),
+        "ts": ts or datetime.now(UTC),
         "source": "firewall:paloalto",
         "event_type": event_type,
         "severity": severity,
@@ -265,7 +265,7 @@ def _parse_pfsense(raw: str) -> dict[str, Any] | None:
         severity = "low"
 
     return {
-        "ts": datetime.now(timezone.utc),
+        "ts": datetime.now(UTC),
         "source": "firewall:pfsense",
         "event_type": event_type,
         "severity": severity,
@@ -298,7 +298,7 @@ def _parse_generic_fw(raw: str) -> dict[str, Any] | None:
     # Must have some network-related keys
     network_keys = {"src", "dst", "srcip", "dstip", "action", "proto",
                     "src_ip", "dst_ip", "srcaddr", "dstaddr", "sport", "dport"}
-    if len(set(k.lower() for k in fields) & network_keys) < 2:
+    if len({k.lower() for k in fields} & network_keys) < 2:
         return None
 
     src_ip = fields.get("src") or fields.get("srcip") or fields.get("src_ip") or fields.get("srcaddr")
@@ -318,7 +318,7 @@ def _parse_generic_fw(raw: str) -> dict[str, Any] | None:
     username = fields.get("user") or fields.get("srcuser") or fields.get("username")
 
     return {
-        "ts": datetime.now(timezone.utc),
+        "ts": datetime.now(UTC),
         "source": "firewall:generic",
         "event_type": event_type,
         "severity": severity,
@@ -353,9 +353,7 @@ class FirewallParser(BaseParser):
                 return True
         # PAN-OS CSV heuristic
         parts = raw.split(",")
-        if len(parts) > 30 and parts[3].strip() in ("TRAFFIC", "THREAT", "SYSTEM", "URL"):
-            return True
-        return False
+        return bool(len(parts) > 30 and parts[3].strip() in ("TRAFFIC", "THREAT", "SYSTEM", "URL"))
 
     def parse(self, raw: str) -> dict[str, Any] | None:
         if "%ASA-" in raw:

@@ -6,18 +6,18 @@ import hashlib
 import logging
 import math
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from apps.api.broadcast import broadcaster
+from apps.api.config import get_settings
+from apps.api.detection.triage import _load_whitelist
 from apps.api.models.anomaly_baseline import AnomalyBaseline
 from apps.api.models.event import Event
 from apps.api.models.incident import Incident
 from apps.api.models.incident_event import IncidentEvent
-from apps.api.detection.triage import classify_event, _is_whitelisted, _load_whitelist
-from apps.api.config import get_settings
 from apps.api.notifications.webhook import notify_incident_created
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ def _create_anomaly_incident(
     if db.query(Incident.id).filter(Incident.dedup_hash == dedup_hash).first():
         return False
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     incident_id = str(uuid.uuid4())
 
     incident = Incident(
@@ -122,7 +122,7 @@ def _get_or_create_baseline(
 
 def run_anomaly_detection(db: Session) -> dict:
     """Execute la detection d'anomalies statistiques. Retourne un resume."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     window_start = now - timedelta(minutes=LOOKBACK_MINUTES)
     incidents_created = 0
 
@@ -132,9 +132,9 @@ def run_anomaly_detection(db: Session) -> dict:
     if settings.TRIAGE_ENABLED:
         from apps.api.detection.triage import EVENT_CLASSIFICATION
         benign_types = {k for k, v in EVENT_CLASSIFICATION.items() if v == "benign"}
-        whitelist = _load_whitelist(db)
+        _load_whitelist(db)
     else:
-        whitelist = []
+        pass
 
     # --- Volume anomaly: events per event_type ---
     volume_rows = (

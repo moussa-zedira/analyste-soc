@@ -10,8 +10,7 @@ import json
 import logging
 import secrets
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -63,9 +62,9 @@ class SSOProviderAdmin(BaseModel):
     client_secret: str = Field(default="***")
     scopes: str
     enabled: bool
-    allowed_domains: Optional[list] = None
+    allowed_domains: list | None = None
     default_role: str
-    group_to_role_mapping: Optional[dict] = None
+    group_to_role_mapping: dict | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -78,21 +77,21 @@ class SSOProviderCreate(BaseModel):
     client_secret: str
     scopes: str = "openid email profile"
     enabled: bool = True
-    allowed_domains: Optional[list[str]] = None
+    allowed_domains: list[str] | None = None
     default_role: str = "analyst"
-    group_to_role_mapping: Optional[dict[str, str]] = None
+    group_to_role_mapping: dict[str, str] | None = None
 
 
 class SSOProviderUpdate(BaseModel):
-    name: Optional[str] = None
-    issuer_url: Optional[str] = None
-    client_id: Optional[str] = None
-    client_secret: Optional[str] = None
-    scopes: Optional[str] = None
-    enabled: Optional[bool] = None
-    allowed_domains: Optional[list[str]] = None
-    default_role: Optional[str] = None
-    group_to_role_mapping: Optional[dict[str, str]] = None
+    name: str | None = None
+    issuer_url: str | None = None
+    client_id: str | None = None
+    client_secret: str | None = None
+    scopes: str | None = None
+    enabled: bool | None = None
+    allowed_domains: list[str] | None = None
+    default_role: str | None = None
+    group_to_role_mapping: dict[str, str] | None = None
 
 
 class SSOLoginInit(BaseModel):
@@ -314,7 +313,7 @@ def create_provider(
     if payload.default_role not in ("analyst", "lead", "admin"):
         raise HTTPException(status_code=400, detail="Invalid default_role")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     provider = SSOProvider(
         id=str(uuid.uuid4()),
         provider_type=payload.provider_type,
@@ -370,7 +369,7 @@ def update_provider(
 
     for k, v in data.items():
         setattr(provider, k, v)
-    provider.updated_at = datetime.now(timezone.utc)
+    provider.updated_at = datetime.now(UTC)
     db.add(provider)
     db.commit()
     db.refresh(provider)

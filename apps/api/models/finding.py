@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
     Float,
     Integer,
-    JSON,
     String,
     Text,
     func,

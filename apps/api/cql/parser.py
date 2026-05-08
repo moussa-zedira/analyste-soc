@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from apps.api.cql.lexer import Lexer, Token, TokenType, LexerError
-
+from apps.api.cql.lexer import Lexer, Token, TokenType
 
 # ---------------------------------------------------------------------------
 # AST Node types
@@ -120,7 +119,7 @@ class Parser:
         self.pos = 0
 
     @classmethod
-    def from_query(cls, query: str) -> "Parser":
+    def from_query(cls, query: str) -> Parser:
         lexer = Lexer(query)
         tokens = lexer.tokenize()
         return cls(tokens)

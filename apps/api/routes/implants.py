@@ -69,7 +69,7 @@ class PivotRequest(BaseModel):
 
 @router.post("/build")
 async def build_implant(body: ImplantBuildRequest):
-    from apps.api.pentest.implants.implant_builder import build_implant as _build, ImplantConfig
+    from apps.api.pentest.implants.implant_builder import ImplantConfig, build_implant as _build
     try:
         cfg = ImplantConfig(**body.model_dump())
         result = _build(cfg)

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import re
+import logging
 from difflib import SequenceMatcher
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from apps.api.cql.executor import EVENT_FIELDS, FIELD_ALIASES, _STRING_FIELDS, _NUMERIC_FIELDS
 from apps.api.cql.commands import list_commands
-import logging
+from apps.api.cql.executor import _DATETIME_FIELDS, _NUMERIC_FIELDS, EVENT_FIELDS, FIELD_ALIASES
+from apps.api.models.event import Event
 
 logger = logging.getLogger(__name__)
 
@@ -337,8 +337,6 @@ def _suggest_values(field_name: str | None, db: Session | None) -> list[dict]:
         try:
             col = getattr(Event, resolved, None)
             if col is not None:
-                from sqlalchemy import func as sa_func
-                from apps.api.models.event import Event
                 vals = (
                     db.query(col)
                     .filter(col.isnot(None))

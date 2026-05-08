@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -50,7 +50,7 @@ def _add_timeline(
     entry = CaseTimelineEntry(
         id=str(uuid.uuid4()),
         case_id=case_id,
-        ts=datetime.now(timezone.utc),
+        ts=datetime.now(UTC),
         actor_id=actor_id,
         actor_username=actor_username,
         kind=kind,
@@ -82,7 +82,7 @@ def create_case(
 ) -> Case:
     if priority not in VALID_PRIORITIES:
         raise ValueError(f"invalid priority: {priority}")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     case = Case(
         id=str(uuid.uuid4()),
         title=title,
@@ -126,7 +126,7 @@ def transition_case(
         raise ValueError(f"transition {case.status} -> {new_status} not allowed")
     old = case.status
     case.status = new_status
-    case.updated_at = datetime.now(timezone.utc)
+    case.updated_at = datetime.now(UTC)
     if new_status == "closed":
         case.closed_at = case.updated_at
     if old in ("open",) and new_status != "open" and not case.sla_responded_at:
@@ -154,7 +154,7 @@ def assign_case(
         raise LookupError("case not found")
     case.assignee_id = assignee_id
     case.assignee_username = assignee_username
-    case.updated_at = datetime.now(timezone.utc)
+    case.updated_at = datetime.now(UTC)
     _add_timeline(
         db, case_id, "assignment",
         f"assigned to {assignee_username or assignee_id or '(unassigned)'}",
@@ -213,7 +213,7 @@ def add_evidence(
     case = db.get(Case, case_id)
     if not case:
         raise LookupError("case not found")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     sha = hashlib.sha256(content.encode("utf-8", errors="ignore")).hexdigest()
     custody = [_custody_link(prev_hash="", actor=actor_username or "system",
                              action="collected", ts=now)]
@@ -254,7 +254,7 @@ def append_custody(
         raise LookupError("evidence not found")
     chain = list(ev.custody_chain or [])
     prev = chain[-1]["hash"] if chain else ""
-    link = _custody_link(prev, actor_username or "system", action, datetime.now(timezone.utc))
+    link = _custody_link(prev, actor_username or "system", action, datetime.now(UTC))
     chain.append(link)
     ev.custody_chain = chain
     db.commit()
@@ -267,7 +267,7 @@ def append_custody(
 
 
 def compute_sla_status(case: Case) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     response_deadline = case.created_at + timedelta(minutes=case.sla_response_minutes)
     resolution_deadline = case.created_at + timedelta(minutes=case.sla_resolution_minutes)
     response_breached = (

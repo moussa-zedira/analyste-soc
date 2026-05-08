@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -107,7 +107,7 @@ class EventContext:
         if not base.get("id"):
             base["id"] = self.context_id
         if not base.get("ts"):
-            base["ts"] = datetime.now(timezone.utc)
+            base["ts"] = datetime.now(UTC)
         # Merge TI score
         ti = self.enrichments.get("ti", {})
         if ti:

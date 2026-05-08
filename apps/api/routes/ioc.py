@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -13,24 +12,24 @@ from sqlalchemy.orm import Session
 from apps.api.db.session import get_db
 from apps.api.security import require_api_key
 from apps.api.threat_intel.ioc_manager import (
-    create_ioc,
-    get_ioc,
-    list_iocs,
-    update_ioc,
-    delete_ioc,
-    revoke_ioc,
-    mark_false_positive,
-    get_sightings,
-    get_related_iocs,
-    bulk_import_stix,
-    bulk_import_csv,
-    bulk_import_text,
-    export_stix_bundle,
-    export_csv,
-    get_ioc_stats,
-    IOC_TYPES,
     IOC_STATES,
+    IOC_TYPES,
     TLP_LEVELS,
+    bulk_import_csv,
+    bulk_import_stix,
+    bulk_import_text,
+    create_ioc,
+    delete_ioc,
+    export_csv,
+    export_stix_bundle,
+    get_ioc,
+    get_ioc_stats,
+    get_related_iocs,
+    get_sightings,
+    list_iocs,
+    mark_false_positive,
+    revoke_ioc,
+    update_ioc,
 )
 
 router = APIRouter(prefix="/ioc", dependencies=[Depends(require_api_key)])

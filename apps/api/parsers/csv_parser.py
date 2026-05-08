@@ -11,8 +11,7 @@ from __future__ import annotations
 
 import csv
 import io
-import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from apps.api.parsers import BaseParser, _normalize_severity
@@ -117,9 +116,7 @@ class CSVLogParser(BaseParser):
         # Must have at least 3 delimited fields
         delim = _detect_delimiter(stripped)
         parts = stripped.split(delim)
-        if len(parts) < 3:
-            return False
-        return True
+        return not len(parts) < 3
 
     def parse(self, raw: str) -> dict[str, Any] | None:
         return self.parse_with_headers(raw)
@@ -212,7 +209,7 @@ class CSVLogParser(BaseParser):
                 try:
                     ts = datetime.strptime(ts_raw, fmt)
                     if ts.tzinfo is None:
-                        ts = ts.replace(tzinfo=timezone.utc)
+                        ts = ts.replace(tzinfo=UTC)
                     break
                 except ValueError:
                     continue
@@ -220,7 +217,7 @@ class CSVLogParser(BaseParser):
         severity_raw = _get(_SEVERITY_HEADERS) or "low"
 
         return {
-            "ts": ts or datetime.now(timezone.utc),
+            "ts": ts or datetime.now(UTC),
             "source": f"csv:{_get(_SOURCE_HEADERS) or 'unknown'}",
             "event_type": _get(_EVENT_TYPE_HEADERS) or "csv.event",
             "severity": _normalize_severity(severity_raw),

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 from apps.api.db.session import get_db
 from apps.api.models.soar import Playbook, PlaybookExecution, PlaybookStepResult
 from apps.api.security import require_api_key
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +154,7 @@ def seed_builtin_playbooks(db: Session) -> int:
             Playbook.name == name, Playbook.builtin.is_(True),
         ).first()
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if existing:
             existing.definition = pb_def["definition"]
             existing.description = pb_def.get("description", "")
@@ -223,7 +222,7 @@ def create_playbook(body: PlaybookCreate, db: Session = Depends(get_db)):
             detail={"validation_errors": errors},
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     playbook = Playbook(
         id=str(uuid.uuid4()),
         name=body.name,
@@ -270,7 +269,7 @@ async def execute_playbook(
 
     # Launch via Celery for long-running execution
     from apps.api.soar.tasks import task_execute_playbook
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     execution_id = str(uuid.uuid4())
 
     execution = PlaybookExecution(
@@ -440,7 +439,7 @@ def cancel_execution(execution_id: str, db: Session = Depends(get_db)):
             logger.debug("soar: ignored exception", exc_info=True)
 
     execution.status = "cancelled"
-    execution.finished_at = datetime.now(timezone.utc)
+    execution.finished_at = datetime.now(UTC)
     db.commit()
 
     # Publish cancel status

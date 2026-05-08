@@ -61,7 +61,6 @@ class LDAPConnector(Connector):
             return {"applied": False, "reason": "ldap_not_configured"}
 
         def _do():
-            import ldap3
             from ldap3 import MODIFY_REPLACE
             conn = self._connect()
             try:
@@ -89,7 +88,6 @@ class LDAPConnector(Connector):
             return {"applied": False, "reason": "ldap_not_configured"}
 
         def _do():
-            import ldap3
             from ldap3 import MODIFY_REPLACE
             conn = self._connect()
             try:

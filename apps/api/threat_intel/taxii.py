@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -409,7 +409,7 @@ def taxii_add_objects(
             if existing:
                 existing.object_json = json.dumps(obj, default=str)
                 existing.stix_version = obj.get("modified")
-                existing.added = datetime.now(timezone.utc)
+                existing.added = datetime.now(UTC)
             else:
                 db.add(STIXObject(
                     collection_id=collection_id,

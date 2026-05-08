@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.api.db.base import Base
+
+if TYPE_CHECKING:
+    from apps.api.models.incident import Incident
 
 
 class Event(Base):
@@ -28,7 +32,7 @@ class Event(Base):
     ti_score: Mapped[int | None] = mapped_column(nullable=True)
     ti_tags: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    incidents: Mapped[list["Incident"]] = relationship(
+    incidents: Mapped[list[Incident]] = relationship(
         "Incident",
         secondary="incident_events",
         back_populates="events",

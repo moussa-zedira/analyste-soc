@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from apps.api.models.event import Event
-from apps.api.models.incident import Incident
 from apps.api.models.incident_event import IncidentEvent
 from apps.api.models.threat_score import ThreatScore
 
@@ -37,7 +36,7 @@ def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
 
     Retourne le nombre d'IP evaluees.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cutoff = now - timedelta(hours=lookback_hours)
 
     # --- Gather per-IP stats from events ---
@@ -88,7 +87,7 @@ def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
         .group_by(Event.src_ip)
         .all()
     )
-    incidents_by_ip: dict[str, int] = {ip: cnt for ip, cnt in incident_rows}
+    incidents_by_ip: dict[str, int] = dict(incident_rows)
 
     # --- Normalization bounds ---
     max_events = max(r.event_count for r in ip_rows)

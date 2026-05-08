@@ -14,7 +14,7 @@ plutot que via la fixture db_session qui utilise des savepoints.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -38,7 +38,7 @@ def _make_engagement(
     from apps.api.db.session import SessionLocal
     from apps.api.models.engagement import Engagement
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     eng = Engagement(
         id=f"eng-{uuid.uuid4().hex[:8]}",
         name="ACME RedTeam",
@@ -72,7 +72,7 @@ def _make_campaign(
     from apps.api.db.session import SessionLocal
     from apps.api.models.phishing import PhishingCampaign
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     c = PhishingCampaign(
         id=f"pc-{uuid.uuid4().hex[:8]}",
         name=f"C-{uuid.uuid4().hex[:4]}",
@@ -241,7 +241,7 @@ def test_create_campaign_blocks_when_before_start_date(
     api_client, monkeypatch
 ):
     _register_gophish_env(monkeypatch)
-    future = datetime.now(timezone.utc) + timedelta(days=7)
+    future = datetime.now(UTC) + timedelta(days=7)
     eng_id = _make_engagement(start_at=future)
     headers = _login_role(api_client, "lead")
 

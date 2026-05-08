@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+
 from apps.collectors.normalizer import NormalizedEvent
 
 # 192.168.1.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://ref" "Mozilla/4.08"

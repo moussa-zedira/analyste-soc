@@ -4,16 +4,15 @@ notification, investigation, remediation et reporting."""
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
 import logging
 import re
 import smtplib
 import socket
 import uuid
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from email.mime.text import MIMEText
-from typing import Any, Callable
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -139,6 +138,7 @@ async def geoip_lookup(params: dict, variables: dict, db: Session) -> dict:
     result: dict[str, Any] = {"ip": ip}
     try:
         import geoip2.database
+
         from apps.api.config import get_settings
         settings = get_settings()
         with geoip2.database.Reader(settings.GEOIP_DB_PATH) as reader:
@@ -234,10 +234,10 @@ async def block_ip_firewall(params: dict, variables: dict, db: Session) -> dict:
         "ip": ip,
         "direction": direction,
         "duration_hours": duration,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
-    from apps.api.soar.connectors import PanoramaConnector, IPTablesConnector
+    from apps.api.soar.connectors import IPTablesConnector, PanoramaConnector
 
     for connector in (PanoramaConnector(), IPTablesConnector()):
         if not connector.configured:
@@ -286,7 +286,7 @@ async def isolate_host(params: dict, variables: dict, db: Session) -> dict:
         "hostname": hostname,
         "isolation_level": level,
         "device_id": device_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     from apps.api.soar.connectors import DefenderConnector, FalconConnector
@@ -337,10 +337,10 @@ async def disable_user(params: dict, variables: dict, db: Session) -> dict:
         "action": "disable_user",
         "username": username,
         "reason": reason,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
-    from apps.api.soar.connectors import LDAPConnector, AWSConnector
+    from apps.api.soar.connectors import AWSConnector, LDAPConnector
 
     if platform == "ldap":
         candidates = [LDAPConnector()]
@@ -380,7 +380,7 @@ async def revoke_sessions(params: dict, variables: dict, db: Session) -> dict:
     base = {
         "action": "revoke_sessions",
         "username": username,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     from apps.api.soar.connectors import AWSConnector, LDAPConnector
@@ -437,7 +437,7 @@ async def quarantine_file(params: dict, variables: dict, db: Session) -> dict:
         "device_id": device_id,
         "sha1": sha1,
         "quarantine_id": str(uuid.uuid4()),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     from apps.api.soar.connectors import DefenderConnector
@@ -467,7 +467,7 @@ async def block_domain_dns(params: dict, variables: dict, db: Session) -> dict:
     base = {
         "action": "block_domain_dns",
         "domain": domain,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     from apps.api.soar.connectors import PanoramaConnector
@@ -503,7 +503,7 @@ async def update_waf_rules(params: dict, variables: dict, db: Session) -> dict:
         "waf_action": waf_action,
         "rule_id": f"soar-waf-{uuid.uuid4().hex[:8]}",
         "applied": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -806,13 +806,14 @@ async def run_osint(params: dict, variables: dict, db: Session) -> dict:
 )
 async def search_events(params: dict, variables: dict, db: Session) -> dict:
     from datetime import timedelta
+
     from apps.api.models.event import Event
 
     query = params.get("query", "")
     hours = params.get("time_range_hours", 24)
     limit = min(params.get("limit", 100), 500)
 
-    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+    since = datetime.now(UTC) - timedelta(hours=hours)
     q = db.query(Event).filter(Event.ts >= since)
     if query:
         q = q.filter(
@@ -840,11 +841,12 @@ async def search_events(params: dict, variables: dict, db: Session) -> dict:
 )
 async def get_user_activity(params: dict, variables: dict, db: Session) -> dict:
     from datetime import timedelta
+
     from apps.api.models.event import Event
 
     username = params.get("username", "")
     hours = params.get("hours", 24)
-    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+    since = datetime.now(UTC) - timedelta(hours=hours)
 
     events = (
         db.query(Event)
@@ -878,7 +880,7 @@ async def get_host_processes(params: dict, variables: dict, db: Session) -> dict
         "hostname": hostname,
         "requested": True,
         "note": "Process list request sent to endpoint agent",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -901,7 +903,7 @@ async def capture_pcap(params: dict, variables: dict, db: Session) -> dict:
         "filter": bpf_filter,
         "duration_seconds": duration,
         "started": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -920,7 +922,7 @@ async def screenshot_url(params: dict, variables: dict, db: Session) -> dict:
         "url": url,
         "screenshot_id": screenshot_id,
         "requested": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -941,7 +943,7 @@ async def check_url_sandbox(params: dict, variables: dict, db: Session) -> dict:
         "sandbox": sandbox,
         "submission_id": submission_id,
         "submitted": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -974,7 +976,7 @@ async def kill_process(params: dict, variables: dict, db: Session) -> dict:
         "pid": pid,
         "process_name": process_name,
         "device_id": device_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     from apps.api.soar.connectors import DefenderConnector, FalconConnector
@@ -1022,7 +1024,7 @@ async def remove_persistence(params: dict, variables: dict, db: Session) -> dict
         "persistence_type": pers_type,
         "path": path,
         "removed": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -1042,7 +1044,7 @@ async def rotate_credentials(params: dict, variables: dict, db: Session) -> dict
         "action": "rotate_credentials",
         "username": username,
         "notify_user": notify,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     from apps.api.soar.connectors import LDAPConnector
@@ -1095,7 +1097,7 @@ async def patch_vulnerability(params: dict, variables: dict, db: Session) -> dic
         "priority": priority,
         "deployment_id": str(uuid.uuid4()),
         "scheduled": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -1117,7 +1119,7 @@ async def restore_backup(params: dict, variables: dict, db: Session) -> dict:
         "restore_point": restore_point,
         "restore_job_id": str(uuid.uuid4()),
         "initiated": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -1136,7 +1138,7 @@ async def rollback_change(params: dict, variables: dict, db: Session) -> dict:
         "change_id": change_id,
         "target": target,
         "rolled_back": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -1153,13 +1155,13 @@ async def rollback_change(params: dict, variables: dict, db: Session) -> dict:
 async def generate_report(params: dict, variables: dict, db: Session) -> dict:
     incident_id = params.get("incident_id", "")
     fmt = params.get("format", "json")
-    include_timeline = params.get("include_timeline", True)
+    params.get("include_timeline", True)
 
     report_data: dict[str, Any] = {
         "report_id": str(uuid.uuid4()),
         "incident_id": incident_id,
         "format": fmt,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "sections": [],
     }
 
@@ -1204,7 +1206,7 @@ async def update_incident(params: dict, variables: dict, db: Session) -> dict:
 
     incident_id = params.get("incident_id", variables.get("input", {}).get("incident_id", ""))
     new_status = params.get("status", "")
-    notes = params.get("notes", "")
+    params.get("notes", "")
 
     if not incident_id:
         return {"action": "update_incident", "updated": False, "reason": "No incident_id"}
@@ -1215,7 +1217,7 @@ async def update_incident(params: dict, variables: dict, db: Session) -> dict:
 
     if new_status:
         incident.status = new_status
-    incident.updated_at = datetime.now(timezone.utc)
+    incident.updated_at = datetime.now(UTC)
     db.commit()
     return {
         "action": "update_incident",
@@ -1241,7 +1243,7 @@ async def add_timeline_entry(params: dict, variables: dict, db: Session) -> dict
         "incident_id": incident_id,
         "entry_type": entry_type,
         "message": message,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "added": True,
     }
 
@@ -1295,7 +1297,7 @@ async def export_iocs(params: dict, variables: dict, db: Session) -> dict:
 
     # Collect IOCs from step results if not provided
     if not iocs:
-        for step_name, step_data in variables.get("steps", {}).items():
+        for _step_name, step_data in variables.get("steps", {}).items():
             if isinstance(step_data, dict):
                 if step_data.get("ip"):
                     iocs.append({"type": "ipv4-addr", "value": step_data["ip"]})
@@ -1309,7 +1311,7 @@ async def export_iocs(params: dict, variables: dict, db: Session) -> dict:
         "export_id": export_id,
         "format": fmt,
         "ioc_count": len(iocs),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
     if fmt == "stix":
@@ -1321,7 +1323,7 @@ async def export_iocs(params: dict, variables: dict, db: Session) -> dict:
                     "type": "indicator",
                     "id": f"indicator--{uuid.uuid4()}",
                     "pattern": f"[{ioc['type']}:value = '{ioc['value']}']",
-                    "valid_from": datetime.now(timezone.utc).isoformat(),
+                    "valid_from": datetime.now(UTC).isoformat(),
                 }
                 for ioc in iocs
             ],
@@ -1377,5 +1379,5 @@ async def tag_ioc(params: dict, variables: dict, db: Session) -> dict:
         "indicator_type": ind_type,
         "tags": tags,
         "tagged": True,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }

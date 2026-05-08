@@ -10,7 +10,6 @@ Le rendu YAML reste produit côté Python pour garantir la validité syntaxique.
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -19,7 +18,6 @@ from typing import Any
 import yaml
 
 from apps.api.ai.llm_client import LlmResponse, call_llm, parse_json_response
-
 
 SIGMA_LEVEL_BY_SEVERITY = {
     "critical": "critical",
@@ -146,13 +144,13 @@ def build_yara_rule(seed: RuleSeed) -> str:
         strings.append(("$placeholder", seed.title[:40].replace('"', '_')))
 
     str_lines = "\n        ".join(f'{name} = "{val}"' for name, val in strings)
-    cond = " or ".join(name for name, _ in strings)
+    " or ".join(name for name, _ in strings)
 
     meta_lines = [
         f'description = "{(seed.description or "Auto-generated rule")[:120]}"',
         f'severity = "{seed.severity or "medium"}"',
-        f'author = "analyste-soc auto-generator"',
-        f'date = "2026-04-17"',
+        'author = "analyste-soc auto-generator"',
+        'date = "2026-04-17"',
     ]
     if seed.mitre_techniques:
         meta_lines.append(f'mitre = "{",".join(seed.mitre_techniques)}"')

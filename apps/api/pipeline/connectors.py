@@ -10,7 +10,7 @@ import hashlib
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -25,8 +25,8 @@ async def ioc_to_ti_enrich(ioc_value: str, ioc_type: str = "ip") -> dict[str, An
     if ioc_type != "ip":
         return None
     try:
-        from apps.api.threat_intel.enrichment import _lookup_ip
         from apps.api.db.session import SessionLocal
+        from apps.api.threat_intel.enrichment import _lookup_ip
 
         db = SessionLocal()
         try:
@@ -66,7 +66,7 @@ def detection_to_incident(
     from apps.api.models.incident import Incident
     from apps.api.models.incident_event import IncidentEvent
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     bucket = now.strftime("%Y-%m-%dT%H:%M")
     dedup = hashlib.sha256(f"{rule_id}|{entity_key}|{bucket}".encode()).hexdigest()
 
@@ -108,8 +108,8 @@ async def incident_to_soar(
     """Fire SOAR playbooks matching the incident context."""
     results = []
     try:
-        from apps.api.soar.engine import fire_triggers
         from apps.api.db.session import SessionLocal
+        from apps.api.soar.engine import fire_triggers
 
         db = SessionLocal()
         try:
@@ -182,7 +182,7 @@ def correlation_to_incident(
     from apps.api.models.incident import Incident
     from apps.api.models.incident_event import IncidentEvent
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     bucket = now.strftime("%Y-%m-%dT%H:%M")
     dedup = hashlib.sha256(
         f"corr:{rule_id}|{group_key}|{bucket}".encode()
@@ -236,7 +236,7 @@ def event_to_cql_index(event_dict: dict[str, Any]) -> None:
         if isinstance(ts, datetime):
             score = ts.timestamp()
         else:
-            score = datetime.now(timezone.utc).timestamp()
+            score = datetime.now(UTC).timestamp()
         r.zadd(key, {json.dumps(event_dict, default=str)[:4000]: score})
         # Trim to last 100k events
         r.zremrangebyrank(key, 0, -100001)
@@ -269,7 +269,7 @@ def finding_to_ioc(
             return None
 
         ioc_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         db.execute(
             text(
                 "INSERT INTO iocs (id, ioc_type, value, threat_type, severity, "
@@ -302,7 +302,7 @@ def scan_result_to_event(scan_result: dict[str, Any]) -> dict[str, Any]:
     """Convert a scan result dict into a raw event dict for pipeline ingestion."""
     return {
         "id": str(uuid.uuid4()),
-        "ts": scan_result.get("timestamp", datetime.now(timezone.utc)),
+        "ts": scan_result.get("timestamp", datetime.now(UTC)),
         "source": f"scanner:{scan_result.get('scanner', 'unknown')}",
         "event_type": "scan_result",
         "severity": scan_result.get("severity", "medium"),

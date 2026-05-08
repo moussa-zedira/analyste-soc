@@ -6,7 +6,6 @@ from apps.api.compliance.frameworks import (
     ALL_FRAMEWORKS,
     NIS2,
     Control,
-    Framework,
     list_frameworks,
 )
 from apps.api.compliance.reporter import (

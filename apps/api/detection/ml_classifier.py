@@ -12,7 +12,7 @@ import json
 import logging
 import os
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -46,7 +46,7 @@ MODEL_MAX_AGE_DAYS = 7
 
 # Module-level singleton (protected by lock for thread safety)
 _lock = threading.Lock()
-_classifier: "Pipeline | None" = None
+_classifier: Pipeline | None = None
 _classifier_info: dict = {}
 _boot_loaded = False
 
@@ -61,8 +61,8 @@ def _model_is_stale(meta: dict) -> bool:
     except ValueError:
         return True
     if trained.tzinfo is None:
-        trained = trained.replace(tzinfo=timezone.utc)
-    return (datetime.now(timezone.utc) - trained) > timedelta(days=MODEL_MAX_AGE_DAYS)
+        trained = trained.replace(tzinfo=UTC)
+    return (datetime.now(UTC) - trained) > timedelta(days=MODEL_MAX_AGE_DAYS)
 
 
 def _load_persisted_classifier() -> bool:
@@ -101,7 +101,7 @@ def _persist_classifier(pipeline, n_samples: int) -> None:
         MODEL_DIR.mkdir(parents=True, exist_ok=True)
         joblib.dump(pipeline, MODEL_PATH)
         meta = {
-            "timestamp_train": datetime.now(timezone.utc).isoformat(),
+            "timestamp_train": datetime.now(UTC).isoformat(),
             "n_samples_train": n_samples,
             "n_features": getattr(
                 pipeline.named_steps.get("tfidf"), "max_features", None,
@@ -182,7 +182,7 @@ def train_classifier(db: Session, force_retrain: bool = False) -> dict:
     info = {
         "status": "trained",
         "n_samples_train": len(texts),
-        "timestamp_train": datetime.now(timezone.utc).isoformat(),
+        "timestamp_train": datetime.now(UTC).isoformat(),
         "model_class": type(pipeline.named_steps["clf"]).__name__,
         "sklearn_version": getattr(sklearn, "__version__", "unknown"),
         "model_version": MODEL_VERSION,

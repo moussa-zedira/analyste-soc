@@ -6,16 +6,13 @@ Provides SAST, DAST, SCA, Secret Detection, Container Security, and IaC scanning
 from __future__ import annotations
 
 import asyncio
-import datetime as _dt
-import hashlib
 import json
 import logging
 import os
 import re
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Optional
 
 import httpx
 import structlog
@@ -1067,7 +1064,7 @@ async def _check_reflected_xss(client: httpx.AsyncClient, url: str) -> list[Scan
     findings: list[ScanFindingResult] = []
     canary = f"xss{uuid.uuid4().hex[:8]}"
     payload = f"<script>{canary}</script>"
-    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
@@ -1096,7 +1093,7 @@ async def _check_reflected_xss(client: httpx.AsyncClient, url: str) -> list[Scan
 async def _check_error_sqli(client: httpx.AsyncClient, url: str) -> list[ScanFindingResult]:
     """Check for error-based SQL injection indicators."""
     findings: list[ScanFindingResult] = []
-    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
@@ -1137,7 +1134,7 @@ async def _check_error_sqli(client: httpx.AsyncClient, url: str) -> list[ScanFin
 async def _check_open_redirect(client: httpx.AsyncClient, url: str) -> list[ScanFindingResult]:
     """Check for open redirect vulnerabilities."""
     findings: list[ScanFindingResult] = []
-    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
@@ -1415,7 +1412,7 @@ async def _run_iac_scan_regex(
 
     if target.is_file():
         ext = target.suffix.lower()
-        name = target.name.lower()
+        target.name.lower()
         if ext in (".tf", ".tfvars"):
             tf_files.append(target)
         elif ext in (".yml", ".yaml"):
@@ -1665,7 +1662,7 @@ async def run_full_scan(
         task_names.append("dast")
 
     completed = await asyncio.gather(*tasks, return_exceptions=True)
-    for name, result in zip(task_names, completed):
+    for name, result in zip(task_names, completed, strict=False):
         if isinstance(result, Exception):
             slog.error("scan_failed", scan_type=name, error=str(result))
             results[name] = []

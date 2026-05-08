@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -28,7 +28,7 @@ def refresh_baselines(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Recalcule les baselines a partir des evenements des N dernieres minutes."""
-    since = datetime.now(timezone.utc) - timedelta(minutes=lookback_min)
+    since = datetime.now(UTC) - timedelta(minutes=lookback_min)
     return update_baselines(db, since=since)
 
 

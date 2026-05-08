@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -12,12 +12,12 @@ from sqlalchemy.orm import Session
 
 from apps.api.cache import get_cache, set_cache
 from apps.api.db.session import get_db
-from apps.api.geoip import lookup_batch
 from apps.api.detection.mitre import (
     RULE_MITRE_MAP,
     TACTIC_ORDER,
     get_all_mapped_techniques,
 )
+from apps.api.geoip import lookup_batch
 from apps.api.models.event import Event
 from apps.api.models.incident import Incident
 from apps.api.models.incident_event import IncidentEvent
@@ -109,7 +109,7 @@ def kpis(db: Session = Depends(get_db)) -> dict:
     if cached is not None:
         return cached
 
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
 
     total_events_24h = (
         db.query(func.count(Event.id)).filter(Event.ts >= cutoff).scalar() or 0
@@ -146,7 +146,7 @@ def events_per_minute(
     if cached is not None:
         return cached
 
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+    cutoff = datetime.now(UTC) - timedelta(minutes=minutes)
 
     rows = db.query(Event).filter(Event.ts >= cutoff).order_by(Event.ts).all()
 
@@ -155,7 +155,7 @@ def events_per_minute(
         key = event.ts.strftime("%Y-%m-%dT%H:%M:00Z")
         buckets[key] += 1
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     result = []
     for i in range(minutes):
         t = cutoff + timedelta(minutes=i)
@@ -178,7 +178,7 @@ def attack_heatmap(
     if cached is not None:
         return cached
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
 
     events = db.query(Event).filter(Event.ts >= cutoff).all()
 

@@ -10,7 +10,7 @@ import csv
 import io
 import json
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, or_
@@ -18,12 +18,11 @@ from sqlalchemy.orm import Session
 
 from apps.api.models.ioc import IOC, IOCRelationship, IOCSighting
 from apps.api.threat_intel.stix import (
+    generate_stix_id,
     ioc_to_stix,
-    stix_to_ioc,
     make_bundle,
     parse_bundle,
-    generate_stix_id,
-    serialize_bundle,
+    stix_to_ioc,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,8 +90,8 @@ def create_ioc(
     existing = db.query(IOC).filter(IOC.type == ioc_type, IOC.value == value).first()
     if existing:
         # Update last_seen and merge data
-        existing.last_seen = datetime.now(timezone.utc)
-        existing.updated_at = datetime.now(timezone.utc)
+        existing.last_seen = datetime.now(UTC)
+        existing.updated_at = datetime.now(UTC)
         if confidence > existing.confidence:
             existing.confidence = confidence
         # Merge tags
@@ -109,7 +108,7 @@ def create_ioc(
         db.refresh(existing)
         return existing
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ttl = ttl_hours or DEFAULT_TTL.get(ioc_type, 720)
     expiry = now + timedelta(hours=ttl)
 
@@ -205,7 +204,7 @@ def update_ioc(
         elif hasattr(ioc, key):
             setattr(ioc, key, val)
 
-    ioc.updated_at = datetime.now(timezone.utc)
+    ioc.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(ioc)
     return ioc
@@ -234,10 +233,10 @@ def mark_false_positive(db: Session, ioc_id: int) -> IOC | None:
 
 def expire_stale_iocs(db: Session) -> int:
     """Mark IOCs past their expiry as expired. Returns count."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     count = (
         db.query(IOC)
-        .filter(IOC.state == "active", IOC.expiry != None, IOC.expiry < now)
+        .filter(IOC.state == "active", IOC.expiry is not None, IOC.expiry < now)
         .update({"state": "expired", "updated_at": now})
     )
     db.commit()
@@ -265,7 +264,7 @@ def record_sighting(
     # Update last_seen on the IOC
     ioc = db.get(IOC, ioc_id)
     if ioc:
-        ioc.last_seen = datetime.now(timezone.utc)
+        ioc.last_seen = datetime.now(UTC)
     db.commit()
     db.refresh(sighting)
     return sighting

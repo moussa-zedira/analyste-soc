@@ -93,7 +93,7 @@ class ShodanProvider:
             score = min(vuln_score + port_score, 100)
 
             tags = [f"port:{p}" for p in ports[:10]]
-            tags += [v for v in vulns[:5]]
+            tags += list(vulns[:5])
 
             return TIResult(
                 indicator=ip,
@@ -172,7 +172,7 @@ class ShodanProvider:
         try:
             resp = await self._cb.call(
                 self._client.get,
-                f"https://exploits.shodan.io/api/search",
+                "https://exploits.shodan.io/api/search",
                 params=self._params(query=query),
             )
             resp.raise_for_status()

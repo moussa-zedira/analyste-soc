@@ -4,16 +4,16 @@ correlation temporelle, sequentielle, statistique et entite."""
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import math
 import re
 import uuid
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from enum import Enum
-from typing import Any, Callable
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -45,7 +45,7 @@ MITRE_TACTICS = [
 ]
 
 
-class CorrelationType(str, Enum):
+class CorrelationType(StrEnum):
     """Types de correlation supportes."""
     TEMPORAL = "temporal"
     SEQUENTIAL = "sequential"
@@ -54,7 +54,7 @@ class CorrelationType(str, Enum):
     KILL_CHAIN = "kill_chain"
 
 
-class ActionType(str, Enum):
+class ActionType(StrEnum):
     """Actions declenchees par une correspondance de correlation."""
     ALERT = "alert"
     CREATE_INCIDENT = "create_incident"
@@ -228,7 +228,7 @@ class CorrelationEngine:
         Retourne le nombre d'incidents crees.
         """
         created = 0
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         for match in matches:
             if "create_incident" not in (
@@ -391,7 +391,7 @@ class CorrelationEngine:
                         group_key=group_key,
                         group_values=self._parse_group_key(group_key, rule.group_by),
                         matched_events=unique_events,
-                        matched_at=datetime.now(timezone.utc),
+                        matched_at=datetime.now(UTC),
                         mitre_tactics=rule.mitre_tactics,
                         description=rule.description,
                     ))
@@ -425,7 +425,7 @@ class CorrelationEngine:
                     group_key=group_key,
                     group_values=self._parse_group_key(group_key, rule.group_by),
                     matched_events=chain,
-                    matched_at=datetime.now(timezone.utc),
+                    matched_at=datetime.now(UTC),
                     mitre_tactics=rule.mitre_tactics,
                     description=rule.description,
                 ))
@@ -526,7 +526,7 @@ class CorrelationEngine:
                                 group_key, rule.group_by,
                             ),
                             matched_events=window_events,
-                            matched_at=datetime.now(timezone.utc),
+                            matched_at=datetime.now(UTC),
                             mitre_tactics=rule.mitre_tactics,
                             description=(
                                 f"{rule.description} "
@@ -551,7 +551,7 @@ class CorrelationEngine:
         window = timedelta(seconds=rule.time_window)
         baseline_window = timedelta(seconds=rule.baseline_window)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         recent_start = now - window
         baseline_start = now - baseline_window
 
@@ -576,7 +576,7 @@ class CorrelationEngine:
                     rule.baseline_window, 1,
                 )
                 num_windows = total_baseline_seconds / max(rule.time_window, 1)
-                avg_rate = len(baseline_events) / max(num_windows, 1)
+                len(baseline_events) / max(num_windows, 1)
 
                 # Simple variance estimation
                 bucket_size = rule.time_window

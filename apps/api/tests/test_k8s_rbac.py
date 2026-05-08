@@ -5,10 +5,9 @@ from __future__ import annotations
 from apps.api.pentest.recon.k8s_rbac import (
     DANGEROUS_RESOURCES,
     DANGEROUS_VERBS,
-    audit_manifest,
     _find_dangerous_rules,
+    audit_manifest,
 )
-
 
 CLUSTER_ADMIN_BIND = """
 apiVersion: rbac.authorization.k8s.io/v1

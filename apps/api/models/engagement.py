@@ -15,7 +15,6 @@ from sqlalchemy import (
     Index,
     PrimaryKeyConstraint,
     Text,
-    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column

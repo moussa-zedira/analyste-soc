@@ -5,15 +5,23 @@ from __future__ import annotations
 from difflib import get_close_matches
 from typing import Any
 
+from apps.api.cql.commands import get_command
+from apps.api.cql.executor import (
+    _DATETIME_FIELDS,
+    _NUMERIC_FIELDS,
+    EVENT_FIELDS,
+    FIELD_ALIASES,
+    _resolve_field,
+)
 from apps.api.cql.lexer import Lexer, LexerError
 from apps.api.cql.parser import (
-    ASTNode, BoolOp, Comparison, NotExpr, ParseError, Parser, Query,
+    ASTNode,
+    BoolOp,
+    Comparison,
+    NotExpr,
+    ParseError,
+    Parser,
 )
-from apps.api.cql.executor import (
-    EVENT_FIELDS, FIELD_ALIASES, _STRING_FIELDS, _NUMERIC_FIELDS, _DATETIME_FIELDS, _resolve_field,
-)
-from apps.api.cql.commands import get_command
-
 
 # ---------------------------------------------------------------------------
 # Validation result
@@ -87,7 +95,6 @@ def _validate_ast(node: ASTNode | None, errors: list[dict], warnings: list[dict]
 
     if isinstance(node, Comparison):
         field_name = node.field.name
-        token = None
         if hasattr(node.field, 'parts') and node.field.parts:
             pass
         _check_field(field_name, errors, warnings)
@@ -125,12 +132,11 @@ def _validate_commands(commands: list, errors: list[dict], warnings: list[dict])
         if cmd.name == "sort" and not cmd.raw_text.strip():
             errors.append(_make_error("'sort' command requires a field name."))
 
-        if cmd.name == "rename":
-            if "AS" not in cmd.raw_text.upper():
-                warnings.append(_make_error(
-                    "'rename' expects syntax: rename <old> as <new>",
-                    severity="warning",
-                ))
+        if cmd.name == "rename" and "AS" not in cmd.raw_text.upper():
+            warnings.append(_make_error(
+                "'rename' expects syntax: rename <old> as <new>",
+                severity="warning",
+            ))
 
         if cmd.name == "trendline":
             parts = cmd.raw_text.strip().split()
@@ -141,6 +147,7 @@ def _validate_commands(commands: list, errors: list[dict], warnings: list[dict])
 
 
 from apps.api.cql.commands import list_commands
+
 _KNOWN_COMMANDS = set(list_commands().keys())
 
 

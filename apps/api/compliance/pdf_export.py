@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
@@ -19,10 +21,6 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
-from reportlab.graphics.shapes import Drawing, Rect, String
-from reportlab.graphics.charts.barcharts import VerticalBarChart
-from reportlab.graphics.charts.legends import Legend
-
 
 STATUS_COLORS = {
     "covered": colors.HexColor("#1f9d55"),
@@ -276,7 +274,7 @@ def generate_compliance_pdf(
         ["Version", framework.get("version", "-")],
         ["URL", framework.get("url", "-")],
         ["Controls evaluated", str(summary.get("controls_total", len(controls)))],
-        ["Generated at", datetime.now(timezone.utc).isoformat(timespec="seconds")],
+        ["Generated at", datetime.now(UTC).isoformat(timespec="seconds")],
     ]
     meta_tbl = Table(meta_data, colWidths=[5.0 * cm, 11.0 * cm])
     meta_tbl.setStyle(TableStyle([

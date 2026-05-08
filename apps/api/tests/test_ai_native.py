@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import os
 
-import pytest
-
 # Forcer le mode stub pour tous les tests (pas de clé API en CI)
 os.environ.pop("ANTHROPIC_API_KEY", None)
 os.environ.pop("OPENAI_API_KEY", None)
@@ -19,7 +17,6 @@ from apps.api.ai.rule_generator import (
     render_sigma_yaml,
 )
 from apps.api.ai.triage import TriageInput, triage_input
-
 
 # ── LLM client ────────────────────────────────────────────────────────
 

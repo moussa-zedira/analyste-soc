@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,7 +22,6 @@ from apps.api.models.user import User
 from apps.api.pentest.engagement.audit import record_operator_action
 from apps.api.pentest.post_exploit import browser_creds, secrets_extract
 
-
 logger = logging.getLogger("apps.api.pentest.credentials")
 router = APIRouter(prefix="/redteam/credentials", tags=["Red Team Credentials"])
 
@@ -33,35 +32,35 @@ router = APIRouter(prefix="/redteam/credentials", tags=["Red Team Credentials"])
 
 
 class SecretsdumpIn(BaseModel):
-    engagement_id: Optional[str] = None
+    engagement_id: str | None = None
     target: str = Field(..., min_length=1)
     username: str = Field(..., min_length=1)
-    password: Optional[str] = None
-    domain: Optional[str] = None
-    hashes: Optional[str] = None
+    password: str | None = None
+    domain: str | None = None
+    hashes: str | None = None
     just_dc: bool = False
-    just_dc_user: Optional[str] = None
+    just_dc_user: str | None = None
 
 
 class KerberoastIn(BaseModel):
-    engagement_id: Optional[str] = None
+    engagement_id: str | None = None
     target_dc: str = Field(..., min_length=1)
     username: str = Field(..., min_length=1)
-    password: Optional[str] = None
+    password: str | None = None
     domain: str = ""
-    hashes: Optional[str] = None
+    hashes: str | None = None
 
 
 class AsrepRoastIn(BaseModel):
-    engagement_id: Optional[str] = None
+    engagement_id: str | None = None
     target_dc: str = Field(..., min_length=1)
     domain: str = Field(..., min_length=1)
-    users: Optional[list[str]] = None
-    userfile: Optional[str] = None
+    users: list[str] | None = None
+    userfile: str | None = None
 
 
 class BrowserIngestIn(BaseModel):
-    engagement_id: Optional[str] = None
+    engagement_id: str | None = None
     host_target: str = Field(..., min_length=1)
     family: str = Field(..., description="chromium | firefox")
     raw: Any = Field(..., description="Dump decrypte (dict ou list)")
@@ -76,14 +75,14 @@ class CredentialOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    engagement_id: Optional[str]
+    engagement_id: str | None
     source: str
     cred_type: str
     target: str
     identifier: str
     fingerprint: str
     mitre_technique: str
-    harvested_by: Optional[str]
+    harvested_by: str | None
     harvested_at: datetime
     notes: str
 
@@ -317,9 +316,9 @@ async def browser_ingest(
 
 @router.get("", response_model=list[CredentialOut])
 def list_credentials(
-    engagement_id: Optional[str] = Query(None),
-    cred_type: Optional[str] = Query(None),
-    source: Optional[str] = Query(None),
+    engagement_id: str | None = Query(None),
+    cred_type: str | None = Query(None),
+    source: str | None = Query(None),
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -417,7 +416,7 @@ def delete_credential(
 
 @router.get("/stats/summary")
 def credentials_stats(
-    engagement_id: Optional[str] = Query(None),
+    engagement_id: str | None = Query(None),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:

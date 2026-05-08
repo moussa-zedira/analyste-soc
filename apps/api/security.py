@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import hmac
-from typing import Iterable, Optional
 
 from fastapi import HTTPException, Request, status
 
 from apps.api.config import get_settings
 
 
-def _decode_jwt(token: str) -> Optional[dict]:
+def _decode_jwt(token: str) -> dict | None:
     """Decode a JWT or return None if invalid."""
     settings = get_settings()
     try:
-        from jose import jwt, JWTError
+        from jose import JWTError, jwt
 
         return jwt.decode(
             token,
@@ -37,7 +36,7 @@ def _check_api_key(request: Request) -> bool:
     )
 
 
-def _extract_jwt_payload(request: Request) -> Optional[dict]:
+def _extract_jwt_payload(request: Request) -> dict | None:
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         return None

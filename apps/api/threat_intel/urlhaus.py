@@ -8,7 +8,6 @@ import httpx
 
 from apps.api.threat_intel.base import TIResult
 from apps.api.threat_intel.observability import (
-    CircuitOpenError,
     get_circuit_breaker,
     instrument,
 )

@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from apps.api.alerting import SEVERITY_COLORS, SEVERITY_RANK
+from apps.api.alerting import SEVERITY_COLORS
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ JIT user provisioning + role mapping via groups claim.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
@@ -32,10 +32,10 @@ class SSOProvider(Base):
     default_role: Mapped[str] = mapped_column(Text, default="analyst")
     group_to_role_mapping: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
 
@@ -55,7 +55,7 @@ class SSOSession(Base):
     id_token_email: Mapped[str | None] = mapped_column(Text, nullable=True)
     id_token_groups: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     last_login: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
     )
     expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

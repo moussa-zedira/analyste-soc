@@ -23,9 +23,9 @@ import tarfile
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 from sqlalchemy import desc
@@ -114,7 +114,7 @@ def collect_corpus(
 ) -> list[RagDoc]:
     """Recupere un corpus de docs pour indexation (compat legacy)."""
     docs: list[RagDoc] = []
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=lookback_hours)
 
     if include_events:
         rows = (
@@ -307,7 +307,7 @@ class FaissRAG:
             for d in self._docs:
                 f.write(json.dumps(d, ensure_ascii=False) + "\n")
 
-        self._manifest["last_updated"] = datetime.now(timezone.utc).isoformat()
+        self._manifest["last_updated"] = datetime.now(UTC).isoformat()
         self.manifest_path.write_text(
             json.dumps(self._manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
@@ -351,7 +351,7 @@ class FaissRAG:
             self._index.add(vecs)
 
             by_source = self._manifest.setdefault("sources", {})
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(UTC).isoformat()
             for d in docs:
                 src = d.get("source", "unknown")
                 stats = by_source.setdefault(src, {"count": 0, "last_updated": now})
@@ -393,7 +393,7 @@ class FaissRAG:
         scores, idxs = self._index.search(vec, search_k)
 
         out: list[dict[str, Any]] = []
-        for score, idx in zip(scores[0], idxs[0]):
+        for score, idx in zip(scores[0], idxs[0], strict=False):
             if idx < 0 or idx >= len(self._docs):
                 continue
             doc = self._docs[idx]
@@ -476,7 +476,7 @@ class FaissRAG:
         elle est skippee et le report le note.
         """
         self.reset()
-        report: dict[str, Any] = {"started_at": datetime.now(timezone.utc).isoformat()}
+        report: dict[str, Any] = {"started_at": datetime.now(UTC).isoformat()}
 
         if include_mitre:
             try:
@@ -514,7 +514,7 @@ class FaissRAG:
                 logger.exception("DB fetch failed")
                 report["db"] = {"error": str(exc)}
 
-        report["finished_at"] = datetime.now(timezone.utc).isoformat()
+        report["finished_at"] = datetime.now(UTC).isoformat()
         report["stats"] = self.stats()
         return report
 
@@ -572,7 +572,7 @@ def _fetch_mitre_attack() -> list[dict[str, Any]]:
 
 def _fetch_cve_recent(days: int = 30) -> list[dict[str, Any]]:
     """Telecharge les CVEs NVD publiees dans les N derniers jours."""
-    end = datetime.now(timezone.utc)
+    end = datetime.now(UTC)
     start = end - timedelta(days=days)
     # NVD attend un format ISO-8601 avec millisecondes et offset
     fmt = "%Y-%m-%dT%H:%M:%S.000"
@@ -686,7 +686,7 @@ def _fetch_sigma_rules() -> list[dict[str, Any]]:
 def _fetch_incidents_events_db(db: Session, limit: int = 5000) -> list[dict[str, Any]]:
     """Convertit events + incidents recents en docs FAISS."""
     out: list[dict[str, Any]] = []
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=168)
+    cutoff = datetime.now(UTC) - timedelta(hours=168)
     for e in (
         db.query(Event)
         .filter(Event.ts >= cutoff)

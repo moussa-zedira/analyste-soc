@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from apps.api.cases.service import (
     ALLOWED_TRANSITIONS,
@@ -33,9 +33,9 @@ def test_priorities_and_resolutions_are_non_empty():
 
 
 def test_custody_link_chains_via_prev_hash():
-    ts1 = datetime(2026, 4, 17, 10, 0, 0, tzinfo=timezone.utc)
+    ts1 = datetime(2026, 4, 17, 10, 0, 0, tzinfo=UTC)
     link1 = _custody_link(prev_hash="", actor="alice", action="collected", ts=ts1)
-    ts2 = datetime(2026, 4, 17, 10, 5, 0, tzinfo=timezone.utc)
+    ts2 = datetime(2026, 4, 17, 10, 5, 0, tzinfo=UTC)
     link2 = _custody_link(prev_hash=link1["hash"], actor="bob", action="copied", ts=ts2)
 
     assert link1["actor"] == "alice"

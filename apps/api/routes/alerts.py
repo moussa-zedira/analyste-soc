@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.auth import RoleChecker
 from apps.api.db.session import get_db
-from apps.api.models.alert_config import AlertChannel, AlertRule, VALID_CHANNEL_TYPES
+from apps.api.models.alert_config import VALID_CHANNEL_TYPES, AlertChannel, AlertRule
 from apps.api.security import require_api_key
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
@@ -147,7 +147,7 @@ def create_channel(
             detail="config_json is not valid JSON",
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     channel = AlertChannel(
         id=str(uuid.uuid4()),
         channel_type=payload.channel_type,
@@ -214,7 +214,7 @@ def update_channel(
     if payload.enabled is not None:
         channel.enabled = payload.enabled
 
-    channel.updated_at = datetime.now(timezone.utc)
+    channel.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(channel)
     return channel
@@ -236,7 +236,7 @@ def toggle_channel(
     if channel is None:
         raise HTTPException(status_code=404, detail="Alert channel not found")
     channel.enabled = payload.enabled
-    channel.updated_at = datetime.now(timezone.utc)
+    channel.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(channel)
     return channel
@@ -325,7 +325,7 @@ def create_rule(
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="conditions_json is not valid JSON")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     rule = AlertRule(
         id=str(uuid.uuid4()),
         name=payload.name,
@@ -378,7 +378,7 @@ def update_rule(
     if payload.priority is not None:
         rule.priority = payload.priority
 
-    rule.updated_at = datetime.now(timezone.utc)
+    rule.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(rule)
     return rule

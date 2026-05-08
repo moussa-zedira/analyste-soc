@@ -7,14 +7,14 @@ import io
 import json
 import logging
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import structlog
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from apps.api.models.devsecops import ScanFinding, ScanProject, ScanRun
+from apps.api.models.devsecops import ScanFinding, ScanRun
 
 logger = logging.getLogger(__name__)
 slog = structlog.get_logger(__name__)
@@ -31,20 +31,20 @@ def get_dashboard_metrics(db: Session, project_id: int | None = None) -> dict[st
         finding_query = finding_query.filter(ScanFinding.run_id.in_(finding_ids))
 
     total_runs = run_query.count()
-    total_findings = finding_query.filter(ScanFinding.false_positive == False).count()
+    total_findings = finding_query.filter(not ScanFinding.false_positive).count()
 
     severity_counts = {}
     for sev in ("critical", "high", "medium", "low", "info"):
         severity_counts[sev] = finding_query.filter(
             ScanFinding.severity == sev,
-            ScanFinding.false_positive == False,
+            not ScanFinding.false_positive,
         ).count()
 
     # Findings by scan type
     type_counts = {}
     for row in (
         finding_query
-        .filter(ScanFinding.false_positive == False)
+        .filter(not ScanFinding.false_positive)
         .with_entities(ScanFinding.scan_type, func.count(ScanFinding.id))
         .group_by(ScanFinding.scan_type)
         .all()
@@ -52,12 +52,12 @@ def get_dashboard_metrics(db: Session, project_id: int | None = None) -> dict[st
         type_counts[row[0]] = row[1]
 
     # Resolution rate
-    resolved = finding_query.filter(ScanFinding.resolved == True).count()
+    resolved = finding_query.filter(ScanFinding.resolved).count()
     resolution_rate = round(resolved / total_findings * 100, 1) if total_findings else 0.0
 
     # Quality gate pass rate
     gate_runs = run_query.filter(ScanRun.quality_gate_passed.isnot(None)).count()
-    gate_passed = run_query.filter(ScanRun.quality_gate_passed == True).count()
+    gate_passed = run_query.filter(ScanRun.quality_gate_passed).count()
     gate_pass_rate = round(gate_passed / gate_runs * 100, 1) if gate_runs else 0.0
 
     # Last scan
@@ -81,7 +81,7 @@ def get_trend_analysis(
     days: int = 30,
 ) -> list[dict[str, Any]]:
     """Compute finding trends over time (findings per day, grouped by severity)."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
 
     query = (
         db.query(
@@ -90,7 +90,7 @@ def get_trend_analysis(
             func.count(ScanFinding.id).label("count"),
         )
         .join(ScanRun, ScanFinding.run_id == ScanRun.id)
-        .filter(ScanRun.created_at >= cutoff, ScanFinding.false_positive == False)
+        .filter(ScanRun.created_at >= cutoff, not ScanFinding.false_positive)
     )
     if project_id:
         query = query.filter(ScanRun.project_id == project_id)
@@ -113,8 +113,8 @@ def get_top_vulnerable_deps(
     """Return top vulnerable dependencies ranked by frequency and severity."""
     query = db.query(ScanFinding).filter(
         ScanFinding.scan_type == "sca",
-        ScanFinding.false_positive == False,
-        ScanFinding.resolved == False,
+        not ScanFinding.false_positive,
+        not ScanFinding.resolved,
     )
     if project_id:
         run_ids = db.query(ScanRun.id).filter(ScanRun.project_id == project_id).subquery()
@@ -141,7 +141,7 @@ def get_secret_leak_summary(
     """Summary of secret leaks detected."""
     query = db.query(ScanFinding).filter(
         ScanFinding.scan_type == "secrets",
-        ScanFinding.false_positive == False,
+        not ScanFinding.false_positive,
     )
     if project_id:
         run_ids = db.query(ScanRun.id).filter(ScanRun.project_id == project_id).subquery()

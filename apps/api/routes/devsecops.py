@@ -2,36 +2,33 @@
 
 from __future__ import annotations
 
-import json
-import uuid
-from datetime import datetime, timezone
-from typing import Any, Optional
+import logging
+from datetime import UTC, datetime
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from apps.api.db.session import get_db
-from apps.api.security import require_api_key
-from apps.api.models.devsecops import ScanProject, ScanRun, ScanFinding, QualityGate
-from apps.api.devsecops.scanner import (
-    run_sast as run_sast_scan,
-    run_sca as run_sca_scan,
-    run_secret_detection as run_secret_scan,
-    run_dast as run_dast_scan,
-    run_container_scan,
-    run_iac_scan,
-)
-from apps.api.devsecops.sarif import generate_sarif
 from apps.api.devsecops.ci_integrations import (
+    generate_azure_devops,
+    generate_circleci,
     generate_github_actions,
     generate_gitlab_ci,
     generate_jenkins_pipeline,
-    generate_azure_devops,
-    generate_circleci,
 )
-
-import logging
+from apps.api.devsecops.sarif import generate_sarif
+from apps.api.devsecops.scanner import (
+    run_container_scan,
+    run_dast as run_dast_scan,
+    run_iac_scan,
+    run_sast as run_sast_scan,
+    run_sca as run_sca_scan,
+    run_secret_detection as run_secret_scan,
+)
+from apps.api.models.devsecops import QualityGate, ScanFinding, ScanProject, ScanRun
+from apps.api.security import require_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +116,7 @@ def _finding_dict(f: ScanFinding) -> dict:
 
 
 def _persist_run(db: Session, scan_type: str, findings: list[dict], project_id: int | None = None) -> ScanRun:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     sev_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     for f in findings:
         s = f.get("severity", "low").lower()

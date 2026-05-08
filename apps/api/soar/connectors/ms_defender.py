@@ -9,7 +9,6 @@ import httpx
 
 from apps.api.soar.connectors.base import Connector
 
-
 GRAPH_SECURITY_BASE = "https://api.securitycenter.microsoft.com/api"
 LOGIN_URL = "https://login.microsoftonline.com"
 

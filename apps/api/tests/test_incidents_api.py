@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -14,7 +14,7 @@ def _make_incident(db_session, *, severity: str = "high", status: str = "open"):
     """Insere un incident de test directement en DB."""
     from apps.api.models.incident import Incident
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     inc = Incident(
         id=f"inc-{uuid.uuid4().hex[:8]}",
         created_at=now,

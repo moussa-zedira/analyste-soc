@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from apps.api.auth import RoleChecker, get_current_user
+from apps.api.auth import RoleChecker
 from apps.api.db.session import get_db
 from apps.api.models.audit_log import AuditLog
 from apps.api.models.user import User
@@ -79,7 +79,7 @@ def _log_action(
         target=target,
         details=json.dumps(details or {}),
         ip_address=ip_address,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(entry)
     db.commit()

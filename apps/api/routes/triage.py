@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 from apps.api.config import get_settings
 from apps.api.db.session import get_db
 from apps.api.detection.triage import (
-    EVENT_CLASSIFICATION,
     DEFAULT_CLASSIFICATION,
+    EVENT_CLASSIFICATION,
     SEVERITY_ORDER,
     invalidate_whitelist_cache,
 )
@@ -105,7 +105,7 @@ def add_whitelist_entry(
         entry_type=payload.entry_type,
         value=payload.value,
         reason=payload.reason,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
         enabled=True,
     )
     db.add(entry)

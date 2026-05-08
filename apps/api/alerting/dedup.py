@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -42,7 +42,7 @@ def check_and_record(
     """
     ttl = ttl_minutes if ttl_minutes is not None else DEFAULT_DEDUP_TTL_MINUTES
     fp = compute_fingerprint(incident)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     row = db.query(AlertFingerprint).filter(AlertFingerprint.fingerprint == fp).first()
     suppress = False

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -142,7 +142,7 @@ def create_integration(payload: IntegrationCreate, db: Session = Depends(get_db)
     _validate_type(payload.integration_type)
     _validate_severity(payload.severity_min)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     integ = OutboundIntegration(
         id=str(uuid.uuid4()),
         integration_type=payload.integration_type,
@@ -211,7 +211,7 @@ def update_integration(
             merged[k] = v
         integ.config_json = json.dumps(merged)
 
-    integ.updated_at = datetime.now(timezone.utc)
+    integ.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(integ)
     return _to_read(integ)

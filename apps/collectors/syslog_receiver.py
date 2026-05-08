@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from collections import deque
 
+from apps.collectors.api_client import send_batch
 from apps.collectors.config import (
     BATCH_SIZE,
     FLUSH_INTERVAL,
@@ -14,7 +14,6 @@ from apps.collectors.config import (
     SYSLOG_UDP_PORT,
 )
 from apps.collectors.normalizer import NormalizedEvent, init_parsers, parse_line
-from apps.collectors.api_client import send_batch
 
 logger = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC
 
 from apps.api.celery_app import celery
 from apps.api.db.session import SessionLocal
@@ -97,10 +98,10 @@ def task_execute_playbook(
                 PlaybookExecution.id == execution_id,
             ).first()
             if execution and execution.status in ("pending", "running"):
-                from datetime import datetime, timezone
+                from datetime import datetime
                 execution.status = "failed"
                 execution.error = str(exc)
-                execution.finished_at = datetime.now(timezone.utc)
+                execution.finished_at = datetime.now(UTC)
                 db.commit()
         except Exception:
             db.rollback()

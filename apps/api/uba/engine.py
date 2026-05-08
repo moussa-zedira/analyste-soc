@@ -21,7 +21,7 @@ from __future__ import annotations
 import hashlib
 import math
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -74,11 +74,11 @@ def _ua_hash(ua: str | None) -> str:
 
 
 def _hour_bucket(ts: datetime) -> str:
-    return str(ts.astimezone(timezone.utc).hour)
+    return str(ts.astimezone(UTC).hour)
 
 
 def _day_bucket(ts: datetime) -> str:
-    return DAY_BUCKETS.get(ts.astimezone(timezone.utc).weekday(), "weekday")
+    return DAY_BUCKETS.get(ts.astimezone(UTC).weekday(), "weekday")
 
 
 def _bump(d: dict[str, int], key: str, by: int = 1, cap: int | None = None) -> None:
@@ -146,7 +146,7 @@ def update_baselines(db: Session, since: datetime | None = None) -> dict[str, in
     peer_groups}.
     """
     if since is None:
-        since = datetime.now(timezone.utc) - timedelta(minutes=LOOKBACK_MIN)
+        since = datetime.now(UTC) - timedelta(minutes=LOOKBACK_MIN)
 
     events = (
         db.query(Event)
@@ -175,7 +175,7 @@ def update_baselines(db: Session, since: datetime | None = None) -> dict[str, in
             )
             .first()
         )
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if baseline is None:
             baseline = UserBaseline(
                 id=str(uuid.uuid4()),

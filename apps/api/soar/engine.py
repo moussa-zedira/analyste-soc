@@ -4,12 +4,11 @@ conditions, interpolation de variables, rollback et audit trail complet."""
 from __future__ import annotations
 
 import asyncio
-import copy
 import logging
 import re
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -163,7 +162,7 @@ class PlaybookEngine:
         incident_id: str | None = None,
     ) -> PlaybookExecution:
         """Run a full playbook and return the execution record."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         execution = PlaybookExecution(
             id=str(uuid.uuid4()),
             playbook_id=playbook.id,
@@ -245,7 +244,7 @@ class PlaybookEngine:
 
         elapsed = (time.monotonic() - t0) * 1000
         execution.duration_ms = round(elapsed, 2)
-        execution.finished_at = datetime.now(timezone.utc)
+        execution.finished_at = datetime.now(UTC)
         execution.variables = _safe_json(variables)
         execution.result = {
             "steps_executed": len(variables.get("steps", {})),
@@ -269,7 +268,7 @@ class PlaybookEngine:
         variables: dict[str, Any],
     ) -> dict[str, Any]:
         """Execute a single step and record the result."""
-        from apps.api.soar.actions import get_action, list_actions
+        from apps.api.soar.actions import get_action
 
         step_name = step_def.get("name", f"step_{idx}")
         action_name = step_def.get("action", "")
@@ -288,8 +287,8 @@ class PlaybookEngine:
                 status="skipped",
                 skipped=True,
                 skip_reason="Condition not met",
-                started_at=datetime.now(timezone.utc),
-                finished_at=datetime.now(timezone.utc),
+                started_at=datetime.now(UTC),
+                finished_at=datetime.now(UTC),
                 duration_ms=0,
             )
             self.db.add(step_result)
@@ -297,7 +296,7 @@ class PlaybookEngine:
             return {"status": "skipped", "reason": "Condition not met"}
 
         t0 = time.monotonic()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         step_record = PlaybookStepResult(
             id=str(uuid.uuid4()),
@@ -316,7 +315,7 @@ class PlaybookEngine:
             output = {"status": "dry_run", "action": action_name, "params": params}
             step_record.status = "dry_run"
             step_record.output = output
-            step_record.finished_at = datetime.now(timezone.utc)
+            step_record.finished_at = datetime.now(UTC)
             step_record.duration_ms = round((time.monotonic() - t0) * 1000, 2)
             self.db.commit()
             return output
@@ -326,7 +325,7 @@ class PlaybookEngine:
             output = {"status": "error", "error": f"Unknown action: {action_name}"}
             step_record.status = "error"
             step_record.error = output["error"]
-            step_record.finished_at = datetime.now(timezone.utc)
+            step_record.finished_at = datetime.now(UTC)
             step_record.duration_ms = round((time.monotonic() - t0) * 1000, 2)
             self.db.commit()
             return output
@@ -347,7 +346,7 @@ class PlaybookEngine:
             output.setdefault("status", "success")
             step_record.status = "success"
             step_record.output = _safe_json(output)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             output = {"status": "error", "error": f"Timeout after {timeout_s}s"}
             step_record.status = "timeout"
             step_record.error = output["error"]
@@ -357,7 +356,7 @@ class PlaybookEngine:
             step_record.error = str(exc)
             logger.exception("Step %s failed", step_name)
 
-        step_record.finished_at = datetime.now(timezone.utc)
+        step_record.finished_at = datetime.now(UTC)
         step_record.duration_ms = round((time.monotonic() - t0) * 1000, 2)
         self.db.commit()
         return output
@@ -378,7 +377,7 @@ class PlaybookEngine:
             )
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
         merged: dict[str, dict] = {}
-        for sub_step, result in zip(parallel_steps, results_list):
+        for sub_step, result in zip(parallel_steps, results_list, strict=False):
             name = sub_step.get("name", f"parallel_{base_idx}_{id(sub_step)}")
             if isinstance(result, Exception):
                 merged[name] = {"status": "error", "error": str(result)}

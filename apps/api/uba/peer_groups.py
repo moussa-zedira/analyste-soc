@@ -9,7 +9,8 @@ deviations relatives — un user a 60/100 dans un groupe ou la moyenne est
 from __future__ import annotations
 
 import math
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from sqlalchemy.orm import Session
 

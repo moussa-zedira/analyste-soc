@@ -9,7 +9,7 @@ LEEF 2.0:  LEEF:2.0|Vendor|Product|Version|EventID|delimiter|key=value...
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from apps.api.parsers import BaseParser, _normalize_severity
@@ -56,7 +56,7 @@ def _parse_leef_ts(attrs: dict[str, str]) -> datetime | None:
     if not raw:
         return None
     if raw.isdigit():
-        return datetime.fromtimestamp(int(raw) / 1000, tz=timezone.utc)
+        return datetime.fromtimestamp(int(raw) / 1000, tz=UTC)
     for fmt in (
         "%b %d %Y %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S.%fZ",
@@ -64,7 +64,7 @@ def _parse_leef_ts(attrs: dict[str, str]) -> datetime | None:
         "%d/%b/%Y:%H:%M:%S %z",
     ):
         try:
-            return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(raw, fmt).replace(tzinfo=UTC)
         except ValueError:
             continue
     return None
@@ -137,7 +137,7 @@ class LEEFParser(BaseParser):
             key, _, val = part.partition("=")
             attrs[key.strip()] = val.strip()
 
-        ts = _parse_leef_ts(attrs) or datetime.now(timezone.utc)
+        ts = _parse_leef_ts(attrs) or datetime.now(UTC)
         severity_raw = _extract(attrs, _SEVERITY_KEYS) or "low"
 
         return {

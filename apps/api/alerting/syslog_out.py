@@ -44,9 +44,9 @@ def _build_cef(incident: dict[str, Any]) -> str:
         f"src={_esc(incident.get('entity_key', 'N/A'))}",
         f"msg={_esc(incident.get('description', 'N/A')[:512])}",
         f"cs1={_esc(incident.get('rule_id', 'N/A'))}",
-        f"cs1Label=RuleID",
+        "cs1Label=RuleID",
         f"cn1={incident.get('threat_score', 0)}",
-        f"cn1Label=ThreatScore",
+        "cn1Label=ThreatScore",
         f"externalId={_esc(incident.get('id', 'N/A'))}",
     ])
 

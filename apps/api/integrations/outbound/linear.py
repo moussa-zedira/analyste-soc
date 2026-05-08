@@ -8,7 +8,6 @@ import httpx
 
 from apps.api.integrations.outbound.base import HTTP_TIMEOUT_SECONDS, OutboundConnector
 
-
 _PRIORITY_MAP = {
     "critical": 1,
     "high": 2,

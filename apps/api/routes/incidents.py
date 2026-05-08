@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
@@ -156,7 +156,7 @@ def update_incident_status(
 
     previous_status = incident.status
     incident.status = new_status
-    incident.updated_at = datetime.now(timezone.utc)
+    incident.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(incident)
     record_incident_transition(previous_status, new_status)

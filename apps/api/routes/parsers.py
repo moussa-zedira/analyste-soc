@@ -11,7 +11,7 @@ Endpoints:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -19,11 +19,9 @@ from pydantic import BaseModel, Field
 
 from apps.api.parsers import (
     detect,
-    detect_format,
-    parse_line,
-    parse_bulk,
-    supported_formats,
     get_registry,
+    parse_line,
+    supported_formats,
 )
 
 router = APIRouter()
@@ -118,7 +116,7 @@ def _to_parsed_event(ev: dict[str, Any]) -> ParsedEvent:
     if isinstance(ts, datetime):
         ts_str = ts.isoformat()
     else:
-        ts_str = str(ts) if ts else datetime.now(timezone.utc).isoformat()
+        ts_str = str(ts) if ts else datetime.now(UTC).isoformat()
 
     return ParsedEvent(
         id=ev.get("id") or str(uuid.uuid4()),

@@ -13,7 +13,7 @@ import logging
 import re
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from apps.api.pipeline.context import EventContext
@@ -60,7 +60,7 @@ class IngestStage(BaseStage):
         if not ctx.parsed.get("id"):
             ctx.parsed["id"] = str(uuid.uuid4())
         if not ctx.parsed.get("ts"):
-            ctx.parsed["ts"] = datetime.now(timezone.utc)
+            ctx.parsed["ts"] = datetime.now(UTC)
         ctx.context_id = ctx.parsed["id"]
         return ctx
 
@@ -174,8 +174,8 @@ class TIEnrichStage(BaseStage):
         provider_results: list[dict] = []
 
         try:
-            from apps.api.threat_intel.enrichment import _lookup_ip, _get_providers
             from apps.api.db.session import SessionLocal
+            from apps.api.threat_intel.enrichment import _lookup_ip
 
             db = SessionLocal()
             try:
@@ -234,8 +234,9 @@ class AssetEnrichStage(BaseStage):
     async def _lookup_asset(self, identifier: str) -> dict[str, Any] | None:
         """Lookup asset in inventory. Returns None if not found."""
         try:
-            from apps.api.db.session import SessionLocal
             from sqlalchemy import text
+
+            from apps.api.db.session import SessionLocal
 
             db = SessionLocal()
             try:
@@ -420,12 +421,11 @@ class DetectStage(BaseStage):
     async def _run_sigma(self, ctx: EventContext) -> list[dict]:
         results: list[dict] = []
         try:
+            from apps.api.db.session import SessionLocal
             from apps.api.detection.sigma_engine import (
                 evaluate_sigma_rule,
                 get_enabled_sigma_rules,
             )
-            from apps.api.db.session import SessionLocal
-            from apps.api.models.event import Event
 
             db = SessionLocal()
             try:
@@ -453,8 +453,8 @@ class DetectStage(BaseStage):
     async def _run_custom_rules(self, ctx: EventContext) -> list[dict]:
         results: list[dict] = []
         try:
-            from apps.api.detection.rules import get_rules
             from apps.api.detection.evaluator import evaluate_rule
+            from apps.api.detection.rules import get_rules
 
             rules = get_rules(enabled_only=True)
             mock_event = _build_mock_event(ctx.parsed)
@@ -535,12 +535,13 @@ class IOCMatchStage(BaseStage):
             return ctx
 
         try:
-            from apps.api.db.session import SessionLocal
             from sqlalchemy import text
+
+            from apps.api.db.session import SessionLocal
 
             db = SessionLocal()
             try:
-                for ioc_type, ioc_value in indicators:
+                for _ioc_type, ioc_value in indicators:
                     row = db.execute(
                         text(
                             "SELECT id, ioc_type, value, threat_type, severity, source "
@@ -564,7 +565,7 @@ class IOCMatchStage(BaseStage):
                                     "UPDATE iocs SET sightings = COALESCE(sightings, 0) + 1, "
                                     "last_seen = :now WHERE id = :ioc_id"
                                 ),
-                                {"now": datetime.now(timezone.utc), "ioc_id": row[0]},
+                                {"now": datetime.now(UTC), "ioc_id": row[0]},
                             )
                             db.commit()
                         except Exception:
@@ -593,8 +594,8 @@ class SOARTriggerStage(BaseStage):
             return ctx
 
         try:
-            from apps.api.soar.engine import fire_triggers
             from apps.api.db.session import SessionLocal
+            from apps.api.soar.engine import fire_triggers
 
             db = SessionLocal()
             try:
@@ -739,7 +740,7 @@ class StoreStage(BaseStage):
                 else:
                     event = Event(
                         id=event_dict.get("id", str(uuid.uuid4())),
-                        ts=event_dict.get("ts", datetime.now(timezone.utc)),
+                        ts=event_dict.get("ts", datetime.now(UTC)),
                         source=event_dict.get("source", "pipeline"),
                         event_type=event_dict.get("event_type", "unknown"),
                         severity=event_dict.get("severity", "low"),
@@ -769,7 +770,7 @@ class StoreStage(BaseStage):
         from apps.api.models.incident import Incident
         from apps.api.models.incident_event import IncidentEvent
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         severity_threshold = {"critical", "high"}
 
         for det in ctx.detections:
@@ -832,7 +833,7 @@ def _build_mock_event(parsed: dict[str, Any]) -> Any:
 
     evt = _MockEvent()
     evt.id = parsed.get("id", "")
-    evt.ts = parsed.get("ts", datetime.now(timezone.utc))
+    evt.ts = parsed.get("ts", datetime.now(UTC))
     evt.source = parsed.get("source", "")
     evt.event_type = parsed.get("event_type", "")
     evt.severity = parsed.get("severity", "low")
