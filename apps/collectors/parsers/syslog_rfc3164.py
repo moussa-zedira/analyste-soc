@@ -19,11 +19,11 @@ _SEVERITY_MAP = {
     0: "critical",  # Emergency
     1: "critical",  # Alert
     2: "critical",  # Critical
-    3: "high",      # Error
-    4: "medium",    # Warning
-    5: "low",       # Notice
-    6: "low",       # Informational
-    7: "low",       # Debug
+    3: "high",  # Error
+    4: "medium",  # Warning
+    5: "low",  # Notice
+    6: "low",  # Informational
+    7: "low",  # Debug
 }
 
 _IP_RE = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")

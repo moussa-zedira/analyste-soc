@@ -8,13 +8,13 @@ from apps.collectors.normalizer import NormalizedEvent
 
 # 192.168.1.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://ref" "Mozilla/4.08"
 _COMBINED_RE = re.compile(
-    r"(\S+)\s+"           # client IP
-    r"(\S+)\s+"           # ident
-    r"(\S+)\s+"           # user
-    r"\[([^\]]+)\]\s+"    # date
+    r"(\S+)\s+"  # client IP
+    r"(\S+)\s+"  # ident
+    r"(\S+)\s+"  # user
+    r"\[([^\]]+)\]\s+"  # date
     r'"(\S+)\s+(\S+)\s+(\S+)"\s+'  # method, path, protocol
-    r"(\d{3})\s+"         # status code
-    r"(\d+|-)"            # bytes
+    r"(\d{3})\s+"  # status code
+    r"(\d+|-)"  # bytes
     r'(?:\s+"([^"]*)")?'  # referer
     r'(?:\s+"([^"]*)")?'  # user agent
 )

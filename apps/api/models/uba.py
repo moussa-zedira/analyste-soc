@@ -25,10 +25,10 @@ class UserBaseline(Base):
     entity_key: Mapped[str] = mapped_column(Text, index=True)
     total_events: Mapped[int] = mapped_column(Integer, default=0)
     # Distributions {bucket -> count}
-    hours: Mapped[dict] = mapped_column(JSON, default=dict)        # "0".."23" -> count
+    hours: Mapped[dict] = mapped_column(JSON, default=dict)  # "0".."23" -> count
     event_types: Mapped[dict] = mapped_column(JSON, default=dict)  # event_type -> count
-    geos: Mapped[dict] = mapped_column(JSON, default=dict)         # country/asn -> count
-    src_ips: Mapped[dict] = mapped_column(JSON, default=dict)      # ip -> count (top 100)
+    geos: Mapped[dict] = mapped_column(JSON, default=dict)  # country/asn -> count
+    src_ips: Mapped[dict] = mapped_column(JSON, default=dict)  # ip -> count (top 100)
     user_agents: Mapped[dict] = mapped_column(JSON, default=dict)  # ua hash -> count
     # Score courant + meta
     current_score: Mapped[float] = mapped_column(Float, default=0.0)

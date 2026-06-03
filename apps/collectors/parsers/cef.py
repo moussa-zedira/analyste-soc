@@ -9,13 +9,13 @@ from apps.collectors.normalizer import NormalizedEvent
 # CEF:Version|Device Vendor|Device Product|Device Version|Signature ID|Name|Severity|Extension
 _CEF_RE = re.compile(
     r"CEF:(\d+)\|"
-    r"([^|]*)\|"   # vendor
-    r"([^|]*)\|"   # product
-    r"([^|]*)\|"   # version
-    r"([^|]*)\|"   # sig id
-    r"([^|]*)\|"   # name
-    r"([^|]*)\|"   # severity
-    r"(.*)"         # extension
+    r"([^|]*)\|"  # vendor
+    r"([^|]*)\|"  # product
+    r"([^|]*)\|"  # version
+    r"([^|]*)\|"  # sig id
+    r"([^|]*)\|"  # name
+    r"([^|]*)\|"  # severity
+    r"(.*)"  # extension
 )
 
 
