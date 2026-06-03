@@ -68,12 +68,7 @@ def _create_sigma_incident(
 
 def _fetch_recent_events(db: Session, since: datetime) -> list[Event]:
     """Recupere les evenements de la derniere heure, tries par horodatage croissant."""
-    return (
-        db.query(Event)
-        .filter(Event.ts >= since)
-        .order_by(Event.ts.asc())
-        .all()
-    )
+    return db.query(Event).filter(Event.ts >= since).order_by(Event.ts.asc()).all()
 
 
 def run_detection(db: Session) -> dict:
@@ -98,9 +93,7 @@ def run_detection(db: Session) -> dict:
     for rule in rules:
         try:
             matches = evaluate_rule(rule, events)
-            logger.info(
-                "Rule %s produced %d matches", rule.id, len(matches)
-            )
+            logger.info("Rule %s produced %d matches", rule.id, len(matches))
 
             for match in matches:
                 created = create_incident(db, rule, match)
@@ -130,7 +123,11 @@ def run_detection(db: Session) -> dict:
             for event in events:
                 if evaluate_sigma_rule(compiled, event):
                     created = _create_sigma_incident(
-                        db, sigma_rule, compiled, event, now,
+                        db,
+                        sigma_rule,
+                        compiled,
+                        event,
+                        now,
                     )
                     if created:
                         total_incidents += 1
@@ -176,9 +173,7 @@ def run_detection(db: Session) -> dict:
                     f"fsm:{completion['machine_id']}|{entity_key}|{bucket}".encode()
                 ).hexdigest()
 
-                existing = db.query(Incident).filter(
-                    Incident.dedup_hash == dedup
-                ).first()
+                existing = db.query(Incident).filter(Incident.dedup_hash == dedup).first()
                 if existing:
                     continue
 
@@ -203,7 +198,9 @@ def run_detection(db: Session) -> dict:
                 db.add(incident)
                 total_incidents += 1
             except Exception:
-                logger.exception("FSM incident creation failed for %s", completion.get("machine_id"))
+                logger.exception(
+                    "FSM incident creation failed for %s", completion.get("machine_id")
+                )
 
         # Cleanup expired states periodically
         sm_engine.cleanup()

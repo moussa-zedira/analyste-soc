@@ -33,6 +33,7 @@ def register_action(
     params_schema: dict | None = None,
 ):
     """Decorator to register a SOAR action."""
+
     def decorator(fn: Callable):
         _REGISTRY[name] = {
             "name": name,
@@ -42,6 +43,7 @@ def register_action(
             "fn": fn,
         }
         return fn
+
     return decorator
 
 
@@ -51,15 +53,13 @@ def get_action(name: str) -> Callable | None:
 
 
 def list_actions() -> list[dict[str, Any]]:
-    return [
-        {k: v for k, v in entry.items() if k != "fn"}
-        for entry in _REGISTRY.values()
-    ]
+    return [{k: v for k, v in entry.items() if k != "fn"} for entry in _REGISTRY.values()]
 
 
 # ===================================================================
 # ENRICHMENT ACTIONS
 # ===================================================================
+
 
 @register_action(
     "lookup_ip_reputation",
@@ -72,6 +72,7 @@ async def lookup_ip_reputation(params: dict, variables: dict, db: Session) -> di
     results: dict[str, Any] = {"ip": ip, "providers": {}}
     try:
         from apps.api.threat_intel.enrichment import lookup_ip
+
         ti_result = await asyncio.to_thread(lookup_ip, ip, db)
         results["providers"] = ti_result
         results["malicious"] = ti_result.get("malicious", False)
@@ -101,6 +102,7 @@ async def lookup_domain(params: dict, variables: dict, db: Session) -> dict:
         result["dns_error"] = "NXDOMAIN"
     try:
         from apps.api.threat_intel.enrichment import lookup_domain as ti_lookup
+
         ti = await asyncio.to_thread(ti_lookup, domain, db)
         result["threat_intel"] = ti
     except Exception:
@@ -120,6 +122,7 @@ async def lookup_hash(params: dict, variables: dict, db: Session) -> dict:
     result: dict[str, Any] = {"hash": file_hash, "hash_type": hash_type, "malicious": False}
     try:
         from apps.api.threat_intel.enrichment import lookup_hash as ti_hash
+
         ti = await asyncio.to_thread(ti_hash, file_hash, db)
         result.update(ti)
     except Exception:
@@ -140,6 +143,7 @@ async def geoip_lookup(params: dict, variables: dict, db: Session) -> dict:
         import geoip2.database
 
         from apps.api.config import get_settings
+
         settings = get_settings()
         with geoip2.database.Reader(settings.GEOIP_DB_PATH) as reader:
             resp = reader.city(ip)
@@ -165,6 +169,7 @@ async def whois_lookup(params: dict, variables: dict, db: Session) -> dict:
     result: dict[str, Any] = {"target": target}
     try:
         import whois as python_whois
+
         w = await asyncio.to_thread(python_whois.whois, target)
         result["registrar"] = w.registrar
         result["creation_date"] = str(w.creation_date)
@@ -219,11 +224,16 @@ async def check_tor_exit(params: dict, variables: dict, db: Session) -> dict:
 # CONTAINMENT ACTIONS
 # ===================================================================
 
+
 @register_action(
     "block_ip_firewall",
     category="containment",
     description="Add IP to firewall blocklist (Panorama > iptables > log)",
-    params_schema={"ip": "string", "direction": "string (inbound|outbound|both)", "duration_hours": "int"},
+    params_schema={
+        "ip": "string",
+        "direction": "string (inbound|outbound|both)",
+        "duration_hours": "int",
+    },
 )
 async def block_ip_firewall(params: dict, variables: dict, db: Session) -> dict:
     ip = params.get("ip", "")
@@ -254,7 +264,9 @@ async def block_ip_firewall(params: dict, variables: dict, db: Session) -> dict:
             logger.warning("SOAR connector %s failed: %s", connector.name, exc)
 
     # Fallback : log only (aucun connector configure/disponible)
-    logger.info("SOAR: Blocking IP %s direction=%s duration=%dh (LOG-ONLY)", ip, direction, duration)
+    logger.info(
+        "SOAR: Blocking IP %s direction=%s duration=%dh (LOG-ONLY)", ip, direction, duration
+    )
     return {
         **base,
         "applied": False,
@@ -364,7 +376,12 @@ async def disable_user(params: dict, variables: dict, db: Session) -> dict:
             logger.warning("SOAR %s exception: %s", connector.name, exc)
 
     logger.info("SOAR: Disabling user %s — %s (LOG-ONLY)", username, reason)
-    return {**base, "disabled": False, "reason_no_apply": "no_connector_configured", "connector": "log-only"}
+    return {
+        **base,
+        "disabled": False,
+        "reason_no_apply": "no_connector_configured",
+        "connector": "log-only",
+    }
 
 
 @register_action(
@@ -400,17 +417,28 @@ async def revoke_sessions(params: dict, variables: dict, db: Session) -> dict:
                 res = await connector.revoke_sts_sessions(username)
             else:  # ldap : forcer un changement de password = invalider sessions
                 import secrets
+
                 temp_pwd = secrets.token_urlsafe(24) + "Aa1!"
                 res = await connector.reset_password(username, temp_pwd)
                 if res.get("applied"):
                     res["note"] = "Password rotated — sessions invalidated"
             if res.get("applied"):
-                return {**base, "sessions_revoked": True, "connector": connector.name, "result": res}
+                return {
+                    **base,
+                    "sessions_revoked": True,
+                    "connector": connector.name,
+                    "result": res,
+                }
         except Exception as exc:
             logger.warning("SOAR %s revoke_sessions exception: %s", connector.name, exc)
 
     logger.info("SOAR: Revoking all sessions for %s (LOG-ONLY)", username)
-    return {**base, "sessions_revoked": False, "reason": "no_connector_configured", "connector": "log-only"}
+    return {
+        **base,
+        "sessions_revoked": False,
+        "reason": "no_connector_configured",
+        "connector": "log-only",
+    }
 
 
 @register_action(
@@ -453,7 +481,12 @@ async def quarantine_file(params: dict, variables: dict, db: Session) -> dict:
             logger.warning("SOAR Defender exception: %s", exc)
 
     logger.info("SOAR: Quarantining %s on %s (LOG-ONLY)", file_path, hostname)
-    return {**base, "quarantined": False, "reason": "no_connector_configured_or_missing_sha1", "connector": "log-only"}
+    return {
+        **base,
+        "quarantined": False,
+        "reason": "no_connector_configured_or_missing_sha1",
+        "connector": "log-only",
+    }
 
 
 @register_action(
@@ -482,7 +515,12 @@ async def block_domain_dns(params: dict, variables: dict, db: Session) -> dict:
             logger.warning("SOAR Panorama block_domain exception: %s", exc)
 
     logger.info("SOAR: DNS sinkhole for %s (LOG-ONLY)", domain)
-    return {**base, "sinkholed": False, "reason": "no_connector_configured", "connector": "log-only"}
+    return {
+        **base,
+        "sinkholed": False,
+        "reason": "no_connector_configured",
+        "connector": "log-only",
+    }
 
 
 @register_action(
@@ -511,6 +549,7 @@ async def update_waf_rules(params: dict, variables: dict, db: Session) -> dict:
 # NOTIFICATION ACTIONS
 # ===================================================================
 
+
 @register_action(
     "send_email",
     category="notification",
@@ -519,6 +558,7 @@ async def update_waf_rules(params: dict, variables: dict, db: Session) -> dict:
 )
 async def send_email(params: dict, variables: dict, db: Session) -> dict:
     from apps.api.config import get_settings
+
     settings = get_settings()
     to = params.get("to", "")
     subject = params.get("subject", "SOAR Alert")
@@ -554,6 +594,7 @@ async def send_email(params: dict, variables: dict, db: Session) -> dict:
 )
 async def send_slack(params: dict, variables: dict, db: Session) -> dict:
     from apps.api.config import get_settings
+
     settings = get_settings()
     channel = params.get("channel", "#security-alerts")
     message = params.get("message", "")
@@ -564,6 +605,7 @@ async def send_slack(params: dict, variables: dict, db: Session) -> dict:
 
     try:
         import httpx
+
         payload = {"channel": channel, "text": message, "username": "SOAR Bot"}
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(webhook_url, json=payload)
@@ -588,6 +630,7 @@ async def send_teams(params: dict, variables: dict, db: Session) -> dict:
 
     try:
         import httpx
+
         payload = {
             "@type": "MessageCard",
             "@context": "http://schema.org/extensions",
@@ -619,6 +662,7 @@ async def send_pagerduty(params: dict, variables: dict, db: Session) -> dict:
 
     try:
         import httpx
+
         payload = {
             "routing_key": routing_key,
             "event_action": "trigger",
@@ -650,10 +694,15 @@ async def send_telegram(params: dict, variables: dict, db: Session) -> dict:
     message = params.get("message", "")
 
     if not bot_token or not chat_id:
-        return {"action": "send_telegram", "sent": False, "reason": "Bot token and chat_id required"}
+        return {
+            "action": "send_telegram",
+            "sent": False,
+            "reason": "Bot token and chat_id required",
+        }
 
     try:
         import httpx
+
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(url, json={"chat_id": chat_id, "text": message})
@@ -667,8 +716,12 @@ async def send_telegram(params: dict, variables: dict, db: Session) -> dict:
     category="notification",
     description="Create a Jira ticket",
     params_schema={
-        "url": "string", "project": "string", "summary": "string",
-        "description": "string", "issue_type": "string", "priority": "string",
+        "url": "string",
+        "project": "string",
+        "summary": "string",
+        "description": "string",
+        "issue_type": "string",
+        "priority": "string",
     },
 )
 async def create_ticket_jira(params: dict, variables: dict, db: Session) -> dict:
@@ -684,6 +737,7 @@ async def create_ticket_jira(params: dict, variables: dict, db: Session) -> dict
 
     try:
         import httpx
+
         payload = {
             "fields": {
                 "project": {"key": project},
@@ -712,8 +766,11 @@ async def create_ticket_jira(params: dict, variables: dict, db: Session) -> dict
     category="notification",
     description="Create ServiceNow incident",
     params_schema={
-        "instance": "string", "short_description": "string",
-        "description": "string", "urgency": "int", "impact": "int",
+        "instance": "string",
+        "short_description": "string",
+        "description": "string",
+        "urgency": "int",
+        "impact": "int",
     },
 )
 async def create_ticket_servicenow(params: dict, variables: dict, db: Session) -> dict:
@@ -724,10 +781,15 @@ async def create_ticket_servicenow(params: dict, variables: dict, db: Session) -
     impact = params.get("impact", 2)
 
     if not instance:
-        return {"action": "create_ticket_servicenow", "created": False, "reason": "Instance URL required"}
+        return {
+            "action": "create_ticket_servicenow",
+            "created": False,
+            "reason": "Instance URL required",
+        }
 
     try:
         import httpx
+
         payload = {
             "short_description": short_desc,
             "description": description,
@@ -754,6 +816,7 @@ async def create_ticket_servicenow(params: dict, variables: dict, db: Session) -
 # ===================================================================
 # INVESTIGATION ACTIONS
 # ===================================================================
+
 
 @register_action(
     "run_osint",
@@ -895,7 +958,9 @@ async def capture_pcap(params: dict, variables: dict, db: Session) -> dict:
     bpf_filter = params.get("filter", "")
     duration = params.get("duration_seconds", 60)
     capture_id = str(uuid.uuid4())
-    logger.info("SOAR: Starting pcap on %s (filter=%s, duration=%ds)", interface, bpf_filter, duration)
+    logger.info(
+        "SOAR: Starting pcap on %s (filter=%s, duration=%ds)", interface, bpf_filter, duration
+    )
     return {
         "action": "capture_pcap",
         "capture_id": capture_id,
@@ -950,6 +1015,7 @@ async def check_url_sandbox(params: dict, variables: dict, db: Session) -> dict:
 # ===================================================================
 # REMEDIATION ACTIONS
 # ===================================================================
+
 
 @register_action(
     "kill_process",
@@ -1032,10 +1098,15 @@ async def remove_persistence(params: dict, variables: dict, db: Session) -> dict
     "rotate_credentials",
     category="remediation",
     description="Force password reset via LDAP/AD",
-    params_schema={"username": "string", "notify_user": "bool", "new_password": "string (optionnel)"},
+    params_schema={
+        "username": "string",
+        "notify_user": "bool",
+        "new_password": "string (optionnel)",
+    },
 )
 async def rotate_credentials(params: dict, variables: dict, db: Session) -> dict:
     import secrets
+
     username = params.get("username", "")
     notify = params.get("notify_user", True)
     new_password = params.get("new_password") or (secrets.token_urlsafe(18) + "Aa1!")
@@ -1146,11 +1217,16 @@ async def rollback_change(params: dict, variables: dict, db: Session) -> dict:
 # REPORTING ACTIONS
 # ===================================================================
 
+
 @register_action(
     "generate_report",
     category="reporting",
     description="Generate an incident response report",
-    params_schema={"incident_id": "string", "format": "string (html|pdf|json)", "include_timeline": "bool"},
+    params_schema={
+        "incident_id": "string",
+        "format": "string (html|pdf|json)",
+        "include_timeline": "bool",
+    },
 )
 async def generate_report(params: dict, variables: dict, db: Session) -> dict:
     incident_id = params.get("incident_id", "")
@@ -1168,29 +1244,34 @@ async def generate_report(params: dict, variables: dict, db: Session) -> dict:
     # Pull incident data if available
     if incident_id:
         from apps.api.models.incident import Incident
+
         incident = db.query(Incident).filter(Incident.id == incident_id).first()
         if incident:
-            report_data["sections"].append({
-                "title": "Incident Summary",
-                "content": {
-                    "title": incident.title,
-                    "severity": incident.severity,
-                    "status": incident.status,
-                    "created_at": incident.created_at.isoformat(),
-                },
-            })
+            report_data["sections"].append(
+                {
+                    "title": "Incident Summary",
+                    "content": {
+                        "title": incident.title,
+                        "severity": incident.severity,
+                        "status": incident.status,
+                        "created_at": incident.created_at.isoformat(),
+                    },
+                }
+            )
 
     # Pull execution data from variables
     steps_data = variables.get("steps", {})
     if steps_data:
-        report_data["sections"].append({
-            "title": "Response Actions",
-            "content": {
-                name: {"status": s.get("status", "unknown")}
-                for name, s in steps_data.items()
-                if isinstance(s, dict)
-            },
-        })
+        report_data["sections"].append(
+            {
+                "title": "Response Actions",
+                "content": {
+                    name: {"status": s.get("status", "unknown")}
+                    for name, s in steps_data.items()
+                    if isinstance(s, dict)
+                },
+            }
+        )
 
     return report_data
 
@@ -1261,7 +1342,9 @@ async def calculate_metrics(params: dict, variables: dict, db: Session) -> dict:
     incident_id = params.get("incident_id", "")
     result: dict[str, Any] = {"incident_id": incident_id}
 
-    incident = db.query(Incident).filter(Incident.id == incident_id).first() if incident_id else None
+    incident = (
+        db.query(Incident).filter(Incident.id == incident_id).first() if incident_id else None
+    )
     if incident:
         # MTTD: time from first event to incident creation
         if incident.start_ts and incident.created_at:
@@ -1350,6 +1433,7 @@ async def send_webhook(params: dict, variables: dict, db: Session) -> dict:
 
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(url, json=payload, headers=headers)
         return {

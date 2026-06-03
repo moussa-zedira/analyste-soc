@@ -77,11 +77,7 @@ class ClassificationRead(BaseModel):
 @router.get("/whitelist", response_model=list[WhitelistRead])
 def list_whitelist(db: Session = Depends(get_db)) -> list[WhitelistEntry]:
     """Lister toutes les entrees de la liste blanche."""
-    return (
-        db.query(WhitelistEntry)
-        .order_by(WhitelistEntry.created_at.desc())
-        .all()
-    )
+    return db.query(WhitelistEntry).order_by(WhitelistEntry.created_at.desc()).all()
 
 
 @router.post(

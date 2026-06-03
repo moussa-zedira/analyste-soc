@@ -14,15 +14,17 @@ from urllib.parse import urlparse
 from apps.api.config import get_settings
 
 # IPs explicitement bloquees (instance metadata, link-local, etc.)
-_BLOCKED_HOSTS: frozenset[str] = frozenset({
-    "169.254.169.254",  # AWS / GCP / Azure metadata
-    "metadata.google.internal",
-    "metadata.goog",
-    "metadata",
-    "localhost",
-    "0.0.0.0",
-    "::1",
-})
+_BLOCKED_HOSTS: frozenset[str] = frozenset(
+    {
+        "169.254.169.254",  # AWS / GCP / Azure metadata
+        "metadata.google.internal",
+        "metadata.goog",
+        "metadata",
+        "localhost",
+        "0.0.0.0",
+        "::1",
+    }
+)
 
 # Schemes autorises (jamais file://, gopher://, ftp://, etc.)
 _ALLOWED_SCHEMES: frozenset[str] = frozenset({"http", "https"})
@@ -88,8 +90,6 @@ def validate_outbound_url(url: str, *, require_https: bool | None = None) -> str
             or ip.is_reserved
             or ip.is_unspecified
         ):
-            raise UnsafeURLError(
-                f"URL '{url}' resolves to forbidden address {ip}"
-            )
+            raise UnsafeURLError(f"URL '{url}' resolves to forbidden address {ip}")
 
     return url

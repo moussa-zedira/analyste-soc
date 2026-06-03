@@ -65,11 +65,7 @@ def create_incident(db: Session, rule: Rule, match: RuleMatch) -> bool:
     entity_key = match.group_key
     dedup_hash = _compute_dedup_hash(rule.id, entity_key, match.end_ts)
 
-    existing = (
-        db.query(Incident.id)
-        .filter(Incident.dedup_hash == dedup_hash)
-        .first()
-    )
+    existing = db.query(Incident.id).filter(Incident.dedup_hash == dedup_hash).first()
     if existing is not None:
         logger.debug(
             "Skipped duplicate incident: rule=%s key=%s hash=%s",
@@ -109,11 +105,11 @@ def create_incident(db: Session, rule: Rule, match: RuleMatch) -> bool:
         # ML severity suggestion
         if predict_severity is not None:
             try:
-                event_msgs = [
-                    e.message for e in incident.events[:50] if e.message
-                ]
+                event_msgs = [e.message for e in incident.events[:50] if e.message]
                 suggested = predict_severity(
-                    incident.title, incident.description, event_msgs,
+                    incident.title,
+                    incident.description,
+                    event_msgs,
                 )
                 if suggested:
                     incident.suggested_severity = suggested
@@ -135,18 +131,20 @@ def create_incident(db: Session, rule: Rule, match: RuleMatch) -> bool:
         incidents_created_total.labels(severity=incident.severity).inc()
         record_incident_created(incident.severity, rule.id)
 
-        broadcaster.publish({
-            "type": "new_incident",
-            "payload": {
-                "id": incident_id,
-                "title": incident.title,
-                "severity": incident.severity,
-                "rule_id": rule.id,
-                "entity_key": entity_key,
-                "status": "open",
-                "created_at": now.isoformat(),
-            },
-        })
+        broadcaster.publish(
+            {
+                "type": "new_incident",
+                "payload": {
+                    "id": incident_id,
+                    "title": incident.title,
+                    "severity": incident.severity,
+                    "rule_id": rule.id,
+                    "entity_key": entity_key,
+                    "status": "open",
+                    "created_at": now.isoformat(),
+                },
+            }
+        )
 
         # Dispatch alerts via Celery (non-blocking)
         incident_payload = {

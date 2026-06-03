@@ -24,9 +24,7 @@ def test_surprise_zero_obs_still_finite():
 
 
 def test_entity_key_priority_user_first():
-    ev = SimpleNamespace(
-        raw={"user": "alice"}, src_ip="10.0.0.1", host="host1"
-    )
+    ev = SimpleNamespace(raw={"user": "alice"}, src_ip="10.0.0.1", host="host1")
     assert _entity_key(ev) == ("user", "alice")
 
 

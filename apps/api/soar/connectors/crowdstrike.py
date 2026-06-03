@@ -117,4 +117,10 @@ class FalconConnector(Connector):
                 "persist": False,
             },
         )
-        return {"applied": exec_res["ok"], "aid": aid, "session_id": session_id, "command": command_string, **exec_res}
+        return {
+            "applied": exec_res["ok"],
+            "aid": aid,
+            "session_id": session_id,
+            "command": command_string,
+            **exec_res,
+        }

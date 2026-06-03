@@ -69,16 +69,18 @@ def test_threshold_correlation_below_threshold_no_match():
     )
 
     engine = CorrelationEngine()
-    engine.register_rule(CorrelationRule(
-        id="test-low",
-        name="Burst",
-        description="5 in 60s",
-        correlation_type=CorrelationType.THRESHOLD,
-        event_patterns=[EventPattern(event_type="auth.fail")],
-        time_window=60,
-        group_by=["src_ip"],
-        threshold=5,
-    ))
+    engine.register_rule(
+        CorrelationRule(
+            id="test-low",
+            name="Burst",
+            description="5 in 60s",
+            correlation_type=CorrelationType.THRESHOLD,
+            event_patterns=[EventPattern(event_type="auth.fail")],
+            time_window=60,
+            group_by=["src_ip"],
+            threshold=5,
+        )
+    )
 
     base_ts = datetime.now(UTC)
     events = [_evt(base_ts + timedelta(seconds=i * 5)) for i in range(3)]
@@ -95,16 +97,18 @@ def test_threshold_correlation_groups_by_src_ip():
     )
 
     engine = CorrelationEngine()
-    engine.register_rule(CorrelationRule(
-        id="grp",
-        name="Per-IP burst",
-        description="3 fails per IP / 60s",
-        correlation_type=CorrelationType.THRESHOLD,
-        event_patterns=[EventPattern(event_type="auth.fail")],
-        time_window=60,
-        group_by=["src_ip"],
-        threshold=3,
-    ))
+    engine.register_rule(
+        CorrelationRule(
+            id="grp",
+            name="Per-IP burst",
+            description="3 fails per IP / 60s",
+            correlation_type=CorrelationType.THRESHOLD,
+            event_patterns=[EventPattern(event_type="auth.fail")],
+            time_window=60,
+            group_by=["src_ip"],
+            threshold=3,
+        )
+    )
 
     base = datetime.now(UTC)
     events = [
@@ -128,18 +132,20 @@ def test_temporal_correlation_two_patterns():
     )
 
     engine = CorrelationEngine()
-    engine.register_rule(CorrelationRule(
-        id="temporal-test",
-        name="Fail then success",
-        description="auth.fail then auth.success same IP within 60s",
-        correlation_type=CorrelationType.TEMPORAL,
-        event_patterns=[
-            EventPattern(event_type="auth.fail", label="fail"),
-            EventPattern(event_type="auth.success", label="success"),
-        ],
-        time_window=60,
-        group_by=["src_ip"],
-    ))
+    engine.register_rule(
+        CorrelationRule(
+            id="temporal-test",
+            name="Fail then success",
+            description="auth.fail then auth.success same IP within 60s",
+            correlation_type=CorrelationType.TEMPORAL,
+            event_patterns=[
+                EventPattern(event_type="auth.fail", label="fail"),
+                EventPattern(event_type="auth.success", label="success"),
+            ],
+            time_window=60,
+            group_by=["src_ip"],
+        )
+    )
 
     base = datetime.now(UTC)
     events = [
@@ -160,16 +166,18 @@ def test_evaluate_dedup_per_rule_and_group():
     )
 
     engine = CorrelationEngine()
-    engine.register_rule(CorrelationRule(
-        id="dedup",
-        name="dedup",
-        description="",
-        correlation_type=CorrelationType.THRESHOLD,
-        event_patterns=[EventPattern(event_type="auth.fail")],
-        time_window=60,
-        group_by=["src_ip"],
-        threshold=3,
-    ))
+    engine.register_rule(
+        CorrelationRule(
+            id="dedup",
+            name="dedup",
+            description="",
+            correlation_type=CorrelationType.THRESHOLD,
+            event_patterns=[EventPattern(event_type="auth.fail")],
+            time_window=60,
+            group_by=["src_ip"],
+            threshold=3,
+        )
+    )
 
     base = datetime.now(UTC)
     events = [_evt(base + timedelta(seconds=i)) for i in range(10)]

@@ -9,18 +9,24 @@ from apps.collectors.normalizer import NormalizedEvent
 # <PRI>VERSION TIMESTAMP HOSTNAME APP-NAME PROCID MSGID STRUCTURED-DATA MSG
 _RFC5424_RE = re.compile(
     r"<(\d{1,3})>(\d+)\s+"
-    r"(\S+)\s+"     # timestamp
-    r"(\S+)\s+"     # hostname
-    r"(\S+)\s+"     # app-name
-    r"(\S+)\s+"     # procid
-    r"(\S+)\s+"     # msgid
+    r"(\S+)\s+"  # timestamp
+    r"(\S+)\s+"  # hostname
+    r"(\S+)\s+"  # app-name
+    r"(\S+)\s+"  # procid
+    r"(\S+)\s+"  # msgid
     r"(?:\[.*?\]|-)\s*"  # structured-data
-    r"(.*)"         # message
+    r"(.*)"  # message
 )
 
 _SEVERITY_MAP = {
-    0: "critical", 1: "critical", 2: "critical", 3: "high",
-    4: "medium", 5: "low", 6: "low", 7: "low",
+    0: "critical",
+    1: "critical",
+    2: "critical",
+    3: "high",
+    4: "medium",
+    5: "low",
+    6: "low",
+    7: "low",
 }
 
 _IP_RE = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")

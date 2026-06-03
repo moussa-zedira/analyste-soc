@@ -38,7 +38,10 @@ def _build_blocks(incident: dict[str, Any]) -> list[dict]:
             "type": "section",
             "fields": [
                 {"type": "mrkdwn", "text": f"*Severity:*\n{severity.upper()}"},
-                {"type": "mrkdwn", "text": f"*Threat Score:*\n{incident.get('threat_score', 'N/A')}"},
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Threat Score:*\n{incident.get('threat_score', 'N/A')}",
+                },
                 {"type": "mrkdwn", "text": f"*Rule:*\n{incident.get('rule_id', 'N/A')}"},
                 {"type": "mrkdwn", "text": f"*Entity:*\n{incident.get('entity_key', 'N/A')}"},
             ],
@@ -56,51 +59,57 @@ def _build_blocks(incident: dict[str, Any]) -> list[dict]:
     actions_list = incident.get("recommended_actions", [])
     if actions_list:
         actions_text = "\n".join(f"• {a}" for a in actions_list[:5])
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*Recommended Actions:*\n{actions_text}",
-            },
-        })
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Recommended Actions:*\n{actions_text}",
+                },
+            }
+        )
 
     # Context line
-    blocks.append({
-        "type": "context",
-        "elements": [
-            {
-                "type": "mrkdwn",
-                "text": f"Incident ID: `{incident.get('id', 'N/A')}` | {incident.get('timestamp', '')}",
-            }
-        ],
-    })
+    blocks.append(
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"Incident ID: `{incident.get('id', 'N/A')}` | {incident.get('timestamp', '')}",
+                }
+            ],
+        }
+    )
 
     # Interactive buttons
-    blocks.append({
-        "type": "actions",
-        "elements": [
-            {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "Acknowledge", "emoji": True},
-                "style": "primary",
-                "action_id": "ack_incident",
-                "value": str(incident.get("id", "")),
-            },
-            {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "Investigate", "emoji": True},
-                "action_id": "investigate_incident",
-                "value": str(incident.get("id", "")),
-            },
-            {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "Dismiss", "emoji": True},
-                "style": "danger",
-                "action_id": "dismiss_incident",
-                "value": str(incident.get("id", "")),
-            },
-        ],
-    })
+    blocks.append(
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Acknowledge", "emoji": True},
+                    "style": "primary",
+                    "action_id": "ack_incident",
+                    "value": str(incident.get("id", "")),
+                },
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Investigate", "emoji": True},
+                    "action_id": "investigate_incident",
+                    "value": str(incident.get("id", "")),
+                },
+                {
+                    "type": "button",
+                    "text": {"type": "plain_text", "text": "Dismiss", "emoji": True},
+                    "style": "danger",
+                    "action_id": "dismiss_incident",
+                    "value": str(incident.get("id", "")),
+                },
+            ],
+        }
+    )
 
     return blocks
 
@@ -143,6 +152,7 @@ async def send_alert(config: dict[str, Any], incident: dict[str, Any]) -> None:
                 if exc.response.status_code == 429:
                     retry_after = float(exc.response.headers.get("Retry-After", "2"))
                     import asyncio
+
                     await asyncio.sleep(retry_after)
                     continue
                 if attempt == 2:

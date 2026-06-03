@@ -80,6 +80,7 @@ class BaseTIProvider:
             resp = await self._call("ip_lookup", self._client.get, url)
         """
         import time
+
         start = time.perf_counter()
         result_label = "error"
         try:
@@ -102,8 +103,11 @@ class BaseTIProvider:
             elapsed = time.perf_counter() - start
             try:
                 ti_provider_latency_seconds.labels(
-                    provider=self.name, operation=operation,
+                    provider=self.name,
+                    operation=operation,
                 ).observe(elapsed)
                 record_result(self.name, result_label)
             except Exception as exc:
-                logger.debug("Failed to record provider metrics for %s/%s: %s", self.name, operation, exc)
+                logger.debug(
+                    "Failed to record provider metrics for %s/%s: %s", self.name, operation, exc
+                )

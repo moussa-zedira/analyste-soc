@@ -148,9 +148,7 @@ async def ws_terminal(
         return
 
     if not engagement_id:
-        await ws.send_json(
-            {"type": "error", "code": 400, "detail": "engagement_id required"}
-        )
+        await ws.send_json({"type": "error", "code": 400, "detail": "engagement_id required"})
         await ws.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
@@ -208,9 +206,7 @@ async def ws_terminal(
                         assert_engagement_allows,
                     )
 
-                    await assert_engagement_allows(
-                        db, engagement_id, target=session_id
-                    )
+                    await assert_engagement_allows(db, engagement_id, target=session_id)
                 except ImportError:
                     pass
                 except Exception as e:
@@ -225,9 +221,7 @@ async def ws_terminal(
 
             await ws.send_json({"type": "exec_start", "command": cmd})
             try:
-                result = await sliver_client.execute_command(
-                    session_id, cmd, timeout=timeout
-                )
+                result = await sliver_client.execute_command(session_id, cmd, timeout=timeout)
             except RuntimeError as e:
                 await ws.send_json(
                     {
@@ -245,9 +239,8 @@ async def ws_terminal(
                 )
                 continue
 
-            output = (
-                (result.get("stdout") or "")
-                + (("\n" + result.get("stderr", "")) if result.get("stderr") else "")
+            output = (result.get("stdout") or "") + (
+                ("\n" + result.get("stderr", "")) if result.get("stderr") else ""
             )
             payload = {
                 "type": "exec_result",

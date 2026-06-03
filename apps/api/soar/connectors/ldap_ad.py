@@ -44,6 +44,7 @@ class LDAPConnector(Connector):
 
     def _find_user_dn(self, conn, username: str) -> str | None:
         import ldap3
+
         base_dn = self.env("LDAP_BASE_DN")
         # Essaie sAMAccountName (AD) puis uid (OpenLDAP)
         for attr in ("sAMAccountName", "uid", "cn"):
@@ -62,6 +63,7 @@ class LDAPConnector(Connector):
 
         def _do():
             from ldap3 import MODIFY_REPLACE
+
             conn = self._connect()
             try:
                 dn = self._find_user_dn(conn, username)
@@ -77,7 +79,12 @@ class LDAPConnector(Connector):
                     # OpenLDAP : ajoute pwdAccountLockedTime ou shadowExpire
                     conn.modify(dn, {"pwdAccountLockedTime": [(MODIFY_REPLACE, ["000001010000Z"])]})
                 ok = conn.result.get("result") == 0
-                return {"applied": ok, "dn": dn, "username": username, "ldap_result": conn.result.get("description")}
+                return {
+                    "applied": ok,
+                    "dn": dn,
+                    "username": username,
+                    "ldap_result": conn.result.get("description"),
+                }
             finally:
                 conn.unbind()
 
@@ -89,6 +96,7 @@ class LDAPConnector(Connector):
 
         def _do():
             from ldap3 import MODIFY_REPLACE
+
             conn = self._connect()
             try:
                 dn = self._find_user_dn(conn, username)
@@ -104,7 +112,12 @@ class LDAPConnector(Connector):
                     # Fallback OpenLDAP userPassword
                     conn.modify(dn, {"userPassword": [(MODIFY_REPLACE, [new_password])]})
                 ok = conn.result.get("result") == 0
-                return {"applied": ok, "dn": dn, "username": username, "ldap_result": conn.result.get("description")}
+                return {
+                    "applied": ok,
+                    "dn": dn,
+                    "username": username,
+                    "ldap_result": conn.result.get("description"),
+                }
             finally:
                 conn.unbind()
 
@@ -116,13 +129,18 @@ class LDAPConnector(Connector):
 
         def _do():
             from ldap3 import MODIFY_ADD
+
             conn = self._connect()
             try:
                 user_dn = self._find_user_dn(conn, username)
                 if not user_dn:
                     return {"applied": False, "reason": "user_not_found"}
                 conn.modify(group_dn, {"member": [(MODIFY_ADD, [user_dn])]})
-                return {"applied": conn.result.get("result") == 0, "group": group_dn, "user_dn": user_dn}
+                return {
+                    "applied": conn.result.get("result") == 0,
+                    "group": group_dn,
+                    "user_dn": user_dn,
+                }
             finally:
                 conn.unbind()
 
@@ -134,13 +152,18 @@ class LDAPConnector(Connector):
 
         def _do():
             from ldap3 import MODIFY_DELETE
+
             conn = self._connect()
             try:
                 user_dn = self._find_user_dn(conn, username)
                 if not user_dn:
                     return {"applied": False, "reason": "user_not_found"}
                 conn.modify(group_dn, {"member": [(MODIFY_DELETE, [user_dn])]})
-                return {"applied": conn.result.get("result") == 0, "group": group_dn, "user_dn": user_dn}
+                return {
+                    "applied": conn.result.get("result") == 0,
+                    "group": group_dn,
+                    "user_dn": user_dn,
+                }
             finally:
                 conn.unbind()
 

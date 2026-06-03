@@ -155,33 +155,39 @@ def _controls_table(controls: list[dict[str, Any]], styles: dict) -> Table:
         caps = c.get("capabilities") or []
         covered = c.get("covered_capabilities") or []
         title_para = Paragraph(c.get("title", ""), styles["small"])
-        data.append([
-            Paragraph(f"<b>{c.get('id', '')}</b>", styles["small"]),
-            title_para,
-            Paragraph(status.upper(), styles["small"]),
-            Paragraph(f"{len(covered)}/{len(caps)}", styles["small"]),
-        ])
-        row_styles.append((
-            "BACKGROUND",
-            (2, idx),
-            (2, idx),
-            STATUS_COLORS.get(status, colors.grey),
-        ))
+        data.append(
+            [
+                Paragraph(f"<b>{c.get('id', '')}</b>", styles["small"]),
+                title_para,
+                Paragraph(status.upper(), styles["small"]),
+                Paragraph(f"{len(covered)}/{len(caps)}", styles["small"]),
+            ]
+        )
+        row_styles.append(
+            (
+                "BACKGROUND",
+                (2, idx),
+                (2, idx),
+                STATUS_COLORS.get(status, colors.grey),
+            )
+        )
         row_styles.append(("TEXTCOLOR", (2, idx), (2, idx), colors.white))
     table = Table(data, colWidths=[3.5 * cm, 8.0 * cm, 2.5 * cm, 3.5 * cm], repeatRows=1)
-    base_style = TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b3d91")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 9),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
-        ("TOPPADDING", (0, 0), (-1, 0), 6),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (2, 1), (2, -1), "CENTER"),
-        ("ALIGN", (3, 1), (3, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-    ])
+    base_style = TableStyle(
+        [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b3d91")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 9),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+            ("TOPPADDING", (0, 0), (-1, 0), 6),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (2, 1), (2, -1), "CENTER"),
+            ("ALIGN", (3, 1), (3, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+        ]
+    )
     for s in row_styles:
         base_style.add(*s)
     table.setStyle(base_style)
@@ -192,20 +198,29 @@ def _evidence_table(controls: list[dict[str, Any]], styles: dict) -> Table:
     data: list[list[Any]] = [["Control", "Evidence"]]
     for c in controls:
         ev_text = _format_evidence(c.get("evidence", {}))
-        data.append([
-            Paragraph(f"<b>{c.get('id', '')}</b><br/><font size=7>{c.get('title', '')}</font>", styles["small"]),
-            Paragraph(ev_text, styles["small"]),
-        ])
+        data.append(
+            [
+                Paragraph(
+                    f"<b>{c.get('id', '')}</b><br/><font size=7>{c.get('title', '')}</font>",
+                    styles["small"],
+                ),
+                Paragraph(ev_text, styles["small"]),
+            ]
+        )
     table = Table(data, colWidths=[4.5 * cm, 13.0 * cm], repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b3d91")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 9),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b3d91")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+            ]
+        )
+    )
     return table
 
 
@@ -214,22 +229,28 @@ def _remediations_table(remediations: list[dict[str, Any]], styles: dict) -> Tab
         return Paragraph("<i>No open remediation items.</i>", styles["body"])
     data: list[list[Any]] = [["Control", "Severity", "Title", "Status", "Due"]]
     for r in remediations:
-        data.append([
-            Paragraph(r.get("control_id", ""), styles["small"]),
-            Paragraph(r.get("severity", ""), styles["small"]),
-            Paragraph(r.get("title", ""), styles["small"]),
-            Paragraph(r.get("status", ""), styles["small"]),
-            Paragraph(str(r.get("due_date", "") or "-"), styles["small"]),
-        ])
+        data.append(
+            [
+                Paragraph(r.get("control_id", ""), styles["small"]),
+                Paragraph(r.get("severity", ""), styles["small"]),
+                Paragraph(r.get("title", ""), styles["small"]),
+                Paragraph(r.get("status", ""), styles["small"]),
+                Paragraph(str(r.get("due_date", "") or "-"), styles["small"]),
+            ]
+        )
     table = Table(data, colWidths=[3.0 * cm, 1.8 * cm, 7.5 * cm, 2.2 * cm, 3.0 * cm], repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b3d91")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, 0), 9),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b3d91")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
+            ]
+        )
+    )
     return table
 
 
@@ -277,25 +298,31 @@ def generate_compliance_pdf(
         ["Generated at", datetime.now(UTC).isoformat(timespec="seconds")],
     ]
     meta_tbl = Table(meta_data, colWidths=[5.0 * cm, 11.0 * cm])
-    meta_tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#eef3fb")),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#0b3d91")),
-        ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
-    ]))
+    meta_tbl.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#eef3fb")),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#0b3d91")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
+            ]
+        )
+    )
     story.append(meta_tbl)
 
     story.append(PageBreak())
 
     story.append(Paragraph("1. Executive Summary", styles["h2"]))
-    story.append(Paragraph(
-        f"This report assesses the platform's coverage of the <b>{framework.get('name', '')}</b> "
-        f"framework. {summary.get('controls_total', 0)} controls were evaluated. "
-        f"Aggregate coverage score: <b>{score:.1f}%</b>.",
-        styles["body"],
-    ))
+    story.append(
+        Paragraph(
+            f"This report assesses the platform's coverage of the <b>{framework.get('name', '')}</b> "
+            f"framework. {summary.get('controls_total', 0)} controls were evaluated. "
+            f"Aggregate coverage score: <b>{score:.1f}%</b>.",
+            styles["body"],
+        )
+    )
     story.append(Spacer(1, 10))
     story.append(_coverage_chart(summary.get("by_status", {})))
     story.append(_legend_block())
@@ -310,13 +337,17 @@ def generate_compliance_pdf(
         ["Manual", str(by_status.get("manual", 0))],
     ]
     counts_tbl = Table(counts_data, colWidths=[6.0 * cm, 3.0 * cm])
-    counts_tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b3d91")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("ALIGN", (1, 0), (1, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
-    ]))
+    counts_tbl.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b3d91")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("ALIGN", (1, 0), (1, -1), "CENTER"),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cccccc")),
+            ]
+        )
+    )
     story.append(counts_tbl)
 
     story.append(PageBreak())

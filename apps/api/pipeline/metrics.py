@@ -42,7 +42,7 @@ class _StageStats:
             self.skipped += 1
         self._durations.append(duration_ms)
         if len(self._durations) > self._MAX_DURATIONS:
-            self._durations = self._durations[-self._MAX_DURATIONS:]
+            self._durations = self._durations[-self._MAX_DURATIONS :]
 
     @property
     def avg_ms(self) -> float:
@@ -102,9 +102,7 @@ class PipelineMetrics:
         self._throughput_log.append((time.time(), 1))
         # Trim old entries (keep last hour)
         cutoff = time.time() - 3600
-        self._throughput_log = [
-            (ts, c) for ts, c in self._throughput_log if ts > cutoff
-        ]
+        self._throughput_log = [(ts, c) for ts, c in self._throughput_log if ts > cutoff]
 
     def record_error(self, stage_name: str, error: str, event_id: str | None = None) -> None:
         entry = {
@@ -115,7 +113,7 @@ class PipelineMetrics:
         }
         self._recent_errors.append(entry)
         if len(self._recent_errors) > self._MAX_ERRORS:
-            self._recent_errors = self._recent_errors[-self._MAX_ERRORS:]
+            self._recent_errors = self._recent_errors[-self._MAX_ERRORS :]
 
     # ------------------------------------------------------------------
     # Querying
@@ -149,12 +147,12 @@ class PipelineMetrics:
         return {
             "total_events": self._pipeline_count,
             "total_errors": self._pipeline_errors,
-            "avg_processing_ms": round(
-                self._pipeline_total_ms / self._pipeline_count, 2
-            ) if self._pipeline_count else 0.0,
-            "error_rate": round(
-                self._pipeline_errors / self._pipeline_count, 4
-            ) if self._pipeline_count else 0.0,
+            "avg_processing_ms": round(self._pipeline_total_ms / self._pipeline_count, 2)
+            if self._pipeline_count
+            else 0.0,
+            "error_rate": round(self._pipeline_errors / self._pipeline_count, 4)
+            if self._pipeline_count
+            else 0.0,
             "events_per_minute": epm,
             "events_per_hour": eph,
             "uptime_seconds": round(now - self._start_time, 1),
@@ -166,13 +164,15 @@ class PipelineMetrics:
         for name, stats in self._stages.items():
             if stats.count == 0:
                 continue
-            stages.append({
-                "stage": name,
-                "avg_ms": round(stats.avg_ms, 2),
-                "p95_ms": round(stats.percentile(95), 2),
-                "count": stats.count,
-                "error_rate": round(stats.error_rate, 4),
-            })
+            stages.append(
+                {
+                    "stage": name,
+                    "avg_ms": round(stats.avg_ms, 2),
+                    "p95_ms": round(stats.percentile(95), 2),
+                    "count": stats.count,
+                    "error_rate": round(stats.error_rate, 4),
+                }
+            )
         stages.sort(key=lambda s: s["avg_ms"], reverse=True)
         return stages
 
@@ -205,6 +205,7 @@ class PipelineMetrics:
     def _try_push_redis(self, stage: str, duration_ms: float, status: str) -> None:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return

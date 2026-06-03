@@ -9,9 +9,9 @@ from apps.collectors.normalizer import NormalizedEvent
 # Mar 26 22:00:00 hostname sshd[12345]: Failed password for root from 1.2.3.4 port 22 ssh2
 _AUTH_RE = re.compile(
     r"(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+"
-    r"(\S+)\s+"        # hostname
+    r"(\S+)\s+"  # hostname
     r"(\S+?)(?:\[\d+\])?:\s+"  # process
-    r"(.+)"            # message
+    r"(.+)"  # message
 )
 
 _IP_RE = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
@@ -25,10 +25,19 @@ class AuthLogParser:
             return False
         # Only match auth-related lines
         lower = line.lower()
-        return any(kw in lower for kw in [
-            "sshd", "sudo", "pam", "login", "passwd",
-            "authentication", "session", "su[",
-        ])
+        return any(
+            kw in lower
+            for kw in [
+                "sshd",
+                "sudo",
+                "pam",
+                "login",
+                "passwd",
+                "authentication",
+                "session",
+                "su[",
+            ]
+        )
 
     def parse(self, line: str) -> NormalizedEvent | None:
         m = _AUTH_RE.match(line)

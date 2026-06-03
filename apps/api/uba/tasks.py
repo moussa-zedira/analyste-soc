@@ -39,18 +39,14 @@ def recompute_all_baselines_task(lookback_hours: int = 24) -> dict:
         result = update_baselines(db, since=since)
         stats = compute_peer_stats(db)
         peers = assign_peer_groups(db, stats=stats)
-        celery_tasks_total.labels(
-            task_name="recompute_all_baselines", status="success"
-        ).inc()
+        celery_tasks_total.labels(task_name="recompute_all_baselines", status="success").inc()
         result["peer_groups_persisted"] = peers
         result["lookback_hours"] = lookback_hours
         logger.info("UBA recompute_all completed: %s", result)
         return result
     except Exception:
         db.rollback()
-        celery_tasks_total.labels(
-            task_name="recompute_all_baselines", status="failure"
-        ).inc()
+        celery_tasks_total.labels(task_name="recompute_all_baselines", status="failure").inc()
         logger.exception("UBA recompute_all failed")
         raise
     finally:

@@ -98,13 +98,7 @@ def list_users(
     offset: int = Query(0, ge=0),
 ) -> list[UserOut]:
     """Liste tous les utilisateurs (admin uniquement)."""
-    users = (
-        db.query(User)
-        .order_by(User.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    users = db.query(User).order_by(User.created_at.desc()).offset(offset).limit(limit).all()
     return [
         UserOut(
             id=u.id,
@@ -171,7 +165,10 @@ def delete_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur non trouvé")
     if user.id == admin.id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Impossible de supprimer votre propre compte")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Impossible de supprimer votre propre compte",
+        )
 
     username = user.username
     db.delete(user)

@@ -57,9 +57,7 @@ class SSOSession(Base):
     last_login: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
     )
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     raw_userinfo_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (

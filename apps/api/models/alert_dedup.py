@@ -22,7 +22,9 @@ class AlertFingerprint(Base):
     first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     count: Mapped[int] = mapped_column(Integer, default=1)
-    suppressed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    suppressed_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     last_incident_id: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (

@@ -87,13 +87,7 @@ def list_incidents(
     if rule_id is not None:
         query = query.filter(Incident.rule_id == rule_id)
 
-    return (
-        query
-        .order_by(Incident.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    return query.order_by(Incident.created_at.desc()).offset(offset).limit(limit).all()
 
 
 @router.get("/{incident_id}", response_model=IncidentDetail)
@@ -151,7 +145,7 @@ def update_incident_status(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Cannot transition from '{incident.status}' to '{new_status}'. "
-                   f"Allowed: {sorted(allowed)}",
+            f"Allowed: {sorted(allowed)}",
         )
 
     previous_status = incident.status

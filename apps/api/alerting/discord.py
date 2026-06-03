@@ -77,6 +77,7 @@ async def send_alert(config: dict[str, Any], incident: dict[str, Any]) -> None:
                 if resp.status_code == 429:
                     retry_after = resp.json().get("retry_after", 2)
                     import asyncio
+
                     await asyncio.sleep(float(retry_after))
                     continue
                 resp.raise_for_status()

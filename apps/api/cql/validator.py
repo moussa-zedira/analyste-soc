@@ -27,6 +27,7 @@ from apps.api.cql.parser import (
 # Validation result
 # ---------------------------------------------------------------------------
 
+
 def _make_error(msg: str, line: int = 0, col: int = 0, severity: str = "error") -> dict:
     return {"message": msg, "line": line, "col": col, "severity": severity}
 
@@ -35,14 +36,26 @@ def _make_error(msg: str, line: int = 0, col: int = 0, severity: str = "error") 
 # Operator compatibility
 # ---------------------------------------------------------------------------
 
-_STRING_OPERATORS = {"=", "!=", "LIKE", "IN", "NOT IN", "CONTAINS", "STARTSWITH", "ENDSWITH", "MATCHES"}
+_STRING_OPERATORS = {
+    "=",
+    "!=",
+    "LIKE",
+    "IN",
+    "NOT IN",
+    "CONTAINS",
+    "STARTSWITH",
+    "ENDSWITH",
+    "MATCHES",
+}
 _NUMERIC_OPERATORS = {"=", "!=", ">", ">=", "<", "<=", "IN", "NOT IN"}
 _DATETIME_OPERATORS = {"=", "!=", ">", ">=", "<", "<="}
 
 _ALL_FIELD_NAMES = set(EVENT_FIELDS.keys()) | set(FIELD_ALIASES.keys())
 
 
-def _check_field(name: str, errors: list[dict], warnings: list[dict], token_line: int = 0, token_col: int = 0) -> None:
+def _check_field(
+    name: str, errors: list[dict], warnings: list[dict], token_line: int = 0, token_col: int = 0
+) -> None:
     """Check if a field name is valid, add errors/warnings if not."""
     resolved = _resolve_field(name)
     if resolved not in EVENT_FIELDS:
@@ -50,14 +63,18 @@ def _check_field(name: str, errors: list[dict], warnings: list[dict], token_line
         suggestion = ""
         if close:
             suggestion = f" Did you mean: {', '.join(close)}?"
-        errors.append(_make_error(
-            f"Unknown field: '{name}'.{suggestion}",
-            line=token_line,
-            col=token_col,
-        ))
+        errors.append(
+            _make_error(
+                f"Unknown field: '{name}'.{suggestion}",
+                line=token_line,
+                col=token_col,
+            )
+        )
 
 
-def _check_operator(field_name: str, operator: str, errors: list[dict], warnings: list[dict]) -> None:
+def _check_operator(
+    field_name: str, operator: str, errors: list[dict], warnings: list[dict]
+) -> None:
     """Check operator is compatible with field type."""
     resolved = _resolve_field(field_name)
     if resolved not in EVENT_FIELDS:
@@ -65,29 +82,36 @@ def _check_operator(field_name: str, operator: str, errors: list[dict], warnings
 
     if resolved in _NUMERIC_FIELDS:
         if operator not in _NUMERIC_OPERATORS:
-            warnings.append(_make_error(
-                f"Operator '{operator}' is unusual for numeric field '{field_name}'. "
-                f"Suggested: {', '.join(sorted(_NUMERIC_OPERATORS))}",
-                severity="warning",
-            ))
+            warnings.append(
+                _make_error(
+                    f"Operator '{operator}' is unusual for numeric field '{field_name}'. "
+                    f"Suggested: {', '.join(sorted(_NUMERIC_OPERATORS))}",
+                    severity="warning",
+                )
+            )
     elif resolved in _DATETIME_FIELDS:
         if operator not in _DATETIME_OPERATORS:
-            warnings.append(_make_error(
-                f"Operator '{operator}' may not work well with datetime field '{field_name}'. "
-                f"Use earliest=/latest= for time filtering.",
-                severity="warning",
-            ))
+            warnings.append(
+                _make_error(
+                    f"Operator '{operator}' may not work well with datetime field '{field_name}'. "
+                    f"Use earliest=/latest= for time filtering.",
+                    severity="warning",
+                )
+            )
     else:  # string
         if operator in (">", ">=", "<", "<="):
-            warnings.append(_make_error(
-                f"Comparison operator '{operator}' on string field '{field_name}' may produce unexpected results.",
-                severity="warning",
-            ))
+            warnings.append(
+                _make_error(
+                    f"Comparison operator '{operator}' on string field '{field_name}' may produce unexpected results.",
+                    severity="warning",
+                )
+            )
 
 
 # ---------------------------------------------------------------------------
 # AST validation
 # ---------------------------------------------------------------------------
+
 
 def _validate_ast(node: ASTNode | None, errors: list[dict], warnings: list[dict]) -> None:
     if node is None:
@@ -95,7 +119,7 @@ def _validate_ast(node: ASTNode | None, errors: list[dict], warnings: list[dict]
 
     if isinstance(node, Comparison):
         field_name = node.field.name
-        if hasattr(node.field, 'parts') and node.field.parts:
+        if hasattr(node.field, "parts") and node.field.parts:
             pass
         _check_field(field_name, errors, warnings)
         _check_operator(field_name, node.operator, errors, warnings)
@@ -117,7 +141,9 @@ def _validate_commands(commands: list, errors: list[dict], warnings: list[dict])
 
         # Command-specific validation
         if cmd.name == "stats" and not cmd.raw_text.strip():
-            errors.append(_make_error("'stats' command requires at least one aggregation function."))
+            errors.append(
+                _make_error("'stats' command requires at least one aggregation function.")
+            )
 
         if cmd.name in ("head", "tail"):
             parts = cmd.raw_text.strip().split()
@@ -125,25 +151,33 @@ def _validate_commands(commands: list, errors: list[dict], warnings: list[dict])
                 try:
                     n = int(parts[0])
                     if n <= 0:
-                        errors.append(_make_error(f"'{cmd.name}' requires a positive number, got {n}."))
+                        errors.append(
+                            _make_error(f"'{cmd.name}' requires a positive number, got {n}.")
+                        )
                 except ValueError:
-                    errors.append(_make_error(f"'{cmd.name}' argument must be a number, got '{parts[0]}'."))
+                    errors.append(
+                        _make_error(f"'{cmd.name}' argument must be a number, got '{parts[0]}'.")
+                    )
 
         if cmd.name == "sort" and not cmd.raw_text.strip():
             errors.append(_make_error("'sort' command requires a field name."))
 
         if cmd.name == "rename" and "AS" not in cmd.raw_text.upper():
-            warnings.append(_make_error(
-                "'rename' expects syntax: rename <old> as <new>",
-                severity="warning",
-            ))
+            warnings.append(
+                _make_error(
+                    "'rename' expects syntax: rename <old> as <new>",
+                    severity="warning",
+                )
+            )
 
         if cmd.name == "trendline":
             parts = cmd.raw_text.strip().split()
             if len(parts) < 3:
                 errors.append(_make_error("'trendline' requires: trendline <type> <span> <field>"))
             elif parts[0].lower() not in ("sma", "ema", "wma"):
-                errors.append(_make_error(f"Unknown trendline type: '{parts[0]}'. Use sma, ema, or wma."))
+                errors.append(
+                    _make_error(f"Unknown trendline type: '{parts[0]}'. Use sma, ema, or wma.")
+                )
 
 
 from apps.api.cql.commands import list_commands
@@ -154,6 +188,7 @@ _KNOWN_COMMANDS = set(list_commands().keys())
 # ---------------------------------------------------------------------------
 # Main validator
 # ---------------------------------------------------------------------------
+
 
 def validate_cql(query_str: str) -> dict[str, Any]:
     """Validate a CQL query without executing it.
@@ -201,42 +236,54 @@ def validate_cql(query_str: str) -> dict[str, Any]:
     # Time range validation
     if ast.earliest:
         import re
+
         if not re.match(r"^-\d+(s|m|h|d|w)$", ast.earliest) and ast.earliest.lower() != "now":
             try:
                 from datetime import datetime
+
                 datetime.fromisoformat(ast.earliest)
             except (ValueError, TypeError):
-                errors.append(_make_error(
-                    f"Invalid earliest time: '{ast.earliest}'. "
-                    "Use relative (-24h, -7d) or ISO format (2026-03-28T00:00:00)."
-                ))
+                errors.append(
+                    _make_error(
+                        f"Invalid earliest time: '{ast.earliest}'. "
+                        "Use relative (-24h, -7d) or ISO format (2026-03-28T00:00:00)."
+                    )
+                )
 
     if ast.latest:
         import re
+
         if not re.match(r"^-\d+(s|m|h|d|w)$", ast.latest) and ast.latest.lower() != "now":
             try:
                 from datetime import datetime
+
                 datetime.fromisoformat(ast.latest)
             except (ValueError, TypeError):
-                errors.append(_make_error(
-                    f"Invalid latest time: '{ast.latest}'. "
-                    "Use relative (-24h) or ISO format or 'now'."
-                ))
+                errors.append(
+                    _make_error(
+                        f"Invalid latest time: '{ast.latest}'. "
+                        "Use relative (-24h) or ISO format or 'now'."
+                    )
+                )
 
     # Performance warnings
     if not ast.earliest and not ast.latest:
-        warnings.append(_make_error(
-            "No time range specified. Defaults to last 24h. Use earliest= for wider range.",
-            severity="warning",
-        ))
+        warnings.append(
+            _make_error(
+                "No time range specified. Defaults to last 24h. Use earliest= for wider range.",
+                severity="warning",
+            )
+        )
 
     has_limit = any(cmd.name in ("head", "tail") for cmd in ast.commands)
     has_stats = any(cmd.name == "stats" for cmd in ast.commands)
     if not has_limit and not has_stats and not ast.commands:
-        warnings.append(_make_error(
-            "No limit specified. Large result sets may be slow. Consider adding '| head 100'.",
-            severity="warning",
-        ))
+        warnings.append(
+            _make_error(
+                "No limit specified. Large result sets may be slow. Consider adding '| head 100'.",
+                severity="warning",
+            )
+        )
 
     return {
         "valid": len(errors) == 0,

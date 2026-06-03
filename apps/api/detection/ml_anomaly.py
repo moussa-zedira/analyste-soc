@@ -26,6 +26,7 @@ try:
     import numpy as np
     import sklearn
     from sklearn.ensemble import IsolationForest
+
     _ML_AVAILABLE = True
 except ImportError:
     _ML_AVAILABLE = False
@@ -86,7 +87,9 @@ def _load_persisted_model() -> bool:
         logger.warning("ml_anomaly: meta unreadable, will retrain")
         return False
     if _model_is_stale(meta):
-        logger.info("ml_anomaly: persisted model stale (>%d days), will retrain", MODEL_MAX_AGE_DAYS)
+        logger.info(
+            "ml_anomaly: persisted model stale (>%d days), will retrain", MODEL_MAX_AGE_DAYS
+        )
         return False
     try:
         loaded = joblib.load(MODEL_PATH)
@@ -96,8 +99,11 @@ def _load_persisted_model() -> bool:
     with _ml_lock:
         _model = loaded
         _model_info = {**meta, "status": "loaded_from_disk"}
-    logger.info("ml_anomaly: loaded persisted model from %s (trained %s)",
-                MODEL_PATH, meta.get("timestamp_train"))
+    logger.info(
+        "ml_anomaly: loaded persisted model from %s (trained %s)",
+        MODEL_PATH,
+        meta.get("timestamp_train"),
+    )
     return True
 
 
@@ -132,7 +138,8 @@ def ensure_model_loaded() -> None:
 
 
 def _build_feature_vectors(
-    db: Session, window_minutes: int = 60,
+    db: Session,
+    window_minutes: int = 60,
 ) -> tuple[np.ndarray, list[str], dict[str, list[str]]]:
     """Construit les vecteurs de caracteristiques par IP a partir des evenements recents.
 
@@ -174,9 +181,7 @@ def _build_feature_vectors(
         sev_cnt[ip] = sev_cnt.get(ip, 0) + cnt
 
     eid_rows = (
-        db.query(Event.src_ip, Event.id)
-        .filter(Event.ts >= cutoff, Event.src_ip.isnot(None))
-        .all()
+        db.query(Event.src_ip, Event.id).filter(Event.ts >= cutoff, Event.src_ip.isnot(None)).all()
     )
     ip_event_ids: dict[str, list[str]] = {}
     for ip, eid in eid_rows:
@@ -191,13 +196,15 @@ def _build_feature_vectors(
             time_spread = (r.max_ts - r.min_ts).total_seconds()
         avg_sev = sev_sum.get(ip, 1) / max(sev_cnt.get(ip, 1), 1)
 
-        features.append([
-            r.event_count,
-            r.distinct_types,
-            r.distinct_dst,
-            avg_sev,
-            time_spread,
-        ])
+        features.append(
+            [
+                r.event_count,
+                r.distinct_types,
+                r.distinct_dst,
+                avg_sev,
+                time_spread,
+            ]
+        )
         ips.append(ip)
 
     return np.array(features, dtype=np.float64), ips, ip_event_ids
@@ -213,9 +220,7 @@ def _create_ml_incident(
 ) -> bool:
     """Cree un incident pour une anomalie detectee par ML."""
     bucket = now.strftime("%Y-%m-%dT%H:%M")
-    dedup_hash = hashlib.sha256(
-        f"ml.isolation_forest.v1|{ip}|{bucket}".encode()
-    ).hexdigest()
+    dedup_hash = hashlib.sha256(f"ml.isolation_forest.v1|{ip}|{bucket}".encode()).hexdigest()
 
     if db.query(Incident.id).filter(Incident.dedup_hash == dedup_hash).first():
         return False
@@ -238,10 +243,18 @@ def _create_ml_incident(
     )
 
     incident = Incident(
-        id=incident_id, created_at=now, updated_at=now,
-        status="open", severity=severity, title=title, description=description,
-        rule_id="ml.isolation_forest.v1", entity_key=f"src_ip:{ip}",
-        start_ts=now - timedelta(hours=1), end_ts=now, dedup_hash=dedup_hash,
+        id=incident_id,
+        created_at=now,
+        updated_at=now,
+        status="open",
+        severity=severity,
+        title=title,
+        description=description,
+        rule_id="ml.isolation_forest.v1",
+        entity_key=f"src_ip:{ip}",
+        start_ts=now - timedelta(hours=1),
+        end_ts=now,
+        dedup_hash=dedup_hash,
     )
     db.add(incident)
     db.flush()
@@ -251,21 +264,34 @@ def _create_ml_incident(
     db.flush()
 
     notify_incident_created(
-        incident_id=incident_id, title=title, severity=severity,
-        description=description, rule_id="ml.isolation_forest.v1",
-        entity_key=f"src_ip:{ip}", status="open", created_at=now.isoformat(),
+        incident_id=incident_id,
+        title=title,
+        severity=severity,
+        description=description,
+        rule_id="ml.isolation_forest.v1",
+        entity_key=f"src_ip:{ip}",
+        status="open",
+        created_at=now.isoformat(),
     )
 
-    broadcaster.publish({
-        "type": "new_incident",
-        "payload": {
-            "id": incident_id, "title": title, "severity": severity,
-            "rule_id": "ml.isolation_forest.v1", "entity_key": f"src_ip:{ip}",
-            "status": "open", "created_at": now.isoformat(),
-        },
-    })
+    broadcaster.publish(
+        {
+            "type": "new_incident",
+            "payload": {
+                "id": incident_id,
+                "title": title,
+                "severity": severity,
+                "rule_id": "ml.isolation_forest.v1",
+                "entity_key": f"src_ip:{ip}",
+                "status": "open",
+                "created_at": now.isoformat(),
+            },
+        }
+    )
 
-    logger.info("Created ML anomaly incident %s for IP %s (score=%.3f)", incident_id, ip, anomaly_score)
+    logger.info(
+        "Created ML anomaly incident %s for IP %s (score=%.3f)", incident_id, ip, anomaly_score
+    )
     return True
 
 

@@ -24,17 +24,9 @@ class JsonLogParser:
             return None
 
         # Extract common fields with fallbacks
-        source = (
-            data.get("source")
-            or data.get("hostname")
-            or data.get("host")
-            or "json"
-        )
+        source = data.get("source") or data.get("hostname") or data.get("host") or "json"
         event_type = (
-            data.get("event_type")
-            or data.get("type")
-            or data.get("action")
-            or "system.info"
+            data.get("event_type") or data.get("type") or data.get("action") or "system.info"
         )
         severity = _normalize_severity(
             data.get("severity") or data.get("level") or data.get("priority") or "low"

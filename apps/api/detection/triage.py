@@ -51,11 +51,7 @@ def _load_whitelist(db: Session) -> list[WhitelistEntry]:
     if now - _whitelist_cache_ts < _CACHE_TTL and _whitelist_cache_ts > 0:
         return _whitelist_cache
 
-    entries = (
-        db.query(WhitelistEntry)
-        .filter(WhitelistEntry.enabled.is_(True))
-        .all()
-    )
+    entries = db.query(WhitelistEntry).filter(WhitelistEntry.enabled.is_(True)).all()
     _whitelist_cache = entries
     _whitelist_cache_ts = now
     return entries
@@ -154,7 +150,10 @@ def filter_events(events: list[Event], db: Session) -> list[Event]:
 
     logger.info(
         "Triage: %d/%d events passed (benign=%d, whitelisted=%d, below_threshold=%d)",
-        stats["passed"], len(events),
-        stats["benign"], stats["whitelisted"], stats["below_threshold"],
+        stats["passed"],
+        len(events),
+        stats["benign"],
+        stats["whitelisted"],
+        stats["below_threshold"],
     )
     return filtered

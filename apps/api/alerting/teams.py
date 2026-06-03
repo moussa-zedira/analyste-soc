@@ -56,11 +56,13 @@ def _build_adaptive_card(incident: dict[str, Any]) -> dict:
     actions_list = incident.get("recommended_actions", [])
     if actions_list:
         items = "\n".join(f"- {a}" for a in actions_list[:5])
-        body.append({
-            "type": "TextBlock",
-            "text": f"**Recommended Actions:**\n{items}",
-            "wrap": True,
-        })
+        body.append(
+            {
+                "type": "TextBlock",
+                "text": f"**Recommended Actions:**\n{items}",
+                "wrap": True,
+            }
+        )
 
     card = {
         "type": "message",
@@ -111,7 +113,8 @@ async def send_alert(config: dict[str, Any], incident: dict[str, Any]) -> None:
                 resp = await client.post(webhook_url, json=payload)
                 if resp.status_code == 429:
                     import asyncio
-                    retry_after = float(resp.headers.get("Retry-After", str(2 ** attempt)))
+
+                    retry_after = float(resp.headers.get("Retry-After", str(2**attempt)))
                     await asyncio.sleep(retry_after)
                     continue
                 resp.raise_for_status()

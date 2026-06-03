@@ -43,8 +43,7 @@ BRUTE_FORCE_RULE = Rule(
     severity=Severity.HIGH,
     title_template="Brute force suspected from {src_ip}",
     description_template=(
-        "{count} failed authentication attempts detected within a "
-        "{window}-second window. {extra}"
+        "{count} failed authentication attempts detected within a {window}-second window. {extra}"
     ),
     tags=["authentication", "brute-force"],
 )

@@ -25,13 +25,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
-_DOMAIN_RE = re.compile(
-    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$"
-)
+_DOMAIN_RE = re.compile(r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$")
 
-_IP_RE = re.compile(
-    r"^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$"
-)
+_IP_RE = re.compile(r"^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$")
 
 _CHECK_TIMEOUT = 5
 
@@ -154,7 +150,7 @@ def _clean_target(raw: str) -> tuple[str, str]:
     target = raw.strip()
     for prefix in ("https://", "http://"):
         if target.lower().startswith(prefix):
-            target = target[len(prefix):]
+            target = target[len(prefix) :]
     target = target.split("/")[0]
     target = target.split("?")[0]
     target = target.split("#")[0]
@@ -220,20 +216,19 @@ def _scan_ports(ip: str) -> list[PortResult]:
     """Scanne tous les ports courants en parallèle."""
     results: list[PortResult] = []
     with ThreadPoolExecutor(max_workers=25) as executor:
-        futures = {
-            executor.submit(_scan_single_port, ip, port): port
-            for port in COMMON_PORTS
-        }
+        futures = {executor.submit(_scan_single_port, ip, port): port for port in COMMON_PORTS}
         for future in as_completed(futures):
             try:
                 results.append(future.result())
             except Exception:
                 port = futures[future]
-                results.append(PortResult(
-                    port=port,
-                    service=COMMON_PORTS.get(port, "unknown"),
-                    state="closed",
-                ))
+                results.append(
+                    PortResult(
+                        port=port,
+                        service=COMMON_PORTS.get(port, "unknown"),
+                        state="closed",
+                    )
+                )
     results.sort(key=lambda r: r.port)
     return results
 
@@ -245,6 +240,7 @@ def _get_geo_full(ip: str) -> tuple[dict | None, list[str]]:
     # D'abord essayer le module geoip interne
     try:
         from apps.api.geoip import lookup_ip
+
         basic_geo = lookup_ip(ip)
         if basic_geo:
             # Enrichir avec ip-api.com pour ISP/ASN
@@ -274,7 +270,9 @@ def _get_geo_full(ip: str) -> tuple[dict | None, list[str]]:
     try:
         resp = httpx.get(
             f"http://ip-api.com/json/{ip}",
-            params={"fields": "status,country,regionName,city,lat,lon,isp,org,as,asname,reverse,mobile,proxy,hosting,timezone,zip"},
+            params={
+                "fields": "status,country,regionName,city,lat,lon,isp,org,as,asname,reverse,mobile,proxy,hosting,timezone,zip"
+            },
             timeout=5.0,
         )
         if resp.status_code == 200:
@@ -529,13 +527,15 @@ def _lookup_cves(open_ports: list[PortResult]) -> tuple[list[CveResult], list[st
                         else:
                             severity = "low"
 
-                    cves.append(CveResult(
-                        id=item.get("id", item.get("cve", "CVE-UNKNOWN")),
-                        severity=severity,
-                        score=score_val,
-                        description=(item.get("summary") or item.get("description", ""))[:200],
-                        service=service,
-                    ))
+                    cves.append(
+                        CveResult(
+                            id=item.get("id", item.get("cve", "CVE-UNKNOWN")),
+                            severity=severity,
+                            score=score_val,
+                            description=(item.get("summary") or item.get("description", ""))[:200],
+                            service=service,
+                        )
+                    )
         except Exception as exc:
             errors.append(f"CVE lookup ({service}): {exc}")
 
@@ -643,14 +643,18 @@ def _calculate_score(
             score += 10
             details.append({"check": "Content-Security-Policy", "points": 10, "passed": True})
         else:
-            details.append({"check": "Content-Security-Policy", "points": 0, "passed": False, "max": 10})
+            details.append(
+                {"check": "Content-Security-Policy", "points": 0, "passed": False, "max": 10}
+            )
 
         # X-Content-Type-Options (+5)
         if security_headers.get("X-Content-Type-Options"):
             score += 5
             details.append({"check": "X-Content-Type-Options", "points": 5, "passed": True})
         else:
-            details.append({"check": "X-Content-Type-Options", "points": 0, "passed": False, "max": 5})
+            details.append(
+                {"check": "X-Content-Type-Options", "points": 0, "passed": False, "max": 5}
+            )
     else:
         for name, pts in [
             ("HSTS présent", 10),
@@ -687,23 +691,44 @@ def _calculate_score(
         pts = max(0, 20 - penalty)
         score += pts
         port_list = ", ".join(str(p) for p in sorted(dangerous_open))
-        details.append({
-            "check": f"Ports dangereux ouverts: {port_list}",
-            "points": pts,
-            "passed": False,
-            "max": 20,
-        })
+        details.append(
+            {
+                "check": f"Ports dangereux ouverts: {port_list}",
+                "points": pts,
+                "passed": False,
+                "max": 20,
+            }
+        )
 
     # Peu de ports ouverts (+10) — moins de 5 ports ouverts = bon
     total_open = len(open_port_numbers)
     if total_open <= 3:
         score += 10
-        details.append({"check": f"Surface d'attaque réduite ({total_open} ports)", "points": 10, "passed": True})
+        details.append(
+            {
+                "check": f"Surface d'attaque réduite ({total_open} ports)",
+                "points": 10,
+                "passed": True,
+            }
+        )
     elif total_open <= 6:
         score += 5
-        details.append({"check": f"Surface d'attaque modérée ({total_open} ports)", "points": 5, "passed": True})
+        details.append(
+            {
+                "check": f"Surface d'attaque modérée ({total_open} ports)",
+                "points": 5,
+                "passed": True,
+            }
+        )
     else:
-        details.append({"check": f"Surface d'attaque large ({total_open} ports)", "points": 0, "passed": False, "max": 10})
+        details.append(
+            {
+                "check": f"Surface d'attaque large ({total_open} ports)",
+                "points": 0,
+                "passed": False,
+                "max": 10,
+            }
+        )
 
     return score, details
 
@@ -802,7 +827,10 @@ def analyze_target(
 
     # 10. Score de sécurité
     score, score_details = _calculate_score(
-        result.ssl_cert, result.security_headers, result.http_headers, result.open_ports,
+        result.ssl_cert,
+        result.security_headers,
+        result.http_headers,
+        result.open_ports,
     )
     result.security_score = score
     result.score_details = score_details

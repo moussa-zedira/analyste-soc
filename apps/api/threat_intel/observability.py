@@ -143,7 +143,8 @@ class CircuitBreaker:
         if self._state != CircuitState.OPEN:
             logger.warning(
                 "Circuit breaker OPEN for %s (failures=%d)",
-                self.provider, self._failure_count,
+                self.provider,
+                self._failure_count,
             )
         self._state = CircuitState.OPEN
         self._opened_at = time.monotonic()
@@ -174,9 +175,7 @@ class CircuitBreaker:
                     self._half_open()
                 else:
                     record_result(self.provider, "circuit_open")
-                    raise CircuitOpenError(
-                        f"Circuit breaker OPEN for provider '{self.provider}'"
-                    )
+                    raise CircuitOpenError(f"Circuit breaker OPEN for provider '{self.provider}'")
             if self._state == CircuitState.HALF_OPEN:
                 if self._half_open_calls >= self.half_open_max_calls:
                     record_result(self.provider, "circuit_open")
@@ -340,11 +339,17 @@ def instrument(
                 elapsed = time.perf_counter() - start
                 try:
                     ti_provider_latency_seconds.labels(
-                        provider=provider, operation=operation,
+                        provider=provider,
+                        operation=operation,
                     ).observe(elapsed)
                     record_result(provider, result_label)
                 except Exception as exc:
-                    logger.debug("Failed to record instrument metrics for %s/%s: %s", provider, operation, exc)
+                    logger.debug(
+                        "Failed to record instrument metrics for %s/%s: %s",
+                        provider,
+                        operation,
+                        exc,
+                    )
 
         return wrapper
 

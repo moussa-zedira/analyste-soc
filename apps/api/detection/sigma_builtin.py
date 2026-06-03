@@ -153,12 +153,11 @@ def seed_builtin_sigma(db: Session) -> int:
     Retourne le nombre de regles nouvellement creees.
     """
     created = 0
-    existing_titles = {
-        name for (name,) in db.query(SigmaRule.name).all()
-    }
+    existing_titles = {name for (name,) in db.query(SigmaRule.name).all()}
     for yaml_content in BUILTIN_SIGMA_RULES:
         try:
             import yaml as _yaml
+
             parsed = _yaml.safe_load(yaml_content)
             title = (parsed or {}).get("title", "")
         except Exception:  # noqa: BLE001

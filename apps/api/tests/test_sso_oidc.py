@@ -87,7 +87,7 @@ async def test_discover_oidc_parses_mock(monkeypatch):
 
     monkeypatch.setattr(httpx, "AsyncClient", _MockClient)
     # Bypass cache : utilise un issuer unique
-    issuer = f"https://idp-{int(time.time()*1000)}.example.com"
+    issuer = f"https://idp-{int(time.time() * 1000)}.example.com"
     doc = await discover_oidc(issuer)
 
     assert doc["token_endpoint"] == sample_doc["token_endpoint"]
@@ -129,7 +129,7 @@ async def test_discover_oidc_strips_trailing_slash(monkeypatch):
             return _MockResp()
 
     monkeypatch.setattr(httpx, "AsyncClient", _MockClient)
-    issuer = f"https://idp-slash-{int(time.time()*1000)}.example.com/"
+    issuer = f"https://idp-slash-{int(time.time() * 1000)}.example.com/"
     await discover_oidc(issuer)
     assert captured["url"].endswith("/.well-known/openid-configuration")
     assert "//.well-known" not in captured["url"]
@@ -221,8 +221,12 @@ async def test_verify_id_token_accepts_valid(monkeypatch):
         return base64.urlsafe_b64encode(b).rstrip(b"=").decode("ascii")
 
     jwk = {
-        "kty": "RSA", "kid": "k2", "use": "sig", "alg": "RS256",
-        "n": _b64u_uint(pubn.n), "e": _b64u_uint(pubn.e),
+        "kty": "RSA",
+        "kid": "k2",
+        "use": "sig",
+        "alg": "RS256",
+        "n": _b64u_uint(pubn.n),
+        "e": _b64u_uint(pubn.e),
     }
 
     issuer = "https://idp.test"
@@ -239,7 +243,9 @@ async def test_verify_id_token_accepts_valid(monkeypatch):
         "groups": ["sec-admins"],
     }
     id_token = jwt.encode(
-        claims, pem_priv.decode("ascii"), algorithm="RS256",
+        claims,
+        pem_priv.decode("ascii"),
+        algorithm="RS256",
         headers={"kid": "k2"},
     )
 
@@ -249,7 +255,9 @@ async def test_verify_id_token_accepts_valid(monkeypatch):
     monkeypatch.setattr(verify_mod, "_fetch_jwks", _mock_fetch_jwks)
 
     out = await verify_mod.verify_id_token(
-        id_token=id_token, issuer=issuer, audience=audience,
+        id_token=id_token,
+        issuer=issuer,
+        audience=audience,
         jwks_uri="https://idp.test/jwks",
     )
     assert out["sub"] == "user-1"

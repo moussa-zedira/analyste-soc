@@ -72,7 +72,9 @@ class ServiceNowConnector(OutboundConnector):
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
             r = await client.post(url, json=payload, headers=headers)
             if r.status_code >= 400:
-                raise RuntimeError(f"servicenow_create_failed status={r.status_code} body={r.text[:300]}")
+                raise RuntimeError(
+                    f"servicenow_create_failed status={r.status_code} body={r.text[:300]}"
+                )
             data = (r.json() or {}).get("result") or {}
         sys_id = data.get("sys_id")
         number = data.get("number") or sys_id

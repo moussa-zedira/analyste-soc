@@ -9,11 +9,11 @@ from apps.collectors.normalizer import NormalizedEvent
 _NS = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}
 
 _LEVEL_MAP = {
-    "1": "critical",   # Critical
-    "2": "high",       # Error
-    "3": "medium",     # Warning
-    "4": "low",        # Information
-    "5": "low",        # Verbose
+    "1": "critical",  # Critical
+    "2": "high",  # Error
+    "3": "medium",  # Warning
+    "4": "low",  # Information
+    "5": "low",  # Verbose
 }
 
 _EVENT_ID_MAP = {
@@ -49,10 +49,7 @@ class WindowsXmlParser:
         if system is None:
             return None
 
-        event_id_el = (
-            system.find("e:EventID", _NS)
-            or system.find("EventID")
-        )
+        event_id_el = system.find("e:EventID", _NS) or system.find("EventID")
         event_id = event_id_el.text if event_id_el is not None else "0"
 
         level_el = system.find("e:Level", _NS) or system.find("Level")

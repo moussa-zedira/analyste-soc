@@ -198,7 +198,4 @@ def run(interface: str | None = None) -> None:
     except PermissionError:
         print("[ERROR] Requires admin/elevated privileges. Run as Administrator.")
     except KeyboardInterrupt:
-        print(
-            f"\n[SNIFFER] Stopped. "
-            f"Events: {stats['events_sent']}, Errors: {stats['errors']}"
-        )
+        print(f"\n[SNIFFER] Stopped. Events: {stats['events_sent']}, Errors: {stats['errors']}")

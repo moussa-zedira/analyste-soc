@@ -43,8 +43,7 @@ def get_dashboard_metrics(db: Session, project_id: int | None = None) -> dict[st
     # Findings by scan type
     type_counts = {}
     for row in (
-        finding_query
-        .filter(not ScanFinding.false_positive)
+        finding_query.filter(not ScanFinding.false_positive)
         .with_entities(ScanFinding.scan_type, func.count(ScanFinding.id))
         .group_by(ScanFinding.scan_type)
         .all()
@@ -97,7 +96,9 @@ def get_trend_analysis(
 
     rows = query.group_by(func.date(ScanRun.created_at), ScanFinding.severity).all()
 
-    trend: dict[str, dict[str, int]] = defaultdict(lambda: {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0})
+    trend: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+    )
     for day, severity, count in rows:
         day_str = str(day)
         trend[day_str][severity] = count
@@ -127,7 +128,12 @@ def get_top_vulnerable_deps(
         title = f.title or ""
         key = title.split(":")[-1].strip() if ":" in title else title
         if key not in dep_map:
-            dep_map[key] = {"dependency": key, "count": 0, "severity": f.severity, "cwe_id": f.cwe_id}
+            dep_map[key] = {
+                "dependency": key,
+                "count": 0,
+                "severity": f.severity,
+                "cwe_id": f.cwe_id,
+            }
         dep_map[key]["count"] += 1
 
     ranked = sorted(dep_map.values(), key=lambda x: (-x["count"], x["severity"]))
@@ -162,24 +168,37 @@ def get_secret_leak_summary(
 def export_findings_csv(findings: list[dict]) -> str:
     """Export findings to CSV format."""
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=[
-        "scan_type", "severity", "title", "cwe_id", "file_path",
-        "line_number", "description", "remediation", "false_positive", "resolved",
-    ])
+    writer = csv.DictWriter(
+        output,
+        fieldnames=[
+            "scan_type",
+            "severity",
+            "title",
+            "cwe_id",
+            "file_path",
+            "line_number",
+            "description",
+            "remediation",
+            "false_positive",
+            "resolved",
+        ],
+    )
     writer.writeheader()
     for f in findings:
-        writer.writerow({
-            "scan_type": f.get("scan_type", ""),
-            "severity": f.get("severity", ""),
-            "title": f.get("title", ""),
-            "cwe_id": f.get("cwe_id", ""),
-            "file_path": f.get("file_path", ""),
-            "line_number": f.get("line_number", ""),
-            "description": f.get("description", ""),
-            "remediation": f.get("remediation", ""),
-            "false_positive": f.get("false_positive", False),
-            "resolved": f.get("resolved", False),
-        })
+        writer.writerow(
+            {
+                "scan_type": f.get("scan_type", ""),
+                "severity": f.get("severity", ""),
+                "title": f.get("title", ""),
+                "cwe_id": f.get("cwe_id", ""),
+                "file_path": f.get("file_path", ""),
+                "line_number": f.get("line_number", ""),
+                "description": f.get("description", ""),
+                "remediation": f.get("remediation", ""),
+                "false_positive": f.get("false_positive", False),
+                "resolved": f.get("resolved", False),
+            }
+        )
     return output.getvalue()
 
 
@@ -205,7 +224,9 @@ def generate_executive_summary(metrics: dict, trend: list[dict]) -> dict[str, An
     if len(trend) >= 2:
         recent = sum(trend[-1].get(s, 0) for s in ("critical", "high", "medium"))
         older = sum(trend[0].get(s, 0) for s in ("critical", "high", "medium"))
-        trend_direction = "improving" if recent < older else "worsening" if recent > older else "stable"
+        trend_direction = (
+            "improving" if recent < older else "worsening" if recent > older else "stable"
+        )
     else:
         trend_direction = "insufficient data"
 

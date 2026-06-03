@@ -51,18 +51,14 @@ def test_register_duplicate_returns_409(api_client):
 def test_login_wrong_password_returns_401(api_client):
     """Mauvais mot de passe = 401 sans details."""
     payload, _ = _register_and_login(api_client)
-    r = api_client.post(
-        "/auth/login", json={"username": payload["username"], "password": "nope"}
-    )
+    r = api_client.post("/auth/login", json={"username": payload["username"], "password": "nope"})
     assert r.status_code == 401
 
 
 def test_me_returns_current_user(api_client):
     """/auth/me renvoie le user du JWT."""
     payload, tokens = _register_and_login(api_client)
-    r = api_client.get(
-        "/auth/me", headers={"Authorization": f"Bearer {tokens['access_token']}"}
-    )
+    r = api_client.get("/auth/me", headers={"Authorization": f"Bearer {tokens['access_token']}"})
     assert r.status_code == 200
     assert r.json()["username"] == payload["username"]
 
@@ -70,9 +66,7 @@ def test_me_returns_current_user(api_client):
 def test_me_rejects_refresh_token(api_client):
     """Un refresh ne doit PAS etre accepte comme access (verification du claim type)."""
     _, tokens = _register_and_login(api_client)
-    r = api_client.get(
-        "/auth/me", headers={"Authorization": f"Bearer {tokens['refresh_token']}"}
-    )
+    r = api_client.get("/auth/me", headers={"Authorization": f"Bearer {tokens['refresh_token']}"})
     assert r.status_code == 401
 
 
@@ -86,9 +80,7 @@ def test_refresh_rotates_tokens(api_client):
     assert new_tokens["refresh_token"] != tokens["refresh_token"]
 
     # Le precedent refresh est revoque -> 401 sur reuse.
-    r2 = api_client.post(
-        "/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
-    )
+    r2 = api_client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
     assert r2.status_code == 401
 
 

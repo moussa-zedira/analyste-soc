@@ -40,52 +40,26 @@ class PhishingCampaign(Base):
     engagement_id: Mapped[str | None] = mapped_column(
         Text, ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True
     )
-    gophish_campaign_id: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )
+    gophish_campaign_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(
         Text, nullable=False, default="draft"
     )  # draft | sending | in-progress | completed | stopped | failed
-    template_name: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
-    landing_url: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
-    sent_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    opened_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    clicked_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    submitted_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    email_failed_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    launched_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    template_name: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    landing_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    sent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    opened_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    clicked_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    submitted_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    email_failed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    launched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[str | None] = mapped_column(
         Text, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    mitre_technique: Mapped[str] = mapped_column(
-        Text, nullable=False, default="T1566.001"
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    mitre_technique: Mapped[str] = mapped_column(Text, nullable=False, default="T1566.001")
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    last_synced_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     targets: Mapped[list[PhishingTarget]] = relationship(
         "PhishingTarget",
@@ -119,34 +93,16 @@ class PhishingTarget(Base):
         nullable=False,
     )
     email: Mapped[str] = mapped_column(Text, nullable=False)
-    first_name: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
-    last_name: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
-    position: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
-    group_name: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
-    last_status: Mapped[str] = mapped_column(
-        Text, nullable=False, default="pending"
-    )
-    opened_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    clicked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    submitted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    first_name: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    last_name: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    position: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    group_name: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    last_status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    clicked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    campaign: Mapped[PhishingCampaign] = relationship(
-        "PhishingCampaign", back_populates="targets"
-    )
+    campaign: Mapped[PhishingCampaign] = relationship("PhishingCampaign", back_populates="targets")
 
     __table_args__ = (
         Index("ix_phishing_targets_campaign_email", "campaign_id", "email"),
@@ -173,20 +129,12 @@ class PhishingResult(Base):
     event_type: Mapped[str] = mapped_column(
         Text, nullable=False
     )  # email_sent | email_opened | clicked_link | submitted_data | email_failed
-    ip_address: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
-    user_agent: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
+    ip_address: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    user_agent: Mapped[str] = mapped_column(Text, nullable=False, default="")
     payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    ts: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    campaign: Mapped[PhishingCampaign] = relationship(
-        "PhishingCampaign", back_populates="results"
-    )
+    campaign: Mapped[PhishingCampaign] = relationship("PhishingCampaign", back_populates="results")
 
     __table_args__ = (
         Index("ix_phishing_results_campaign_ts", "campaign_id", "ts"),

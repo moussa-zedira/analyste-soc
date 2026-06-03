@@ -93,7 +93,9 @@ class ChatResponse(BaseModel):
     latency_ms: int
 
 
-def _build_pentest_context(db: Session, engagement: Engagement, message: str) -> tuple[str, list[str]]:
+def _build_pentest_context(
+    db: Session, engagement: Engagement, message: str
+) -> tuple[str, list[str]]:
     """Contexte pentest : engagement + sessions C2 + BloodHound + creds + scans."""
     parts: list[str] = []
     labels: list[str] = []
@@ -135,7 +137,9 @@ def _build_pentest_context(db: Session, engagement: Engagement, message: str) ->
         .first()
     )
     if bh_ds:
-        node_count = db.query(func.count(BHNode.id)).filter(BHNode.dataset_id == bh_ds.id).scalar() or 0
+        node_count = (
+            db.query(func.count(BHNode.id)).filter(BHNode.dataset_id == bh_ds.id).scalar() or 0
+        )
         high_value = (
             db.query(func.count(BHNode.id))
             .filter(BHNode.dataset_id == bh_ds.id)
@@ -170,8 +174,7 @@ def _build_pentest_context(db: Session, engagement: Engagement, message: str) ->
     ips = _IP_RE.findall(message)[:3]
     if ips:
         scores = {
-            t.ip: t.score
-            for t in db.query(ThreatScore).filter(ThreatScore.ip.in_(ips)).all()
+            t.ip: t.score for t in db.query(ThreatScore).filter(ThreatScore.ip.in_(ips)).all()
         }
         for ip in ips:
             in_scope = any(ip.startswith(s.split("/")[0][:7]) for s in scope)
@@ -193,16 +196,14 @@ def _build_soc_context(db: Session, message: str) -> tuple[str, list[str]]:
         func.count(case((Incident.status == "open", 1))),
     ).one()
     parts.append(
-        f"DB Summary: {event_count} events total, "
-        f"{inc_total} incidents ({inc_open} open)."
+        f"DB Summary: {event_count} events total, {inc_total} incidents ({inc_open} open)."
     )
     labels.append("summary_stats")
 
     recent = db.query(Incident).order_by(Incident.created_at.desc()).limit(10).all()
     if recent:
         lines = [
-            f"- [{i.severity}] {i.title} (status={i.status}, rule={i.rule_id})"
-            for i in recent
+            f"- [{i.severity}] {i.title} (status={i.status}, rule={i.rule_id})" for i in recent
         ]
         parts.append("Recent incidents:\n" + "\n".join(lines))
         labels.append("recent_incidents")
@@ -210,8 +211,7 @@ def _build_soc_context(db: Session, message: str) -> tuple[str, list[str]]:
     ips = _IP_RE.findall(message)[:3]
     if ips:
         scores = {
-            t.ip: t.score
-            for t in db.query(ThreatScore).filter(ThreatScore.ip.in_(ips)).all()
+            t.ip: t.score for t in db.query(ThreatScore).filter(ThreatScore.ip.in_(ips)).all()
         }
         for ip in ips:
             if ip in scores:
@@ -299,9 +299,7 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db)) -> dict:
     history = _load_history(db, conv_id, limit=20)
 
     # Construit le prompt final (system + contexte + historique + nouveau message)
-    history_block = "\n".join(
-        f"[{m['role'].upper()}] {m['content']}" for m in history
-    )
+    history_block = "\n".join(f"[{m['role'].upper()}] {m['content']}" for m in history)
     full_prompt = (
         f"CONTEXTE:\n{context_str}\n\n"
         + (f"HISTORIQUE:\n{history_block}\n\n" if history_block else "")

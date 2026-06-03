@@ -51,11 +51,18 @@ class FeedUpdate(BaseModel):
 
 def _feed_to_dict(f: ThreatFeed) -> dict:
     import json
+
     return {
-        "id": f.id, "name": f.name, "url": f.url, "feed_type": f.feed_type,
-        "interval_minutes": f.interval_minutes, "enabled": f.enabled,
-        "auth_type": f.auth_type, "default_tlp": f.default_tlp,
-        "default_confidence": f.default_confidence, "ioc_count": f.ioc_count,
+        "id": f.id,
+        "name": f.name,
+        "url": f.url,
+        "feed_type": f.feed_type,
+        "interval_minutes": f.interval_minutes,
+        "enabled": f.enabled,
+        "auth_type": f.auth_type,
+        "default_tlp": f.default_tlp,
+        "default_confidence": f.default_confidence,
+        "ioc_count": f.ioc_count,
         "last_poll": f.last_poll.isoformat() if f.last_poll else None,
         "last_success": f.last_success.isoformat() if f.last_success else None,
         "last_error": f.last_error,

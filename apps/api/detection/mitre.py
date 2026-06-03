@@ -41,8 +41,10 @@ class MitreTechnique:
 
 def _t(tid: str, name: str, tactic_id: str, tactic: str) -> MitreTechnique:
     return MitreTechnique(
-        id=tid, name=name,
-        tactic_id=tactic_id, tactic_name=tactic,
+        id=tid,
+        name=name,
+        tactic_id=tactic_id,
+        tactic_name=tactic,
         url=f"https://attack.mitre.org/techniques/{tid.replace('.', '/')}/",
     )
 
@@ -163,19 +165,68 @@ T1561 = _t("T1561", "Disk Wipe", "TA0040", "Impact")
 
 
 ALL_TECHNIQUES: list[MitreTechnique] = [
-    T1595, T1595_001, T1595_002, T1592,
-    T1190, T1133, T1566, T1566_001, T1566_002,
-    T1059, T1059_001, T1059_003, T1059_004, T1203, T1106,
-    T1098, T1136, T1543, T1547, T1053,
-    T1548, T1068, T1055,
-    T1027, T1140, T1562, T1070, T1112,
-    T1110, T1110_001, T1110_003, T1110_004, T1003, T1078, T1552, T1555,
-    T1046, T1083, T1018, T1057, T1518, T1082,
-    T1021, T1021_001, T1021_002, T1021_004, T1570,
-    T1005, T1056, T1113,
-    T1071, T1071_001, T1090, T1572, T1219,
-    T1041, T1048, T1567,
-    T1499, T1486, T1490, T1561,
+    T1595,
+    T1595_001,
+    T1595_002,
+    T1592,
+    T1190,
+    T1133,
+    T1566,
+    T1566_001,
+    T1566_002,
+    T1059,
+    T1059_001,
+    T1059_003,
+    T1059_004,
+    T1203,
+    T1106,
+    T1098,
+    T1136,
+    T1543,
+    T1547,
+    T1053,
+    T1548,
+    T1068,
+    T1055,
+    T1027,
+    T1140,
+    T1562,
+    T1070,
+    T1112,
+    T1110,
+    T1110_001,
+    T1110_003,
+    T1110_004,
+    T1003,
+    T1078,
+    T1552,
+    T1555,
+    T1046,
+    T1083,
+    T1018,
+    T1057,
+    T1518,
+    T1082,
+    T1021,
+    T1021_001,
+    T1021_002,
+    T1021_004,
+    T1570,
+    T1005,
+    T1056,
+    T1113,
+    T1071,
+    T1071_001,
+    T1090,
+    T1572,
+    T1219,
+    T1041,
+    T1048,
+    T1567,
+    T1499,
+    T1486,
+    T1490,
+    T1561,
 ]
 
 TECHNIQUES_BY_ID: dict[str, MitreTechnique] = {t.id: t for t in ALL_TECHNIQUES}
@@ -244,8 +295,7 @@ def get_all_mapped_techniques() -> list[MitreTechnique]:
 def coverage_by_tactic() -> dict[str, dict[str, object]]:
     """Couverture des regles par tactique : {tactic_id: {name, techniques: [...]}}."""
     coverage: dict[str, dict[str, object]] = {
-        t["id"]: {"name": t["name"], "techniques": []}
-        for t in TACTIC_ORDER
+        t["id"]: {"name": t["name"], "techniques": []} for t in TACTIC_ORDER
     }
     seen: set[str] = set()
     for rule_id, techs in RULE_MITRE_MAP.items():
@@ -259,11 +309,13 @@ def coverage_by_tactic() -> dict[str, dict[str, object]]:
                 {"name": tech.tactic_name, "techniques": []},
             )
             techs_list: list[dict[str, object]] = entry["techniques"]  # type: ignore[assignment]
-            techs_list.append({
-                "technique_id": tech.id,
-                "name": tech.name,
-                "rule_id": rule_id,
-            })
+            techs_list.append(
+                {
+                    "technique_id": tech.id,
+                    "name": tech.name,
+                    "rule_id": rule_id,
+                }
+            )
     return coverage
 
 

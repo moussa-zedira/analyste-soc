@@ -101,7 +101,9 @@ async def triage_inline(req: TriageInlineRequest) -> dict[str, Any]:
 
 
 @router.post("/triage/event/{event_id}")
-async def triage_event_route(event_id: str, prefer: str | None = None, db: Session = Depends(get_db)) -> dict[str, Any]:
+async def triage_event_route(
+    event_id: str, prefer: str | None = None, db: Session = Depends(get_db)
+) -> dict[str, Any]:
     try:
         return await triage_event(db, event_id, prefer=prefer)
     except ValueError as e:
@@ -109,7 +111,9 @@ async def triage_event_route(event_id: str, prefer: str | None = None, db: Sessi
 
 
 @router.post("/triage/incident/{incident_id}")
-async def triage_incident_route(incident_id: str, prefer: str | None = None, db: Session = Depends(get_db)) -> dict[str, Any]:
+async def triage_incident_route(
+    incident_id: str, prefer: str | None = None, db: Session = Depends(get_db)
+) -> dict[str, Any]:
     try:
         return await triage_incident(db, incident_id, prefer=prefer)
     except ValueError as e:
@@ -295,6 +299,7 @@ def rules_from_event(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     from apps.api.models.event import Event
+
     ev = db.query(Event).filter(Event.id == event_id).first()
     if ev is None:
         raise HTTPException(status_code=404, detail=f"event not found: {event_id}")

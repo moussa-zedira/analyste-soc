@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Base class
 # ---------------------------------------------------------------------------
 
+
 class BaseParser:
     """Common interface every parser must implement."""
 
@@ -55,6 +56,7 @@ class BaseParser:
 # ---------------------------------------------------------------------------
 # Severity helper (reused by all parsers)
 # ---------------------------------------------------------------------------
+
 
 def _normalize_severity(val: str | int | None) -> str:
     if val is None:
@@ -99,6 +101,7 @@ def get_registry() -> list[BaseParser]:
 # ---------------------------------------------------------------------------
 # Detection & parsing
 # ---------------------------------------------------------------------------
+
 
 def detect(raw: str) -> BaseParser | None:
     """Return the first parser that can handle *raw*, or ``None``."""
@@ -146,15 +149,13 @@ def parse_bulk(lines: list[str]) -> list[dict[str, Any]]:
 
 def supported_formats() -> list[dict[str, Any]]:
     """Return metadata about every registered parser."""
-    return [
-        {"name": p.name, "formats": p.formats, "priority": p.priority}
-        for p in _registry
-    ]
+    return [{"name": p.name, "formats": p.formats, "priority": p.priority} for p in _registry]
 
 
 # ---------------------------------------------------------------------------
 # Auto-register all built-in parsers on import
 # ---------------------------------------------------------------------------
+
 
 def _init_parsers() -> None:
     """Import and register all built-in parsers."""
@@ -176,8 +177,8 @@ def _init_parsers() -> None:
         ApacheParser,
         FirewallParser,
         CloudLogParser,
-        JSONLogParser,   # JSON last-ish — many formats embed JSON
-        CSVLogParser,     # CSV is the most generic fallback
+        JSONLogParser,  # JSON last-ish — many formats embed JSON
+        CSVLogParser,  # CSV is the most generic fallback
     ]:
         register(cls())
 

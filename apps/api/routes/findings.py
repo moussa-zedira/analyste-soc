@@ -55,6 +55,7 @@ class FindingUpdate(BaseModel):
 
 class ExploitRequest(BaseModel):
     """Parametres pour declencher l'exploitation d'un finding."""
+
     params: dict | None = Field(default_factory=dict)
 
 

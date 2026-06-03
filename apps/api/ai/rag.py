@@ -43,13 +43,10 @@ EMBEDDING_MODEL = os.environ.get("RAG_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 EMBEDDING_DIM = 384  # all-MiniLM-L6-v2
 
 MITRE_ATTACK_URL = (
-    "https://raw.githubusercontent.com/mitre/cti/master/"
-    "enterprise-attack/enterprise-attack.json"
+    "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 )
 NVD_CVE_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-SIGMA_TARBALL_URL = (
-    "https://github.com/SigmaHQ/sigma/archive/refs/heads/master.tar.gz"
-)
+SIGMA_TARBALL_URL = "https://github.com/SigmaHQ/sigma/archive/refs/heads/master.tar.gz"
 
 
 # ── Legacy API (compat) ──────────────────────────────────────────────
@@ -118,11 +115,7 @@ def collect_corpus(
 
     if include_events:
         rows = (
-            db.query(Event)
-            .filter(Event.ts >= cutoff)
-            .order_by(desc(Event.ts))
-            .limit(limit)
-            .all()
+            db.query(Event).filter(Event.ts >= cutoff).order_by(desc(Event.ts)).limit(limit).all()
         )
         docs.extend(_event_to_doc(e) for e in rows)
 
@@ -278,15 +271,14 @@ class FaissRAG:
                             if n_err <= 3:
                                 logger.warning(
                                     "rag_docs_parse_skip line=%d err=%s",
-                                    lineno, je,
+                                    lineno,
+                                    je,
                                 )
             except Exception as exc:
                 logger.warning("Cannot read docs.jsonl: %s", exc)
                 self._docs = []
             if n_err:
-                logger.warning(
-                    "rag_docs_load ok=%d skipped=%d", n_ok, n_err
-                )
+                logger.warning("rag_docs_load ok=%d skipped=%d", n_ok, n_err)
 
         if self.index_path.exists():
             try:
@@ -687,13 +679,7 @@ def _fetch_incidents_events_db(db: Session, limit: int = 5000) -> list[dict[str,
     """Convertit events + incidents recents en docs FAISS."""
     out: list[dict[str, Any]] = []
     cutoff = datetime.now(UTC) - timedelta(hours=168)
-    for e in (
-        db.query(Event)
-        .filter(Event.ts >= cutoff)
-        .order_by(desc(Event.ts))
-        .limit(limit)
-        .all()
-    ):
+    for e in db.query(Event).filter(Event.ts >= cutoff).order_by(desc(Event.ts)).limit(limit).all():
         rag = _event_to_doc(e)
         if not rag.text.strip():
             continue

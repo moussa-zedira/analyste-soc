@@ -4,7 +4,7 @@ Usage::
 
     from apps.api.cql import execute_cql, validate_cql, autocomplete_cql
 
-    results = execute_cql("event_type=\"auth_failure\" | stats count by src_ip", db)
+    results = execute_cql('event_type="auth_failure" | stats count by src_ip', db)
 """
 
 from __future__ import annotations

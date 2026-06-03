@@ -39,6 +39,7 @@ class VirusTotalProvider:
     async def _check_rate_limit(self) -> bool:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return True
@@ -57,6 +58,7 @@ class VirusTotalProvider:
     async def _increment_counter(self) -> None:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return
@@ -112,10 +114,13 @@ class VirusTotalProvider:
             reputation = attrs.get("reputation", 0)
 
             tags = attrs.get("tags", [])[:10]
-            list({
-                v for v in (attrs.get("last_analysis_results") or {}).values()
-                if isinstance(v, dict) and v.get("category") == "malicious"
-            })[:5]
+            list(
+                {
+                    v
+                    for v in (attrs.get("last_analysis_results") or {}).values()
+                    if isinstance(v, dict) and v.get("category") == "malicious"
+                }
+            )[:5]
 
             return TIResult(
                 indicator=ip,
@@ -166,13 +171,19 @@ class VirusTotalProvider:
                 categories=list(set((attrs.get("categories") or {}).values()))[:10],
                 tags=attrs.get("tags", [])[:10] or ["virustotal"],
                 total_reports=stats.get("malicious", 0),
-                raw={"stats": stats, "registrar": attrs.get("registrar"), "creation_date": attrs.get("creation_date")},
+                raw={
+                    "stats": stats,
+                    "registrar": attrs.get("registrar"),
+                    "creation_date": attrs.get("creation_date"),
+                },
             )
         except CircuitOpenError:
             logger.warning("VirusTotal circuit open, skipping domain %s", domain)
             return None
         except httpx.HTTPStatusError as e:
-            logger.warning("VirusTotal HTTP error for domain %s: %s", domain, e.response.status_code)
+            logger.warning(
+                "VirusTotal HTTP error for domain %s: %s", domain, e.response.status_code
+            )
             return None
         except Exception:
             logger.exception("VirusTotal check_domain failed for %s", domain)
@@ -220,7 +231,9 @@ class VirusTotalProvider:
             logger.warning("VirusTotal circuit open, skipping hash %s", file_hash)
             return None
         except httpx.HTTPStatusError as e:
-            logger.warning("VirusTotal HTTP error for hash %s: %s", file_hash, e.response.status_code)
+            logger.warning(
+                "VirusTotal HTTP error for hash %s: %s", file_hash, e.response.status_code
+            )
             return None
         except Exception:
             logger.exception("VirusTotal check_hash failed for %s", file_hash)
@@ -237,6 +250,7 @@ class VirusTotalProvider:
             return None
         try:
             import base64
+
             url_id = base64.urlsafe_b64encode(url.encode()).decode().rstrip("=")
             resp = await self._cb.call(
                 self._client.get,
@@ -258,7 +272,11 @@ class VirusTotalProvider:
                 categories=list(set((attrs.get("categories") or {}).values()))[:10],
                 tags=attrs.get("tags", [])[:10] or ["virustotal"],
                 total_reports=stats.get("malicious", 0),
-                raw={"stats": stats, "url": attrs.get("url"), "last_http_response_code": attrs.get("last_http_response_code")},
+                raw={
+                    "stats": stats,
+                    "url": attrs.get("url"),
+                    "last_http_response_code": attrs.get("last_http_response_code"),
+                },
             )
         except CircuitOpenError:
             logger.warning("VirusTotal circuit open, skipping URL")

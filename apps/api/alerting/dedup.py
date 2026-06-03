@@ -21,11 +21,13 @@ DEFAULT_DEDUP_TTL_MINUTES = int(os.environ.get("ALERT_DEDUP_TTL_MIN", "30"))
 
 def compute_fingerprint(incident: dict) -> str:
     """sha256(rule_id|entity_key|severity)."""
-    raw = "|".join([
-        str(incident.get("rule_id") or ""),
-        str(incident.get("entity_key") or incident.get("user") or ""),
-        str(incident.get("severity") or ""),
-    ])
+    raw = "|".join(
+        [
+            str(incident.get("rule_id") or ""),
+            str(incident.get("entity_key") or incident.get("user") or ""),
+            str(incident.get("severity") or ""),
+        ]
+    )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -74,12 +76,7 @@ def check_and_record(
 
 
 def list_recent(db: Session, *, limit: int = 100) -> list[AlertFingerprint]:
-    return (
-        db.query(AlertFingerprint)
-        .order_by(AlertFingerprint.last_seen.desc())
-        .limit(limit)
-        .all()
-    )
+    return db.query(AlertFingerprint).order_by(AlertFingerprint.last_seen.desc()).limit(limit).all()
 
 
 def reset_fingerprint(db: Session, fingerprint: str) -> bool:

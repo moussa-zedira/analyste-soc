@@ -37,6 +37,7 @@ router = APIRouter(prefix="/ioc", dependencies=[Depends(require_api_key)])
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
 
+
 class IOCCreate(BaseModel):
     type: str = Field(..., description="IOC type: ip, domain, url, hash_md5, etc.")
     value: str
@@ -79,7 +80,9 @@ def _ioc_to_dict(ioc: Any) -> dict:
         "tlp": ioc.tlp,
         "source": ioc.source,
         "tags": json.loads(ioc.tags_json) if ioc.tags_json else [],
-        "mitre_techniques": json.loads(ioc.mitre_techniques_json) if ioc.mitre_techniques_json else [],
+        "mitre_techniques": json.loads(ioc.mitre_techniques_json)
+        if ioc.mitre_techniques_json
+        else [],
         "kill_chain_phase": ioc.kill_chain_phase,
         "metadata": json.loads(ioc.metadata_json) if ioc.metadata_json else {},
         "stix_id": ioc.stix_id,
@@ -92,14 +95,23 @@ def _ioc_to_dict(ioc: Any) -> dict:
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
+
 @router.post("")
 def create(body: IOCCreate, db: Session = Depends(get_db)):
     try:
         ioc = create_ioc(
-            db, ioc_type=body.type, value=body.value, source=body.source,
-            confidence=body.confidence, tlp=body.tlp, tags=body.tags,
-            mitre_techniques=body.mitre_techniques, kill_chain_phase=body.kill_chain_phase,
-            metadata=body.metadata, ttl_hours=body.ttl_hours, enrich=body.enrich,
+            db,
+            ioc_type=body.type,
+            value=body.value,
+            source=body.source,
+            confidence=body.confidence,
+            tlp=body.tlp,
+            tags=body.tags,
+            mitre_techniques=body.mitre_techniques,
+            kill_chain_phase=body.kill_chain_phase,
+            metadata=body.metadata,
+            ttl_hours=body.ttl_hours,
+            enrich=body.enrich,
         )
         return {"status": "created", "ioc": _ioc_to_dict(ioc)}
     except ValueError as exc:
@@ -120,9 +132,16 @@ def list_all(
     db: Session = Depends(get_db),
 ):
     result = list_iocs(
-        db, ioc_type=type, state=state, tlp=tlp, source=source,
-        confidence_min=confidence_min, confidence_max=confidence_max,
-        search=search, limit=limit, offset=offset,
+        db,
+        ioc_type=type,
+        state=state,
+        tlp=tlp,
+        source=source,
+        confidence_min=confidence_min,
+        confidence_max=confidence_max,
+        search=search,
+        limit=limit,
+        offset=offset,
     )
     # list_iocs peut renvoyer (items, total) ou directement items ;
     # on normalise pour supporter les deux variantes.
@@ -136,7 +155,11 @@ def list_all(
 
 @router.get("/types")
 def get_types():
-    return {"types": sorted(IOC_TYPES), "states": sorted(IOC_STATES), "tlp_levels": sorted(TLP_LEVELS)}
+    return {
+        "types": sorted(IOC_TYPES),
+        "states": sorted(IOC_STATES),
+        "tlp_levels": sorted(TLP_LEVELS),
+    }
 
 
 @router.get("/stats")
@@ -159,14 +182,24 @@ def export_csv_endpoint(db: Session = Depends(get_db), state: str = "active"):
 @router.get("/graph")
 def graph(db: Session = Depends(get_db), limit: int = 200):
     from apps.api.models.ioc import IOC, IOCRelationship
+
     iocs = db.query(IOC).filter(IOC.state == "active").limit(limit).all()
     ioc_ids = {i.id for i in iocs}
-    rels = db.query(IOCRelationship).filter(
-        IOCRelationship.source_ioc_id.in_(ioc_ids),
-        IOCRelationship.target_ioc_id.in_(ioc_ids),
-    ).all()
-    nodes = [{"id": i.id, "type": i.type, "value": i.value, "confidence": i.confidence} for i in iocs]
-    edges = [{"source": r.source_ioc_id, "target": r.target_ioc_id, "type": r.relationship_type} for r in rels]
+    rels = (
+        db.query(IOCRelationship)
+        .filter(
+            IOCRelationship.source_ioc_id.in_(ioc_ids),
+            IOCRelationship.target_ioc_id.in_(ioc_ids),
+        )
+        .all()
+    )
+    nodes = [
+        {"id": i.id, "type": i.type, "value": i.value, "confidence": i.confidence} for i in iocs
+    ]
+    edges = [
+        {"source": r.source_ioc_id, "target": r.target_ioc_id, "type": r.relationship_type}
+        for r in rels
+    ]
     return {"nodes": nodes, "edges": edges}
 
 
@@ -213,11 +246,18 @@ def false_positive(ioc_id: int, db: Session = Depends(get_db)):
 @router.get("/{ioc_id}/sightings")
 def sightings(ioc_id: int, db: Session = Depends(get_db)):
     sights = get_sightings(db, ioc_id)
-    return {"sightings": [
-        {"id": s.id, "event_id": s.event_id, "source": s.source, "count": s.count,
-         "timestamp": s.timestamp.isoformat() if s.timestamp else None}
-        for s in sights
-    ]}
+    return {
+        "sightings": [
+            {
+                "id": s.id,
+                "event_id": s.event_id,
+                "source": s.source,
+                "count": s.count,
+                "timestamp": s.timestamp.isoformat() if s.timestamp else None,
+            }
+            for s in sights
+        ]
+    }
 
 
 @router.get("/{ioc_id}/related")
@@ -230,11 +270,21 @@ def related(ioc_id: int, db: Session = Depends(get_db)):
 def bulk(body: BulkImport, db: Session = Depends(get_db)):
     try:
         if body.format == "stix":
-            count = bulk_import_stix(db, body.data, source=body.source,
-                                     default_confidence=body.default_confidence, default_tlp=body.default_tlp)
+            count = bulk_import_stix(
+                db,
+                body.data,
+                source=body.source,
+                default_confidence=body.default_confidence,
+                default_tlp=body.default_tlp,
+            )
         elif body.format == "csv":
-            count = bulk_import_csv(db, body.data, source=body.source,
-                                    default_confidence=body.default_confidence, default_tlp=body.default_tlp)
+            count = bulk_import_csv(
+                db,
+                body.data,
+                source=body.source,
+                default_confidence=body.default_confidence,
+                default_tlp=body.default_tlp,
+            )
         else:
             count = bulk_import_text(db, body.data, source=body.source)
         return {"status": "imported", "count": count}

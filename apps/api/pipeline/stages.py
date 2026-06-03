@@ -25,19 +25,20 @@ logger = logging.getLogger(__name__)
 # Base
 # ---------------------------------------------------------------------------
 
+
 class BaseStage(ABC):
     """Abstract base for all pipeline stages."""
 
     name: str = "base"
 
     @abstractmethod
-    async def execute(self, ctx: EventContext) -> EventContext:
-        ...
+    async def execute(self, ctx: EventContext) -> EventContext: ...
 
 
 # ---------------------------------------------------------------------------
 # 1. INGEST
 # ---------------------------------------------------------------------------
+
 
 class IngestStage(BaseStage):
     name = "ingest"
@@ -69,6 +70,7 @@ class IngestStage(BaseStage):
 # 2. PARSE
 # ---------------------------------------------------------------------------
 
+
 class ParseStage(BaseStage):
     name = "parse"
 
@@ -80,6 +82,7 @@ class ParseStage(BaseStage):
         raw_str = ctx.raw if isinstance(ctx.raw, str) else str(ctx.raw)
         try:
             from apps.api.parsers import parse_line
+
             result = await asyncio.to_thread(parse_line, raw_str)
             if result:
                 # Merge, keeping existing values
@@ -105,12 +108,11 @@ class ParseStage(BaseStage):
 # 3. ENRICH_GEO
 # ---------------------------------------------------------------------------
 
+
 class GeoEnrichStage(BaseStage):
     name = "enrich_geo"
 
-    _PRIVATE_RE = re.compile(
-        r"^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|::1|fe80:|fd)"
-    )
+    _PRIVATE_RE = re.compile(r"^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|::1|fe80:|fd)")
 
     async def execute(self, ctx: EventContext) -> EventContext:
         geo_results: dict[str, Any] = {}
@@ -130,6 +132,7 @@ class GeoEnrichStage(BaseStage):
         """Attempt GeoIP lookup via geoip2 (MaxMind) with graceful fallback."""
         try:
             import geoip2.database  # type: ignore[import-untyped]
+
             reader = geoip2.database.Reader("/usr/share/GeoIP/GeoLite2-City.mmdb")
             resp = reader.city(ip)
             return {
@@ -148,6 +151,7 @@ class GeoEnrichStage(BaseStage):
 # ---------------------------------------------------------------------------
 # 4. ENRICH_TI
 # ---------------------------------------------------------------------------
+
 
 class TIEnrichStage(BaseStage):
     name = "enrich_ti"
@@ -185,14 +189,16 @@ class TIEnrichStage(BaseStage):
                         if result:
                             best_score = max(best_score, result.risk_score)
                             all_tags.extend(result.tags)
-                            provider_results.append({
-                                "indicator": ind_value,
-                                "type": ind_type,
-                                "source": result.source,
-                                "risk_score": result.risk_score,
-                                "is_malicious": result.is_malicious,
-                                "tags": result.tags,
-                            })
+                            provider_results.append(
+                                {
+                                    "indicator": ind_value,
+                                    "type": ind_type,
+                                    "source": result.source,
+                                    "risk_score": result.risk_score,
+                                    "is_malicious": result.is_malicious,
+                                    "tags": result.tags,
+                                }
+                            )
             finally:
                 db.close()
         except Exception:
@@ -211,6 +217,7 @@ class TIEnrichStage(BaseStage):
 # ---------------------------------------------------------------------------
 # 5. ENRICH_ASSET
 # ---------------------------------------------------------------------------
+
 
 class AssetEnrichStage(BaseStage):
     name = "enrich_asset"
@@ -269,12 +276,16 @@ class AssetEnrichStage(BaseStage):
 # 6. CLASSIFY
 # ---------------------------------------------------------------------------
 
+
 class ClassifyStage(BaseStage):
     name = "classify"
 
     # Keyword-based classification rules
     _PATTERNS: list[tuple[str, list[str]]] = [
-        ("authentication", ["login", "logon", "logoff", "logout", "auth", "password", "credential", "sso"]),
+        (
+            "authentication",
+            ["login", "logon", "logoff", "logout", "auth", "password", "credential", "sso"],
+        ),
         ("network", ["firewall", "connection", "tcp", "udp", "dns", "port", "traffic", "packet"]),
         ("process", ["process", "exec", "spawn", "cmd", "powershell", "bash", "script"]),
         ("file", ["file", "write", "read", "delete", "create", "modify", "rename", "copy"]),
@@ -293,25 +304,31 @@ class ClassifyStage(BaseStage):
         # Try ML classification first if enabled
         try:
             from apps.api.pipeline.config import get_pipeline_config
+
             cfg = get_pipeline_config()
             if cfg.ml_classification_enabled:
                 ml_result = await self._ml_classify(ctx)
                 if ml_result:
                     ctx.parsed["event_type"] = ml_result
-                    ctx.add_enrichment("classification", {
-                        "method": "ml",
-                        "event_type": ml_result,
-                    })
+                    ctx.add_enrichment(
+                        "classification",
+                        {
+                            "method": "ml",
+                            "event_type": ml_result,
+                        },
+                    )
                     return ctx
         except Exception:
             logger.debug("stages: ignored exception", exc_info=True)
 
         # Rule-based fallback
-        text_to_check = " ".join([
-            ctx.parsed.get("message", ""),
-            ctx.parsed.get("source", ""),
-            ctx.parsed.get("raw", ""),
-        ]).lower()
+        text_to_check = " ".join(
+            [
+                ctx.parsed.get("message", ""),
+                ctx.parsed.get("source", ""),
+                ctx.parsed.get("raw", ""),
+            ]
+        ).lower()
 
         best_type = "unknown"
         best_score = 0
@@ -322,17 +339,21 @@ class ClassifyStage(BaseStage):
                 best_type = event_type
 
         ctx.parsed["event_type"] = best_type
-        ctx.add_enrichment("classification", {
-            "method": "rule_based",
-            "event_type": best_type,
-            "confidence": min(best_score / 3.0, 1.0),
-        })
+        ctx.add_enrichment(
+            "classification",
+            {
+                "method": "rule_based",
+                "event_type": best_type,
+                "confidence": min(best_score / 3.0, 1.0),
+            },
+        )
         return ctx
 
     async def _ml_classify(self, ctx: EventContext) -> str | None:
         """Attempt ML-based classification. Returns None on failure."""
         try:
             from apps.api.detection.ml_anomaly import classify_event
+
             return await asyncio.to_thread(classify_event, ctx.parsed)
         except Exception:
             return None
@@ -341,6 +362,7 @@ class ClassifyStage(BaseStage):
 # ---------------------------------------------------------------------------
 # 7. SCORE
 # ---------------------------------------------------------------------------
+
 
 class ScoreStage(BaseStage):
     name = "score"
@@ -380,18 +402,24 @@ class ScoreStage(BaseStage):
             score += 5
 
         ctx.score = min(score, 100)
-        ctx.add_enrichment("score_breakdown", {
-            "ti_component": int(ti_score * 0.4),
-            "severity_component": self._SEVERITY_SCORES.get(severity, 5),
-            "asset_component": score - int(ti_score * 0.4) - self._SEVERITY_SCORES.get(severity, 5),
-            "total": ctx.score,
-        })
+        ctx.add_enrichment(
+            "score_breakdown",
+            {
+                "ti_component": int(ti_score * 0.4),
+                "severity_component": self._SEVERITY_SCORES.get(severity, 5),
+                "asset_component": score
+                - int(ti_score * 0.4)
+                - self._SEVERITY_SCORES.get(severity, 5),
+                "total": ctx.score,
+            },
+        )
         return ctx
 
 
 # ---------------------------------------------------------------------------
 # 8. DETECT
 # ---------------------------------------------------------------------------
+
 
 class DetectStage(BaseStage):
     name = "detect"
@@ -435,13 +463,15 @@ class DetectStage(BaseStage):
                 for sigma_rule, compiled in sigma_rules:
                     try:
                         if evaluate_sigma_rule(compiled, mock_event):
-                            results.append({
-                                "type": "sigma",
-                                "rule_id": f"sigma:{sigma_rule.id}",
-                                "rule_name": sigma_rule.name,
-                                "severity": compiled.get("level", "medium"),
-                                "description": compiled.get("description", ""),
-                            })
+                            results.append(
+                                {
+                                    "type": "sigma",
+                                    "rule_id": f"sigma:{sigma_rule.id}",
+                                    "rule_name": sigma_rule.name,
+                                    "severity": compiled.get("level", "medium"),
+                                    "description": compiled.get("description", ""),
+                                }
+                            )
                     except Exception:
                         logger.debug("stages: ignored exception", exc_info=True)
             finally:
@@ -462,12 +492,14 @@ class DetectStage(BaseStage):
                 try:
                     matches = evaluate_rule(rule, [mock_event])
                     if matches:
-                        results.append({
-                            "type": "custom",
-                            "rule_id": rule.id,
-                            "rule_name": rule.name,
-                            "severity": rule.severity,
-                        })
+                        results.append(
+                            {
+                                "type": "custom",
+                                "rule_id": rule.id,
+                                "rule_name": rule.name,
+                                "severity": rule.severity,
+                            }
+                        )
                 except Exception:
                     logger.debug("stages: ignored exception", exc_info=True)
         except ImportError:
@@ -478,6 +510,7 @@ class DetectStage(BaseStage):
 # ---------------------------------------------------------------------------
 # 9. CORRELATE
 # ---------------------------------------------------------------------------
+
 
 class CorrelateStage(BaseStage):
     name = "correlate"
@@ -493,15 +526,17 @@ class CorrelateStage(BaseStage):
             mock_event = _build_mock_event(ctx.parsed)
             matches = engine.evaluate([mock_event])
             for m in matches:
-                ctx.add_correlation({
-                    "rule_id": m.rule_id,
-                    "rule_name": m.rule_name,
-                    "severity": m.severity,
-                    "group_key": m.group_key,
-                    "mitre_tactics": m.mitre_tactics,
-                    "description": m.description,
-                    "score": m.score,
-                })
+                ctx.add_correlation(
+                    {
+                        "rule_id": m.rule_id,
+                        "rule_name": m.rule_name,
+                        "severity": m.severity,
+                        "group_key": m.group_key,
+                        "mitre_tactics": m.mitre_tactics,
+                        "description": m.description,
+                        "score": m.score,
+                    }
+                )
         except Exception:
             logger.debug("Correlation stage skipped")
 
@@ -511,6 +546,7 @@ class CorrelateStage(BaseStage):
 # ---------------------------------------------------------------------------
 # 10. IOC_MATCH
 # ---------------------------------------------------------------------------
+
 
 class IOCMatchStage(BaseStage):
     name = "ioc_match"
@@ -550,14 +586,16 @@ class IOCMatchStage(BaseStage):
                         {"val": ioc_value},
                     ).first()
                     if row:
-                        ctx.add_ioc_match({
-                            "ioc_id": row[0],
-                            "ioc_type": row[1],
-                            "value": row[2],
-                            "threat_type": row[3],
-                            "severity": row[4],
-                            "source": row[5],
-                        })
+                        ctx.add_ioc_match(
+                            {
+                                "ioc_id": row[0],
+                                "ioc_type": row[1],
+                                "value": row[2],
+                                "threat_type": row[3],
+                                "severity": row[4],
+                                "source": row[5],
+                            }
+                        )
                         # Record sighting
                         try:
                             db.execute(
@@ -581,6 +619,7 @@ class IOCMatchStage(BaseStage):
 # ---------------------------------------------------------------------------
 # 11. SOAR_TRIGGER
 # ---------------------------------------------------------------------------
+
 
 class SOARTriggerStage(BaseStage):
     name = "soar_trigger"
@@ -612,24 +651,28 @@ class SOARTriggerStage(BaseStage):
                     trigger_context["rule_id"] = det.get("rule_id")
                     executions = await fire_triggers(db, "on_alert", trigger_context)
                     for exe in executions:
-                        ctx.add_soar_execution({
-                            "execution_id": exe.id,
-                            "playbook_name": exe.playbook_name,
-                            "status": exe.status,
-                            "trigger": "on_alert",
-                        })
+                        ctx.add_soar_execution(
+                            {
+                                "execution_id": exe.id,
+                                "playbook_name": exe.playbook_name,
+                                "status": exe.status,
+                                "trigger": "on_alert",
+                            }
+                        )
 
                 # Fire on_incident triggers for incidents
                 for inc in ctx.incidents:
                     trigger_context["severity"] = inc.get("severity", "high")
                     executions = await fire_triggers(db, "on_incident", trigger_context)
                     for exe in executions:
-                        ctx.add_soar_execution({
-                            "execution_id": exe.id,
-                            "playbook_name": exe.playbook_name,
-                            "status": exe.status,
-                            "trigger": "on_incident",
-                        })
+                        ctx.add_soar_execution(
+                            {
+                                "execution_id": exe.id,
+                                "playbook_name": exe.playbook_name,
+                                "status": exe.status,
+                                "trigger": "on_incident",
+                            }
+                        )
             finally:
                 db.close()
         except Exception:
@@ -642,6 +685,7 @@ class SOARTriggerStage(BaseStage):
 # 12. ALERT
 # ---------------------------------------------------------------------------
 
+
 class AlertStage(BaseStage):
     name = "alert"
 
@@ -650,12 +694,7 @@ class AlertStage(BaseStage):
             return ctx
 
         # Only alert if score >= 50 or detections/IOC matches exist
-        should_alert = (
-            ctx.score >= 50
-            or ctx.detections
-            or ctx.ioc_matches
-            or ctx.incidents
-        )
+        should_alert = ctx.score >= 50 or ctx.detections or ctx.ioc_matches or ctx.incidents
         if not should_alert:
             return ctx
 
@@ -668,9 +707,7 @@ class AlertStage(BaseStage):
                 "severity": ctx.parsed.get("severity", "medium"),
                 "description": self._build_description(ctx),
                 "threat_score": ctx.score,
-                "rule_id": (
-                    ctx.detections[0].get("rule_id") if ctx.detections else "pipeline"
-                ),
+                "rule_id": (ctx.detections[0].get("rule_id") if ctx.detections else "pipeline"),
                 "entity_key": ctx.parsed.get("src_ip") or ctx.parsed.get("username", "unknown"),
             }
             results = await async_dispatch_alert(incident_data)
@@ -712,6 +749,7 @@ class AlertStage(BaseStage):
 # ---------------------------------------------------------------------------
 # 13. STORE
 # ---------------------------------------------------------------------------
+
 
 class StoreStage(BaseStage):
     name = "store"
@@ -804,18 +842,22 @@ class StoreStage(BaseStage):
                     updated_at=now,
                 )
                 db.add(incident)
-                db.add(IncidentEvent(
-                    incident_id=incident_id,
-                    event_id=ctx.parsed.get("id", ctx.context_id),
-                ))
+                db.add(
+                    IncidentEvent(
+                        incident_id=incident_id,
+                        event_id=ctx.parsed.get("id", ctx.context_id),
+                    )
+                )
                 db.commit()
 
-                ctx.add_incident({
-                    "id": incident_id,
-                    "title": incident.title,
-                    "severity": sev,
-                    "rule_id": rule_id,
-                })
+                ctx.add_incident(
+                    {
+                        "id": incident_id,
+                        "title": incident.title,
+                        "severity": sev,
+                        "rule_id": rule_id,
+                    }
+                )
             except Exception:
                 db.rollback()
                 logger.debug("Incident creation skipped (dedup or error)")
@@ -824,6 +866,7 @@ class StoreStage(BaseStage):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _build_mock_event(parsed: dict[str, Any]) -> Any:
     """Build a minimal object that looks like an Event for rule evaluation."""

@@ -47,6 +47,7 @@ MITRE_TACTICS = [
 
 class CorrelationType(StrEnum):
     """Types de correlation supportes."""
+
     TEMPORAL = "temporal"
     SEQUENTIAL = "sequential"
     THRESHOLD = "threshold"
@@ -56,6 +57,7 @@ class CorrelationType(StrEnum):
 
 class ActionType(StrEnum):
     """Actions declenchees par une correspondance de correlation."""
+
     ALERT = "alert"
     CREATE_INCIDENT = "create_incident"
     BLOCK_IP = "block_ip"
@@ -67,6 +69,7 @@ class ActionType(StrEnum):
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class EventPattern:
@@ -150,6 +153,7 @@ class CorrelationMatch:
 # Correlation Engine
 # ---------------------------------------------------------------------------
 
+
 class CorrelationEngine:
     """Moteur de correlation multi-evenements temps reel.
 
@@ -232,18 +236,23 @@ class CorrelationEngine:
 
         for match in matches:
             if "create_incident" not in (
-                self._rules.get(match.rule_id, CorrelationRule(
-                    id="", name="", description="",
-                    correlation_type=CorrelationType.TEMPORAL,
-                    event_patterns=[], time_window=0, group_by=[],
-                )).actions
+                self._rules.get(
+                    match.rule_id,
+                    CorrelationRule(
+                        id="",
+                        name="",
+                        description="",
+                        correlation_type=CorrelationType.TEMPORAL,
+                        event_patterns=[],
+                        time_window=0,
+                        group_by=[],
+                    ),
+                ).actions
             ):
                 continue
 
             dedup = self._compute_dedup(match, now)
-            existing = db.query(Incident.id).filter(
-                Incident.dedup_hash == dedup
-            ).first()
+            existing = db.query(Incident.id).filter(Incident.dedup_hash == dedup).first()
             if existing:
                 continue
 
@@ -279,7 +288,9 @@ class CorrelationEngine:
             created += 1
             logger.info(
                 "Correlation incident created: %s rule=%s key=%s events=%d",
-                incident_id, match.rule_id, match.group_key,
+                incident_id,
+                match.rule_id,
+                match.group_key,
                 len(match.matched_events),
             )
 
@@ -330,8 +341,7 @@ class CorrelationEngine:
     ) -> dict[str, str]:
         parts = key.split("|")
         return {
-            group_by[i]: parts[i] if i < len(parts) else "unknown"
-            for i in range(len(group_by))
+            group_by[i]: parts[i] if i < len(parts) else "unknown" for i in range(len(group_by))
         }
 
     # -- Temporal correlation -----------------------------------------------
@@ -366,10 +376,7 @@ class CorrelationEngine:
                 all_patterns_present = True
 
                 for pm in pattern_matches:
-                    in_window = [
-                        e for e in pm
-                        if window_start <= e.ts <= window_end
-                    ]
+                    in_window = [e for e in pm if window_start <= e.ts <= window_end]
                     if not in_window:
                         all_patterns_present = False
                         break
@@ -384,17 +391,19 @@ class CorrelationEngine:
                             seen_ids.add(e.id)
                             unique_events.append(e)
 
-                    matches.append(CorrelationMatch(
-                        rule_id=rule.id,
-                        rule_name=rule.name,
-                        severity=rule.severity,
-                        group_key=group_key,
-                        group_values=self._parse_group_key(group_key, rule.group_by),
-                        matched_events=unique_events,
-                        matched_at=datetime.now(UTC),
-                        mitre_tactics=rule.mitre_tactics,
-                        description=rule.description,
-                    ))
+                    matches.append(
+                        CorrelationMatch(
+                            rule_id=rule.id,
+                            rule_name=rule.name,
+                            severity=rule.severity,
+                            group_key=group_key,
+                            group_values=self._parse_group_key(group_key, rule.group_by),
+                            matched_events=unique_events,
+                            matched_at=datetime.now(UTC),
+                            mitre_tactics=rule.mitre_tactics,
+                            description=rule.description,
+                        )
+                    )
                     break  # one match per group
 
         return matches
@@ -415,20 +424,26 @@ class CorrelationEngine:
         for group_key, group_events in groups.items():
             sorted_events = sorted(group_events, key=lambda e: e.ts)
             chain = self._find_sequential_chain(
-                rule.event_patterns, sorted_events, window, max_gap, rule.ordered,
+                rule.event_patterns,
+                sorted_events,
+                window,
+                max_gap,
+                rule.ordered,
             )
             if chain and len(chain) >= len(rule.event_patterns):
-                matches.append(CorrelationMatch(
-                    rule_id=rule.id,
-                    rule_name=rule.name,
-                    severity=rule.severity,
-                    group_key=group_key,
-                    group_values=self._parse_group_key(group_key, rule.group_by),
-                    matched_events=chain,
-                    matched_at=datetime.now(UTC),
-                    mitre_tactics=rule.mitre_tactics,
-                    description=rule.description,
-                ))
+                matches.append(
+                    CorrelationMatch(
+                        rule_id=rule.id,
+                        rule_name=rule.name,
+                        severity=rule.severity,
+                        group_key=group_key,
+                        group_values=self._parse_group_key(group_key, rule.group_by),
+                        matched_events=chain,
+                        matched_at=datetime.now(UTC),
+                        mitre_tactics=rule.mitre_tactics,
+                        description=rule.description,
+                    )
+                )
 
         return matches
 
@@ -516,23 +531,25 @@ class CorrelationEngine:
                         i += 1
                     count = j - i + 1
                     if count >= rule.threshold:
-                        window_events = sorted_matched[i:j + 1]
-                        matches.append(CorrelationMatch(
-                            rule_id=rule.id,
-                            rule_name=rule.name,
-                            severity=rule.severity,
-                            group_key=group_key,
-                            group_values=self._parse_group_key(
-                                group_key, rule.group_by,
-                            ),
-                            matched_events=window_events,
-                            matched_at=datetime.now(UTC),
-                            mitre_tactics=rule.mitre_tactics,
-                            description=(
-                                f"{rule.description} "
-                                f"({count} events in {rule.time_window}s)"
-                            ),
-                        ))
+                        window_events = sorted_matched[i : j + 1]
+                        matches.append(
+                            CorrelationMatch(
+                                rule_id=rule.id,
+                                rule_name=rule.name,
+                                severity=rule.severity,
+                                group_key=group_key,
+                                group_values=self._parse_group_key(
+                                    group_key,
+                                    rule.group_by,
+                                ),
+                                matched_events=window_events,
+                                matched_at=datetime.now(UTC),
+                                mitre_tactics=rule.mitre_tactics,
+                                description=(
+                                    f"{rule.description} ({count} events in {rule.time_window}s)"
+                                ),
+                            )
+                        )
                         break  # one match per group per pattern
 
         return matches
@@ -561,19 +578,16 @@ class CorrelationEngine:
                 if not matched:
                     continue
 
-                baseline_events = [
-                    e for e in matched if e.ts >= baseline_start
-                ]
-                recent_events = [
-                    e for e in matched if e.ts >= recent_start
-                ]
+                baseline_events = [e for e in matched if e.ts >= baseline_start]
+                recent_events = [e for e in matched if e.ts >= recent_start]
 
                 if len(baseline_events) < 5:
                     continue  # not enough data for baseline
 
                 # Calculate rate per window
                 total_baseline_seconds = max(
-                    rule.baseline_window, 1,
+                    rule.baseline_window,
+                    1,
                 )
                 num_windows = total_baseline_seconds / max(rule.time_window, 1)
                 len(baseline_events) / max(num_windows, 1)
@@ -582,9 +596,7 @@ class CorrelationEngine:
                 bucket_size = rule.time_window
                 buckets: dict[int, int] = defaultdict(int)
                 for e in baseline_events:
-                    bucket = int(
-                        (e.ts - baseline_start).total_seconds()
-                    ) // max(bucket_size, 1)
+                    bucket = int((e.ts - baseline_start).total_seconds()) // max(bucket_size, 1)
                     buckets[bucket] += 1
 
                 if len(buckets) < 2:
@@ -599,24 +611,27 @@ class CorrelationEngine:
                 z_score = (current_rate - mean) / std_dev if std_dev > 0 else 0
 
                 if z_score >= rule.std_dev_threshold:
-                    matches.append(CorrelationMatch(
-                        rule_id=rule.id,
-                        rule_name=rule.name,
-                        severity=rule.severity,
-                        group_key=group_key,
-                        group_values=self._parse_group_key(
-                            group_key, rule.group_by,
-                        ),
-                        matched_events=recent_events,
-                        matched_at=now,
-                        mitre_tactics=rule.mitre_tactics,
-                        description=(
-                            f"{rule.description} "
-                            f"(z-score={z_score:.2f}, mean={mean:.1f}, "
-                            f"current={current_rate})"
-                        ),
-                        score=z_score,
-                    ))
+                    matches.append(
+                        CorrelationMatch(
+                            rule_id=rule.id,
+                            rule_name=rule.name,
+                            severity=rule.severity,
+                            group_key=group_key,
+                            group_values=self._parse_group_key(
+                                group_key,
+                                rule.group_by,
+                            ),
+                            matched_events=recent_events,
+                            matched_at=now,
+                            mitre_tactics=rule.mitre_tactics,
+                            description=(
+                                f"{rule.description} "
+                                f"(z-score={z_score:.2f}, mean={mean:.1f}, "
+                                f"current={current_rate})"
+                            ),
+                            score=z_score,
+                        )
+                    )
 
         return matches
 
@@ -661,6 +676,7 @@ def _load_builtin_rules(engine: CorrelationEngine) -> None:
     """Charge les regles de correlation integrees."""
     try:
         from apps.api.detection.builtin_correlations import get_builtin_rules
+
         for rule in get_builtin_rules():
             engine.register_rule(rule)
         logger.info(
@@ -683,6 +699,7 @@ def run_correlation(db: Session, events: list[Event]) -> int:
     created = engine.persist_matches(db, matches)
     logger.info(
         "Correlation engine: %d matches, %d incidents created",
-        len(matches), created,
+        len(matches),
+        created,
     )
     return created

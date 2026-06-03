@@ -55,6 +55,7 @@ def clear_hooks() -> None:
 # Pipeline Engine
 # ---------------------------------------------------------------------------
 
+
 class PipelineEngine:
     """Orchestrates event processing through the full stage chain."""
 
@@ -119,10 +120,7 @@ class PipelineEngine:
             stage = self._stages[i]
 
             # Check if this is the start of the parallel enrichment group
-            if (
-                self.config.parallel_enrichment
-                and stage.name in parallel_group
-            ):
+            if self.config.parallel_enrichment and stage.name in parallel_group:
                 # Collect consecutive parallel-eligible stages
                 parallel_stages = []
                 while i < len(self._stages) and self._stages[i].name in parallel_group:
@@ -205,7 +203,9 @@ class PipelineEngine:
             sm.error = f"Timeout after {self.config.get_timeout(stage.name)}s"
             self.metrics.record_stage(stage.name, elapsed, "error")
             self.metrics.record_error(
-                stage.name, sm.error, ctx.parsed.get("id"),
+                stage.name,
+                sm.error,
+                ctx.parsed.get("id"),
             )
             logger.warning("Stage %s timed out", stage.name)
             return ctx, False
@@ -218,7 +218,9 @@ class PipelineEngine:
             sm.error = str(exc)[:500]
             self.metrics.record_stage(stage.name, elapsed, "error")
             self.metrics.record_error(
-                stage.name, str(exc)[:500], ctx.parsed.get("id"),
+                stage.name,
+                str(exc)[:500],
+                ctx.parsed.get("id"),
             )
             logger.exception("Stage %s failed: %s", stage.name, exc)
             return ctx, False
@@ -283,10 +285,7 @@ class PipelineEngine:
 
         for i in range(0, len(events), batch_size):
             chunk = events[i : i + batch_size]
-            tasks = [
-                self.process_event(raw, dry_run=dry_run)
-                for raw in chunk
-            ]
+            tasks = [self.process_event(raw, dry_run=dry_run) for raw in chunk]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for r in results:
                 if isinstance(r, Exception):
@@ -336,18 +335,20 @@ class PipelineEngine:
 
             raw_events = []
             for evt in events:
-                raw_events.append({
-                    "id": evt.id,
-                    "ts": evt.ts,
-                    "source": evt.source,
-                    "event_type": evt.event_type,
-                    "severity": evt.severity,
-                    "src_ip": evt.src_ip,
-                    "dst_ip": evt.dst_ip,
-                    "username": evt.username,
-                    "message": evt.message,
-                    "raw": evt.raw,
-                })
+                raw_events.append(
+                    {
+                        "id": evt.id,
+                        "ts": evt.ts,
+                        "source": evt.source,
+                        "event_type": evt.event_type,
+                        "severity": evt.severity,
+                        "src_ip": evt.src_ip,
+                        "dst_ip": evt.dst_ip,
+                        "username": evt.username,
+                        "message": evt.message,
+                        "raw": evt.raw,
+                    }
+                )
         finally:
             db.close()
 
@@ -359,9 +360,7 @@ class PipelineEngine:
         finally:
             self.mode = original_mode
 
-        successes = sum(
-            1 for r in results if r.metadata.get("success", False)
-        )
+        successes = sum(1 for r in results if r.metadata.get("success", False))
         return {
             "total": len(results),
             "success": successes,
@@ -378,12 +377,14 @@ class PipelineEngine:
         """Return information about all stages."""
         info = []
         for stage in self._stages:
-            info.append({
-                "name": stage.name,
-                "enabled": self.config.is_stage_enabled(stage.name),
-                "timeout_seconds": self.config.get_timeout(stage.name),
-                "class": stage.__class__.__name__,
-            })
+            info.append(
+                {
+                    "name": stage.name,
+                    "enabled": self.config.is_stage_enabled(stage.name),
+                    "timeout_seconds": self.config.get_timeout(stage.name),
+                    "class": stage.__class__.__name__,
+                }
+            )
         return info
 
 

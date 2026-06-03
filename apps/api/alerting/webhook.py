@@ -43,7 +43,8 @@ async def send_alert(config: dict[str, Any], incident: dict[str, Any]) -> None:
             except httpx.HTTPStatusError as exc:
                 if exc.response.status_code == 429:
                     import asyncio
-                    await asyncio.sleep(2 ** attempt)
+
+                    await asyncio.sleep(2**attempt)
                     continue
                 if attempt == 2:
                     raise

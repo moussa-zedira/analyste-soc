@@ -34,6 +34,7 @@ class URLhausProvider:
     async def _check_rate_limit(self) -> bool:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return True
@@ -48,6 +49,7 @@ class URLhausProvider:
     async def _increment_counter(self) -> None:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return
@@ -76,7 +78,7 @@ class URLhausProvider:
         score = min(url_count * 15, 100)
         tags_set: set[str] = set()
         for u in urls[:20]:
-            for tag in (u.get("tags") or []):
+            for tag in u.get("tags") or []:
                 if tag:
                     tags_set.add(tag)
 
@@ -130,7 +132,9 @@ class URLhausProvider:
                         "file_type": p.get("file_type"),
                         "sha256": p.get("sha256_hash"),
                         "signature": p.get("signature"),
-                        "virustotal_percent": p.get("virustotal", {}).get("percent") if p.get("virustotal") else None,
+                        "virustotal_percent": p.get("virustotal", {}).get("percent")
+                        if p.get("virustotal")
+                        else None,
                     }
                     for p in (data.get("payloads") or [])[:10]
                 ],
@@ -189,7 +193,9 @@ class URLhausProvider:
     # ------------------------------------------------------------------
 
     @instrument("urlhaus", "payload_lookup")
-    async def payload_lookup(self, sha256_hash: str | None = None, md5_hash: str | None = None) -> dict | None:
+    async def payload_lookup(
+        self, sha256_hash: str | None = None, md5_hash: str | None = None
+    ) -> dict | None:
         """Lookup a malware payload by hash."""
         if not await self._check_rate_limit():
             return None
@@ -227,7 +233,9 @@ class URLhausProvider:
                 "firstseen": data.get("firstseen"),
                 "lastseen": data.get("lastseen"),
                 "url_count": data.get("url_count", 0),
-                "virustotal_percent": data.get("virustotal", {}).get("percent") if data.get("virustotal") else None,
+                "virustotal_percent": data.get("virustotal", {}).get("percent")
+                if data.get("virustotal")
+                else None,
                 "urls": [
                     {
                         "url": u.get("url", "")[:200],

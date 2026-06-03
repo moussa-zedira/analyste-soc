@@ -35,26 +35,16 @@ class Engagement(Base):
     )  # draft | active | paused | closed
     scope_targets: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     excluded_targets: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    start_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    end_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    start_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     roe_document_path: Mapped[str | None] = mapped_column(Text, nullable=True)
-    kill_switch_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False
-    )
+    kill_switch_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_by: Mapped[str | None] = mapped_column(
         Text, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    mitre_tactics_authorized: Mapped[list | None] = mapped_column(
-        JSONB, nullable=True
-    )
+    mitre_tactics_authorized: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     __table_args__ = (
         Index("ix_engagements_status", "status"),
@@ -76,14 +66,10 @@ class EngagementMember(Base):
     role: Mapped[str] = mapped_column(
         Text, nullable=False, default="operator"
     )  # lead | operator | observer
-    added_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        PrimaryKeyConstraint(
-            "engagement_id", "user_id", name="pk_engagement_members"
-        ),
+        PrimaryKeyConstraint("engagement_id", "user_id", name="pk_engagement_members"),
         Index("ix_engagement_members_user", "user_id"),
     )
 
@@ -104,13 +90,9 @@ class OperatorAuditLog(Base):
     target: Mapped[str] = mapped_column(Text, nullable=False, default="")
     command: Mapped[str] = mapped_column(Text, nullable=False, default="")
     result_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     signature: Mapped[str] = mapped_column(Text, nullable=False)
-    in_scope: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
+    in_scope: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     __table_args__ = (
         Index("ix_audit_engagement_ts", "engagement_id", "timestamp"),

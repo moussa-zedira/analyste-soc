@@ -91,9 +91,7 @@ def test_bruteforce_creates_incident(api_client: TestClient):
     incidents = resp.json()
     assert len(incidents) >= 1
 
-    bf_incidents = [
-        i for i in incidents if i["rule_id"] in ("bruteforce.v1", "auth-targeted.v1")
-    ]
+    bf_incidents = [i for i in incidents if i["rule_id"] in ("bruteforce.v1", "auth-targeted.v1")]
     assert bf_incidents, f"no bruteforce incident in {[i['rule_id'] for i in incidents]}"
     inc = bf_incidents[0]
     assert inc["severity"] in ("high", "critical")
@@ -130,9 +128,7 @@ def test_incidents_api_pagination_filters_detail(api_client: TestClient):
     """Test list pagination, severity filter, and detail with linked events."""
     _create_auth_fail_events(api_client, ip="192.168.1.10", count=12)
     _create_auth_fail_events(api_client, ip="192.168.1.20", count=12)
-    api_client.post(
-        "/rules/run", json={}, headers=_register_and_login(api_client, role="admin")
-    )
+    api_client.post("/rules/run", json={}, headers=_register_and_login(api_client, role="admin"))
 
     # List all incidents
     resp = api_client.get("/incidents", headers=_auth())

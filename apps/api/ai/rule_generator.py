@@ -57,8 +57,21 @@ def _extract_keywords(message: str | None, limit: int = 5) -> list[str]:
     if not message:
         return []
     stop = {
-        "the", "and", "for", "with", "from", "this", "that", "user",
-        "host", "name", "time", "type", "data", "info", "error",
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "this",
+        "that",
+        "user",
+        "host",
+        "name",
+        "time",
+        "type",
+        "data",
+        "info",
+        "error",
     }
     tokens = re.findall(r"[A-Za-z][A-Za-z0-9_./-]{3,}", message)
     seen: list[str] = []
@@ -100,13 +113,19 @@ def build_sigma_rule(seed: RuleSeed) -> dict[str, Any]:
     cond = " and ".join(k for k in ("selection", "keywords") if k in detection)
     detection["condition"] = cond or "selection"
 
-    rule_id = str(uuid.UUID(int=int(_short_hash(seed.title) + _short_hash(seed.message or seed.title), 16) & ((1 << 128) - 1)))
+    rule_id = str(
+        uuid.UUID(
+            int=int(_short_hash(seed.title) + _short_hash(seed.message or seed.title), 16)
+            & ((1 << 128) - 1)
+        )
+    )
 
     rule: dict[str, Any] = {
         "title": seed.title[:120],
         "id": rule_id,
         "status": "experimental",
-        "description": seed.description or f"Auto-generated rule from event of type '{seed.event_type or 'unknown'}'",
+        "description": seed.description
+        or f"Auto-generated rule from event of type '{seed.event_type or 'unknown'}'",
         "references": seed.references,
         "author": "analyste-soc auto-generator",
         "date": "2026/04/17",
@@ -141,7 +160,7 @@ def build_yara_rule(seed: RuleSeed) -> str:
 
     if not strings:
         # Yara a besoin d'au moins une string ou condition triviale
-        strings.append(("$placeholder", seed.title[:40].replace('"', '_')))
+        strings.append(("$placeholder", seed.title[:40].replace('"', "_")))
 
     str_lines = "\n        ".join(f'{name} = "{val}"' for name, val in strings)
     " or ".join(name for name, _ in strings)
@@ -184,7 +203,9 @@ Output strictly a JSON object with fields: title, description, mitre_techniques 
 """
 
 
-def enrich_seed_with_llm(seed: RuleSeed, prefer: str | None = None) -> tuple[RuleSeed, dict[str, Any]]:
+def enrich_seed_with_llm(
+    seed: RuleSeed, prefer: str | None = None
+) -> tuple[RuleSeed, dict[str, Any]]:
     """Enrichit le seed via LLM. Retourne (seed_modifié, métadonnées_llm)."""
     prompt = (
         f"Event details:\n"

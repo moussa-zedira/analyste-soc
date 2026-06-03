@@ -25,9 +25,13 @@ class IOC(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     type: Mapped[str] = mapped_column(String(32), index=True)  # ip, domain, url, hash_md5, ...
     value: Mapped[str] = mapped_column(Text, index=True)
-    state: Mapped[str] = mapped_column(String(20), default="active", index=True)  # active, expired, revoked, false_positive
+    state: Mapped[str] = mapped_column(
+        String(20), default="active", index=True
+    )  # active, expired, revoked, false_positive
     confidence: Mapped[int] = mapped_column(Integer, default=50)  # 0-100
-    tlp: Mapped[str] = mapped_column(String(20), default="AMBER")  # WHITE, GREEN, AMBER, AMBER+STRICT, RED
+    tlp: Mapped[str] = mapped_column(
+        String(20), default="AMBER"
+    )  # WHITE, GREEN, AMBER, AMBER+STRICT, RED
     source: Mapped[str] = mapped_column(String(255), default="manual")
     tags_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
     mitre_techniques_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array
@@ -48,7 +52,9 @@ class IOC(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
-    sightings: Mapped[list[IOCSighting]] = relationship(back_populates="ioc", cascade="all, delete-orphan")
+    sightings: Mapped[list[IOCSighting]] = relationship(
+        back_populates="ioc", cascade="all, delete-orphan"
+    )
 
 
 class IOCRelationship(Base):
@@ -57,9 +63,15 @@ class IOCRelationship(Base):
     __tablename__ = "ioc_relationships"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    source_ioc_id: Mapped[int] = mapped_column(Integer, ForeignKey("iocs.id", ondelete="CASCADE"), index=True)
-    target_ioc_id: Mapped[int] = mapped_column(Integer, ForeignKey("iocs.id", ondelete="CASCADE"), index=True)
-    relationship_type: Mapped[str] = mapped_column(String(64))  # related-to, derived-from, uses, etc.
+    source_ioc_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("iocs.id", ondelete="CASCADE"), index=True
+    )
+    target_ioc_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("iocs.id", ondelete="CASCADE"), index=True
+    )
+    relationship_type: Mapped[str] = mapped_column(
+        String(64)
+    )  # related-to, derived-from, uses, etc.
     confidence: Mapped[int] = mapped_column(Integer, default=50)
     stix_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -73,7 +85,9 @@ class IOCSighting(Base):
     __tablename__ = "ioc_sightings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    ioc_id: Mapped[int] = mapped_column(Integer, ForeignKey("iocs.id", ondelete="CASCADE"), index=True)
+    ioc_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("iocs.id", ondelete="CASCADE"), index=True
+    )
     event_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     source: Mapped[str] = mapped_column(String(255), default="internal")
     count: Mapped[int] = mapped_column(Integer, default=1)
@@ -95,7 +109,9 @@ class ThreatFeed(Base):
     feed_type: Mapped[str] = mapped_column(String(32))  # taxii, stix_url, csv_url, misp, plaintext
     interval_minutes: Mapped[int] = mapped_column(Integer, default=60)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    auth_type: Mapped[str | None] = mapped_column(String(32), nullable=True)  # basic, api_key, cert, none
+    auth_type: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )  # basic, api_key, cert, none
     auth_config_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
     default_tlp: Mapped[str] = mapped_column(String(20), default="AMBER")
     default_confidence: Mapped[int] = mapped_column(Integer, default=50)
@@ -132,7 +148,9 @@ class STIXObject(Base):
     __tablename__ = "stix_objects"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    collection_id: Mapped[str] = mapped_column(String(128), ForeignKey("stix_collections.collection_id", ondelete="CASCADE"), index=True)
+    collection_id: Mapped[str] = mapped_column(
+        String(128), ForeignKey("stix_collections.collection_id", ondelete="CASCADE"), index=True
+    )
     stix_id: Mapped[str] = mapped_column(String(128), index=True)
     stix_type: Mapped[str] = mapped_column(String(64), index=True)
     spec_version: Mapped[str] = mapped_column(String(8), default="2.1")

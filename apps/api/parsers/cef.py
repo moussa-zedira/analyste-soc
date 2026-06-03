@@ -24,14 +24,14 @@ from apps.api.parsers import BaseParser, _normalize_severity
 # ---------------------------------------------------------------------------
 
 _CEF_RE = re.compile(
-    r"CEF:(\d+)\|"       # version
-    r"([^|]*)\|"         # vendor
-    r"([^|]*)\|"         # product
-    r"([^|]*)\|"         # device version
-    r"([^|]*)\|"         # signature id
-    r"([^|]*)\|"         # name
-    r"([^|]*)\|"         # severity
-    r"(.*)",             # extensions
+    r"CEF:(\d+)\|"  # version
+    r"([^|]*)\|"  # vendor
+    r"([^|]*)\|"  # product
+    r"([^|]*)\|"  # device version
+    r"([^|]*)\|"  # signature id
+    r"([^|]*)\|"  # name
+    r"([^|]*)\|"  # severity
+    r"(.*)",  # extensions
     re.DOTALL,
 )
 
@@ -60,6 +60,7 @@ def _unescape_cef(value: str) -> str:
 # ---------------------------------------------------------------------------
 # CEF severity → unified severity
 # ---------------------------------------------------------------------------
+
 
 def _cef_severity(sev: str) -> str:
     try:
@@ -114,6 +115,7 @@ def _parse_cef_timestamp(ext: dict[str, str]) -> datetime | None:
 # Event type classification
 # ---------------------------------------------------------------------------
 
+
 def _classify_cef(name: str, sig_id: str) -> str:
     nl = name.lower()
     if any(w in nl for w in ("intrusion", "attack", "exploit")):
@@ -136,6 +138,7 @@ def _classify_cef(name: str, sig_id: str) -> str:
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 class CEFParser(BaseParser):
     name = "cef"

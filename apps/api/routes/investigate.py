@@ -110,12 +110,17 @@ def _get_whois_info(target: str) -> dict | None:
     """Recupere les infos WHOIS."""
     try:
         import whois
+
         w = whois.whois(target)
         return {
             "registrar": w.registrar,
             "creation_date": str(w.creation_date) if w.creation_date else None,
             "expiration_date": str(w.expiration_date) if w.expiration_date else None,
-            "name_servers": w.name_servers if isinstance(w.name_servers, list) else [w.name_servers] if w.name_servers else [],
+            "name_servers": w.name_servers
+            if isinstance(w.name_servers, list)
+            else [w.name_servers]
+            if w.name_servers
+            else [],
             "org": w.org,
             "country": w.country,
         }
@@ -127,6 +132,7 @@ def _get_geo(ip: str) -> dict | None:
     """Recupere les donnees de geolocalisation."""
     try:
         from apps.api.geoip import lookup
+
         return lookup(ip)
     except Exception:
         return None
@@ -136,6 +142,7 @@ async def _get_threat_intel(ip: str, db: Session) -> dict | None:
     """Recupere les donnees TI."""
     try:
         from apps.api.threat_intel.enrichment import lookup_ip_manual
+
         return await lookup_ip_manual(ip, db)
     except Exception:
         return None
@@ -147,20 +154,10 @@ def _get_siem_data(ip: str, db: Session) -> dict:
     datetime.now(UTC) - timedelta(days=7)
 
     # Event count
-    event_count = (
-        db.query(func.count(Event.id))
-        .filter(Event.src_ip == ip)
-        .scalar() or 0
-    )
+    event_count = db.query(func.count(Event.id)).filter(Event.src_ip == ip).scalar() or 0
 
     # Recent events (last 20)
-    recent = (
-        db.query(Event)
-        .filter(Event.src_ip == ip)
-        .order_by(Event.ts.desc())
-        .limit(20)
-        .all()
-    )
+    recent = db.query(Event).filter(Event.src_ip == ip).order_by(Event.ts.desc()).limit(20).all()
     recent_events = [
         {
             "id": e.id,
@@ -219,6 +216,7 @@ def _get_siem_data(ip: str, db: Session) -> dict:
     threat_score = None
     if ts_row:
         import json
+
         threat_score = {
             "score": ts_row.score,
             "factors": json.loads(ts_row.factors_json) if ts_row.factors_json else {},
@@ -237,11 +235,7 @@ def _get_siem_data(ip: str, db: Session) -> dict:
     related_users = [{"username": u, "event_count": c} for u, c in user_rows]
 
     # Timeline (events per hour last 24h)
-    timeline_events = (
-        db.query(Event.ts)
-        .filter(Event.src_ip == ip, Event.ts >= cutoff_24h)
-        .all()
-    )
+    timeline_events = db.query(Event.ts).filter(Event.src_ip == ip, Event.ts >= cutoff_24h).all()
     hour_buckets: dict[str, int] = {}
     for (ts,) in timeline_events:
         key = ts.strftime("%Y-%m-%dT%H:00:00Z")

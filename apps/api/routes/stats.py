@@ -111,14 +111,9 @@ def kpis(db: Session = Depends(get_db)) -> dict:
 
     cutoff = datetime.now(UTC) - timedelta(hours=24)
 
-    total_events_24h = (
-        db.query(func.count(Event.id)).filter(Event.ts >= cutoff).scalar() or 0
-    )
+    total_events_24h = db.query(func.count(Event.id)).filter(Event.ts >= cutoff).scalar() or 0
     open_incidents = (
-        db.query(func.count(Incident.id))
-        .filter(Incident.status == "open")
-        .scalar()
-        or 0
+        db.query(func.count(Incident.id)).filter(Incident.status == "open").scalar() or 0
     )
     high_incidents_24h = (
         db.query(func.count(Incident.id))
@@ -221,11 +216,7 @@ def geo_events(
     ip_counts = {r[0]: r[1] for r in rows}
 
     # Max severity per IP
-    sev_rows = (
-        db.query(Event.src_ip, Event.severity)
-        .filter(Event.src_ip.in_(ips))
-        .all()
-    )
+    sev_rows = db.query(Event.src_ip, Event.severity).filter(Event.src_ip.in_(ips)).all()
     ip_max_sev: dict[str, str] = {}
     for ip, sev in sev_rows:
         cur = ip_max_sev.get(ip, "low")
@@ -237,15 +228,17 @@ def geo_events(
 
     results = []
     for ip, geo in geo_data.items():
-        results.append({
-            "src_ip": ip,
-            "lat": geo.get("lat", 0),
-            "lon": geo.get("lon", 0),
-            "country": geo.get("country", "Unknown"),
-            "city": geo.get("city", "Unknown"),
-            "event_count": ip_counts.get(ip, 0),
-            "max_severity": ip_max_sev.get(ip, "low"),
-        })
+        results.append(
+            {
+                "src_ip": ip,
+                "lat": geo.get("lat", 0),
+                "lon": geo.get("lon", 0),
+                "country": geo.get("country", "Unknown"),
+                "city": geo.get("city", "Unknown"),
+                "event_count": ip_counts.get(ip, 0),
+                "max_severity": ip_max_sev.get(ip, "low"),
+            }
+        )
 
     set_cache(f"stats:geo:{limit}", results, ttl=300)
     return results
@@ -267,8 +260,11 @@ def relationship_graph(
             ip_id = f"ip:{ev.src_ip}"
             if ip_id not in nodes:
                 nodes[ip_id] = {
-                    "id": ip_id, "type": "ip",
-                    "label": ev.src_ip, "severity": None, "event_count": 0,
+                    "id": ip_id,
+                    "type": "ip",
+                    "label": ev.src_ip,
+                    "severity": None,
+                    "event_count": 0,
                 }
             nodes[ip_id]["event_count"] += 1
 
@@ -276,8 +272,11 @@ def relationship_graph(
             user_id = f"user:{ev.username}"
             if user_id not in nodes:
                 nodes[user_id] = {
-                    "id": user_id, "type": "user",
-                    "label": ev.username, "severity": None, "event_count": 0,
+                    "id": user_id,
+                    "type": "user",
+                    "label": ev.username,
+                    "severity": None,
+                    "event_count": 0,
                 }
             nodes[user_id]["event_count"] += 1
 
@@ -298,8 +297,10 @@ def relationship_graph(
         inc_id = f"incident:{inc.id}"
         if inc_id not in nodes:
             nodes[inc_id] = {
-                "id": inc_id, "type": "incident",
-                "label": inc.title, "severity": inc.severity,
+                "id": inc_id,
+                "type": "incident",
+                "label": inc.title,
+                "severity": inc.severity,
                 "event_count": None,
             }
 
@@ -318,8 +319,6 @@ def relationship_graph(
     ]
 
     return {"nodes": list(nodes.values()), "edges": edges}
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -351,9 +350,7 @@ class MitreStatsResponse(BaseModel):
 def mitre_stats(db: Session = Depends(get_db)) -> dict:
     """Retourner la couverture MITRE ATT&CK avec le nombre d'incidents par technique."""
     rule_counts = dict(
-        db.query(Incident.rule_id, func.count(Incident.id))
-        .group_by(Incident.rule_id)
-        .all()
+        db.query(Incident.rule_id, func.count(Incident.id)).group_by(Incident.rule_id).all()
     )
 
     techniques_out: list[dict] = []
@@ -361,21 +358,22 @@ def mitre_stats(db: Session = Depends(get_db)) -> dict:
 
     for tech in get_all_mapped_techniques():
         mapped_rules = [
-            rid for rid, techs in RULE_MITRE_MAP.items()
-            if any(t.id == tech.id for t in techs)
+            rid for rid, techs in RULE_MITRE_MAP.items() if any(t.id == tech.id for t in techs)
         ]
         count = sum(rule_counts.get(rid, 0) for rid in mapped_rules)
         total += count
 
-        techniques_out.append({
-            "technique_id": tech.id,
-            "technique_name": tech.name,
-            "tactic_id": tech.tactic_id,
-            "tactic_name": tech.tactic_name,
-            "url": tech.url,
-            "rule_ids": mapped_rules,
-            "incident_count": count,
-        })
+        techniques_out.append(
+            {
+                "technique_id": tech.id,
+                "technique_name": tech.name,
+                "tactic_id": tech.tactic_id,
+                "tactic_name": tech.tactic_name,
+                "url": tech.url,
+                "rule_ids": mapped_rules,
+                "incident_count": count,
+            }
+        )
 
     return {
         "tactics": TACTIC_ORDER,

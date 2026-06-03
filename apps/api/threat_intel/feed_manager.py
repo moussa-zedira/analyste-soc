@@ -114,6 +114,7 @@ BUILTIN_FEEDS: list[dict[str, Any]] = [
 # Feed CRUD
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def create_feed(
     db: Session,
     name: str,
@@ -181,6 +182,7 @@ def delete_feed(db: Session, feed_id: int) -> bool:
 # ═══════════════════════════════════════════════════════════════════════════
 # Feed polling
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 @instrument("feed_manager", "poll_feed")
 async def poll_feed(db: Session, feed_id: int) -> dict:
@@ -508,12 +510,18 @@ async def _poll_misp(db: Session, feed: ThreatFeed, config: dict, auth_config: d
     skipped = 0
 
     MISP_TYPE_MAP = {
-        "ip-src": "ip", "ip-dst": "ip",
-        "domain": "domain", "hostname": "domain",
+        "ip-src": "ip",
+        "ip-dst": "ip",
+        "domain": "domain",
+        "hostname": "domain",
         "url": "url",
-        "md5": "hash_md5", "sha1": "hash_sha1", "sha256": "hash_sha256",
-        "email-src": "email", "email-dst": "email",
-        "filename": "filename", "mutex": "mutex",
+        "md5": "hash_md5",
+        "sha1": "hash_sha1",
+        "sha256": "hash_sha256",
+        "email-src": "email",
+        "email-dst": "email",
+        "filename": "filename",
+        "mutex": "mutex",
     }
 
     for event_wrapper in events:
@@ -545,6 +553,7 @@ async def _poll_misp(db: Session, feed: ThreatFeed, config: dict, auth_config: d
 # ═══════════════════════════════════════════════════════════════════════════
 # Feed statistics
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def feed_to_dict(feed: ThreatFeed) -> dict[str, Any]:
     """Serialize a ThreatFeed model to dict."""

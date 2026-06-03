@@ -20,9 +20,7 @@ class Incident(Base):
     __tablename__ = "incidents"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), index=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(Text)
     severity: Mapped[str] = mapped_column(Text, index=True)

@@ -70,11 +70,7 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)) -> Event:
     """Ingerer un evenement de securite unique."""
     raw_value: str | None = None
     if payload.raw is not None:
-        raw_value = (
-            payload.raw
-            if isinstance(payload.raw, str)
-            else json.dumps(payload.raw)
-        )
+        raw_value = payload.raw if isinstance(payload.raw, str) else json.dumps(payload.raw)
 
     event = Event(
         id=str(uuid.uuid4()),
@@ -94,24 +90,27 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db)) -> Event:
 
     invalidate("stats:*")
 
-    broadcaster.publish({
-        "type": "new_event",
-        "payload": {
-            "id": event.id,
-            "ts": event.ts.isoformat(),
-            "source": event.source,
-            "event_type": event.event_type,
-            "severity": event.severity,
-            "src_ip": event.src_ip,
-            "dst_ip": event.dst_ip,
-            "username": event.username,
-            "message": event.message,
-        },
-    })
+    broadcaster.publish(
+        {
+            "type": "new_event",
+            "payload": {
+                "id": event.id,
+                "ts": event.ts.isoformat(),
+                "source": event.source,
+                "event_type": event.event_type,
+                "severity": event.severity,
+                "src_ip": event.src_ip,
+                "dst_ip": event.dst_ip,
+                "username": event.username,
+                "message": event.message,
+            },
+        }
+    )
 
     # Dispatch TI enrichment (non-blocking)
     try:
         from apps.api.tasks import task_enrich_event
+
         task_enrich_event.delay(event.id)
     except Exception:
         pass  # Don't block event creation if enrichment dispatch fails
@@ -138,11 +137,7 @@ def create_events_batch(
     for payload in payloads:
         raw_value: str | None = None
         if payload.raw is not None:
-            raw_value = (
-                payload.raw
-                if isinstance(payload.raw, str)
-                else json.dumps(payload.raw)
-            )
+            raw_value = payload.raw if isinstance(payload.raw, str) else json.dumps(payload.raw)
 
         event = Event(
             id=str(uuid.uuid4()),
@@ -184,13 +179,7 @@ def list_events(
     if src_ip is not None:
         query = query.filter(Event.src_ip == src_ip)
 
-    return (
-        query
-        .order_by(Event.ts.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    return query.order_by(Event.ts.desc()).offset(offset).limit(limit).all()
 
 
 @router.get("/{event_id}", response_model=EventRead)

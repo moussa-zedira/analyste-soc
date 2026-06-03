@@ -39,7 +39,10 @@ _EVAL_FUNCTIONS = {
     "replace": {"syntax": "replace(field, old, new)", "description": "Replace text"},
     "concat": {"syntax": "concat(val1, val2, ...)", "description": "Concatenate values"},
     "now": {"syntax": "now()", "description": "Current UTC timestamp"},
-    "coalesce": {"syntax": "coalesce(field1, field2, default)", "description": "First non-null value"},
+    "coalesce": {
+        "syntax": "coalesce(field1, field2, default)",
+        "description": "First non-null value",
+    },
     "abs": {"syntax": "abs(field)", "description": "Absolute value"},
     "ceil": {"syntax": "ceil(field)", "description": "Round up"},
     "floor": {"syntax": "floor(field)", "description": "Round down"},
@@ -73,6 +76,7 @@ _AGG_FUNCTIONS = {
 # Context detection
 # ---------------------------------------------------------------------------
 
+
 def _detect_context(query: str, cursor: int) -> dict[str, Any]:
     """Analyze query text up to cursor position to determine suggestion context."""
     before = query[:cursor].rstrip()
@@ -93,7 +97,7 @@ def _detect_context(query: str, cursor: int) -> dict[str, Any]:
     # Check if we're after a pipe
     pipe_positions = [i for i, ch in enumerate(before) if ch == "|"]
     if pipe_positions:
-        after_last_pipe = before[pipe_positions[-1] + 1:].strip()
+        after_last_pipe = before[pipe_positions[-1] + 1 :].strip()
         ctx["after_pipe"] = True
         pipe_parts = after_last_pipe.split()
 
@@ -126,9 +130,23 @@ def _detect_context(query: str, cursor: int) -> dict[str, Any]:
             ctx["partial"] = pipe_parts[-1] if not before.endswith(" ") else ""
             return ctx
 
-        if cmd_name in ("sort", "unique", "dedup", "fields", "table", "top", "rare",
-                        "bucket", "iplocation", "mitre", "mvexpand", "trendline",
-                        "fillnull", "regex", "timechart"):
+        if cmd_name in (
+            "sort",
+            "unique",
+            "dedup",
+            "fields",
+            "table",
+            "top",
+            "rare",
+            "bucket",
+            "iplocation",
+            "mitre",
+            "mvexpand",
+            "trendline",
+            "fillnull",
+            "regex",
+            "timechart",
+        ):
             ctx["context"] = "by_field"
             ctx["partial"] = pipe_parts[-1] if not before.endswith(" ") else ""
             return ctx
@@ -159,7 +177,21 @@ def _detect_context(query: str, cursor: int) -> dict[str, Any]:
 
     # After a value or closing paren — suggest boolean operator
     if before.endswith(")") or (
-        second_last and second_last.upper() in ("=", "!=", ">", ">=", "<", "<=", "LIKE", "CONTAINS", "STARTSWITH", "ENDSWITH", "MATCHES")
+        second_last
+        and second_last.upper()
+        in (
+            "=",
+            "!=",
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "LIKE",
+            "CONTAINS",
+            "STARTSWITH",
+            "ENDSWITH",
+            "MATCHES",
+        )
     ):
         if before.endswith(" "):
             ctx["context"] = "keyword"
@@ -173,8 +205,23 @@ def _detect_context(query: str, cursor: int) -> dict[str, Any]:
 
     if len(parts) >= 1 and before.endswith(" "):
         # Check if last token looks like a field name
-        if last.upper() not in ("AND", "OR", "NOT", "=", "!=", ">", ">=", "<", "<=",
-                                "LIKE", "IN", "CONTAINS", "STARTSWITH", "ENDSWITH", "MATCHES"):
+        if last.upper() not in (
+            "AND",
+            "OR",
+            "NOT",
+            "=",
+            "!=",
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "LIKE",
+            "IN",
+            "CONTAINS",
+            "STARTSWITH",
+            "ENDSWITH",
+            "MATCHES",
+        ):
             # Could be field name followed by space -> suggest operators
             if last.lower() in EVENT_FIELDS or last.lower() in FIELD_ALIASES:
                 ctx["context"] = "operator"
@@ -182,8 +229,20 @@ def _detect_context(query: str, cursor: int) -> dict[str, Any]:
                 return ctx
 
         # After an operator -> suggest value
-        if last.upper() in ("=", "!=", ">", ">=", "<", "<=", "LIKE", "IN",
-                            "CONTAINS", "STARTSWITH", "ENDSWITH", "MATCHES"):
+        if last.upper() in (
+            "=",
+            "!=",
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "LIKE",
+            "IN",
+            "CONTAINS",
+            "STARTSWITH",
+            "ENDSWITH",
+            "MATCHES",
+        ):
             ctx["context"] = "value"
             ctx["field_name"] = second_last
             return ctx
@@ -199,6 +258,7 @@ def _detect_context(query: str, cursor: int) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Fuzzy matching
 # ---------------------------------------------------------------------------
+
 
 def _fuzzy_score(query: str, candidate: str) -> float:
     """Compute fuzzy match score (0-1)."""
@@ -217,30 +277,35 @@ def _fuzzy_score(query: str, candidate: str) -> float:
 # Suggestion generators
 # ---------------------------------------------------------------------------
 
+
 def _suggest_fields(partial: str) -> list[dict]:
     suggestions = []
     for name, meta in EVENT_FIELDS.items():
         score = _fuzzy_score(partial, name)
         if score > 0.3:
-            suggestions.append({
-                "text": name,
-                "type": SUGGESTION_TYPE_FIELD,
-                "description": meta["description"],
-                "field_type": meta["type"],
-                "score": score,
-            })
+            suggestions.append(
+                {
+                    "text": name,
+                    "type": SUGGESTION_TYPE_FIELD,
+                    "description": meta["description"],
+                    "field_type": meta["type"],
+                    "score": score,
+                }
+            )
     # Add aliases
     for alias, target in FIELD_ALIASES.items():
         score = _fuzzy_score(partial, alias)
         if score > 0.3:
             meta = EVENT_FIELDS.get(target, {})
-            suggestions.append({
-                "text": alias,
-                "type": SUGGESTION_TYPE_FIELD,
-                "description": f"Alias for {target}: {meta.get('description', '')}",
-                "field_type": meta.get("type", "string"),
-                "score": score * 0.9,  # Slightly lower for aliases
-            })
+            suggestions.append(
+                {
+                    "text": alias,
+                    "type": SUGGESTION_TYPE_FIELD,
+                    "description": f"Alias for {target}: {meta.get('description', '')}",
+                    "field_type": meta.get("type", "string"),
+                    "score": score * 0.9,  # Slightly lower for aliases
+                }
+            )
     return sorted(suggestions, key=lambda s: -s["score"])
 
 
@@ -255,35 +320,41 @@ def _suggest_operators(field_name: str | None) -> list[dict]:
     ]
 
     if resolved in _NUMERIC_FIELDS:
-        all_ops.extend([
-            (">", "Greater than"),
-            (">=", "Greater than or equal"),
-            ("<", "Less than"),
-            ("<=", "Less than or equal"),
-            ("IN", "In value list"),
-            ("NOT IN", "Not in value list"),
-        ])
+        all_ops.extend(
+            [
+                (">", "Greater than"),
+                (">=", "Greater than or equal"),
+                ("<", "Less than"),
+                ("<=", "Less than or equal"),
+                ("IN", "In value list"),
+                ("NOT IN", "Not in value list"),
+            ]
+        )
     elif resolved in _DATETIME_FIELDS:
-        all_ops.extend([
-            (">", "After"),
-            (">=", "At or after"),
-            ("<", "Before"),
-            ("<=", "At or before"),
-        ])
+        all_ops.extend(
+            [
+                (">", "After"),
+                (">=", "At or after"),
+                ("<", "Before"),
+                ("<=", "At or before"),
+            ]
+        )
     else:
-        all_ops.extend([
-            ("LIKE", "Pattern match with wildcards"),
-            ("CONTAINS", "Contains substring"),
-            ("STARTSWITH", "Starts with"),
-            ("ENDSWITH", "Ends with"),
-            ("MATCHES", "Regex match"),
-            ("IN", "In value list"),
-            ("NOT IN", "Not in value list"),
-            (">", "Greater than"),
-            (">=", "Greater than or equal"),
-            ("<", "Less than"),
-            ("<=", "Less than or equal"),
-        ])
+        all_ops.extend(
+            [
+                ("LIKE", "Pattern match with wildcards"),
+                ("CONTAINS", "Contains substring"),
+                ("STARTSWITH", "Starts with"),
+                ("ENDSWITH", "Ends with"),
+                ("MATCHES", "Regex match"),
+                ("IN", "In value list"),
+                ("NOT IN", "Not in value list"),
+                (">", "Greater than"),
+                (">=", "Greater than or equal"),
+                ("<", "Less than"),
+                ("<=", "Less than or equal"),
+            ]
+        )
 
     return [
         {"text": op, "type": SUGGESTION_TYPE_OPERATOR, "description": desc, "score": 1.0 - i * 0.05}
@@ -304,29 +375,54 @@ def _suggest_values(field_name: str | None, db: Session | None) -> list[dict]:
     static: dict[str, list[str]] = {
         "severity": ["low", "medium", "high"],
         "event_type": [
-            "auth_failure", "auth_success", "process_create", "privilege_change",
-            "rdp_connect", "ssh_connect", "smb_connect", "dns_query",
-            "file_create", "file_delete", "file_modify",
-            "registry_modify", "scheduled_task", "service_install",
-            "network_connection", "firewall_block", "firewall_allow",
-            "malware_detected", "ids_alert", "web_request",
+            "auth_failure",
+            "auth_success",
+            "process_create",
+            "privilege_change",
+            "rdp_connect",
+            "ssh_connect",
+            "smb_connect",
+            "dns_query",
+            "file_create",
+            "file_delete",
+            "file_modify",
+            "registry_modify",
+            "scheduled_task",
+            "service_install",
+            "network_connection",
+            "firewall_block",
+            "firewall_allow",
+            "malware_detected",
+            "ids_alert",
+            "web_request",
         ],
     }
 
     if resolved in static:
         return [
-            {"text": v, "type": SUGGESTION_TYPE_VALUE, "description": f"Value for {resolved}", "score": 0.9}
+            {
+                "text": v,
+                "type": SUGGESTION_TYPE_VALUE,
+                "description": f"Value for {resolved}",
+                "score": 0.9,
+            }
             for v in static[resolved]
         ]
 
     # Try to get recent values from Redis cache
     try:
         from apps.api.cache import get_cache, set_cache
+
         cache_key = f"cql:values:{resolved}"
         cached = get_cache(cache_key)
         if cached:
             return [
-                {"text": str(v), "type": SUGGESTION_TYPE_VALUE, "description": "Recent value", "score": 0.8}
+                {
+                    "text": str(v),
+                    "type": SUGGESTION_TYPE_VALUE,
+                    "description": "Recent value",
+                    "score": 0.8,
+                }
                 for v in cached[:20]
             ]
     except Exception:
@@ -337,24 +433,24 @@ def _suggest_values(field_name: str | None, db: Session | None) -> list[dict]:
         try:
             col = getattr(Event, resolved, None)
             if col is not None:
-                vals = (
-                    db.query(col)
-                    .filter(col.isnot(None))
-                    .distinct()
-                    .limit(50)
-                    .all()
-                )
+                vals = db.query(col).filter(col.isnot(None)).distinct().limit(50).all()
                 value_list = [str(v[0]) for v in vals if v[0] is not None]
 
                 # Cache in Redis
                 try:
                     from apps.api.cache import set_cache
+
                     set_cache(f"cql:values:{resolved}", value_list, ttl=300)
                 except Exception:
                     logger.debug("autocomplete: ignored exception", exc_info=True)
 
                 return [
-                    {"text": v, "type": SUGGESTION_TYPE_VALUE, "description": "Recent value", "score": 0.8}
+                    {
+                        "text": v,
+                        "type": SUGGESTION_TYPE_VALUE,
+                        "description": "Recent value",
+                        "score": 0.8,
+                    }
                     for v in value_list[:20]
                 ]
         except Exception:
@@ -369,22 +465,41 @@ def _suggest_commands(partial: str) -> list[dict]:
     for name, meta in commands.items():
         score = _fuzzy_score(partial, name)
         if score > 0.3:
-            suggestions.append({
-                "text": name,
-                "type": SUGGESTION_TYPE_COMMAND,
-                "description": meta["description"].split("\n")[0] if meta["description"] else "",
-                "syntax": meta.get("syntax", ""),
-                "score": score,
-            })
+            suggestions.append(
+                {
+                    "text": name,
+                    "type": SUGGESTION_TYPE_COMMAND,
+                    "description": meta["description"].split("\n")[0]
+                    if meta["description"]
+                    else "",
+                    "syntax": meta.get("syntax", ""),
+                    "score": score,
+                }
+            )
     return sorted(suggestions, key=lambda s: -s["score"])
 
 
 def _suggest_keywords() -> list[dict]:
     return [
-        {"text": "AND", "type": SUGGESTION_TYPE_KEYWORD, "description": "Boolean AND", "score": 1.0},
+        {
+            "text": "AND",
+            "type": SUGGESTION_TYPE_KEYWORD,
+            "description": "Boolean AND",
+            "score": 1.0,
+        },
         {"text": "OR", "type": SUGGESTION_TYPE_KEYWORD, "description": "Boolean OR", "score": 0.9},
-        {"text": "NOT", "type": SUGGESTION_TYPE_KEYWORD, "description": "Boolean NOT", "score": 0.8},
-        {"text": "|", "type": SUGGESTION_TYPE_KEYWORD, "description": "Pipe to command", "score": 0.7},
+        {
+            "text": "NOT",
+            "type": SUGGESTION_TYPE_KEYWORD,
+            "description": "Boolean NOT",
+            "score": 0.8,
+        },
+        {
+            "text": "|",
+            "type": SUGGESTION_TYPE_KEYWORD,
+            "description": "Pipe to command",
+            "score": 0.7,
+        },
     ]
 
 
@@ -393,13 +508,15 @@ def _suggest_stats_functions(partial: str) -> list[dict]:
     for name, meta in _AGG_FUNCTIONS.items():
         score = _fuzzy_score(partial, name)
         if score > 0.3:
-            suggestions.append({
-                "text": name,
-                "type": SUGGESTION_TYPE_FUNCTION,
-                "description": meta["description"],
-                "syntax": meta["syntax"],
-                "score": score,
-            })
+            suggestions.append(
+                {
+                    "text": name,
+                    "type": SUGGESTION_TYPE_FUNCTION,
+                    "description": meta["description"],
+                    "syntax": meta["syntax"],
+                    "score": score,
+                }
+            )
     return sorted(suggestions, key=lambda s: -s["score"])
 
 
@@ -408,19 +525,22 @@ def _suggest_eval_functions(partial: str) -> list[dict]:
     for name, meta in _EVAL_FUNCTIONS.items():
         score = _fuzzy_score(partial, name)
         if score > 0.3:
-            suggestions.append({
-                "text": name,
-                "type": SUGGESTION_TYPE_FUNCTION,
-                "description": meta["description"],
-                "syntax": meta["syntax"],
-                "score": score,
-            })
+            suggestions.append(
+                {
+                    "text": name,
+                    "type": SUGGESTION_TYPE_FUNCTION,
+                    "description": meta["description"],
+                    "syntax": meta["syntax"],
+                    "score": score,
+                }
+            )
     return sorted(suggestions, key=lambda s: -s["score"])
 
 
 # ---------------------------------------------------------------------------
 # Main autocomplete entry point
 # ---------------------------------------------------------------------------
+
 
 def autocomplete_cql(
     query: str,

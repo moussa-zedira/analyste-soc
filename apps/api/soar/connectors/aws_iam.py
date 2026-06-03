@@ -41,9 +41,11 @@ class AWSConnector(Connector):
         if not self.configured:
             return False
         try:
+
             def _ping():
                 client = self._client("sts")
                 return client.get_caller_identity()
+
             ident = await asyncio.to_thread(_ping)
             return bool(ident.get("Account"))
         except Exception:
@@ -90,6 +92,7 @@ class AWSConnector(Connector):
             return {"applied": False, "reason": "aws_not_configured"}
 
         from datetime import datetime
+
         now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
         revoke_policy = {
             "Version": "2012-10-17",
@@ -98,9 +101,7 @@ class AWSConnector(Connector):
                     "Effect": "Deny",
                     "Action": "*",
                     "Resource": "*",
-                    "Condition": {
-                        "DateLessThan": {"aws:TokenIssueTime": now_iso}
-                    },
+                    "Condition": {"DateLessThan": {"aws:TokenIssueTime": now_iso}},
                 }
             ],
         }

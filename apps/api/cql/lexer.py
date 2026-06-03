@@ -66,9 +66,13 @@ _KEYWORDS: dict[str, TokenType] = {
 }
 
 _OPERATOR_KEYWORDS = {
-    TokenType.LIKE, TokenType.IN, TokenType.NOT_IN,
-    TokenType.CONTAINS, TokenType.STARTSWITH,
-    TokenType.ENDSWITH, TokenType.MATCHES,
+    TokenType.LIKE,
+    TokenType.IN,
+    TokenType.NOT_IN,
+    TokenType.CONTAINS,
+    TokenType.STARTSWITH,
+    TokenType.ENDSWITH,
+    TokenType.MATCHES,
 }
 
 
@@ -152,7 +156,7 @@ class Lexer:
                 self._advance()
             else:
                 break
-        return Token(TokenType.NUMBER, self.text[start:self.pos], self.line, start_col)
+        return Token(TokenType.NUMBER, self.text[start : self.pos], self.line, start_col)
 
     def _read_identifier(self) -> str:
         start = self.pos
@@ -162,7 +166,7 @@ class Lexer:
                 self._advance()
             else:
                 break
-        return self.text[start:self.pos]
+        return self.text[start : self.pos]
 
     def _read_regex(self) -> str:
         """Read /pattern/ regex literal."""
@@ -208,7 +212,9 @@ class Lexer:
             if ch == "/":
                 # Only treat as regex if we're in value position (after operator)
                 if self.tokens and self.tokens[-1].type in (
-                    TokenType.EQ, TokenType.NEQ, TokenType.MATCHES,
+                    TokenType.EQ,
+                    TokenType.NEQ,
+                    TokenType.MATCHES,
                     TokenType.ASSIGN,
                 ):
                     self._advance()
@@ -217,7 +223,9 @@ class Lexer:
                     continue
 
             # Numbers (including negative)
-            if ch.isdigit() or (ch == "-" and self.pos + 1 < len(self.text) and self.text[self.pos + 1].isdigit()):
+            if ch.isdigit() or (
+                ch == "-" and self.pos + 1 < len(self.text) and self.text[self.pos + 1].isdigit()
+            ):
                 if ch == "-":
                     self._advance()
                     tok = self._read_number()
@@ -230,7 +238,7 @@ class Lexer:
 
             # Two-char operators
             if self.pos + 1 < len(self.text):
-                two = self.text[self.pos:self.pos + 2]
+                two = self.text[self.pos : self.pos + 2]
                 if two == "!=":
                     self._advance()
                     self._advance()
@@ -291,7 +299,7 @@ class Lexer:
                         self._advance()
                     else:
                         break
-                word = self.text[ident_start:self.pos]
+                word = self.text[ident_start : self.pos]
 
                 # Check for keywords
                 upper = word.upper()
@@ -307,9 +315,11 @@ class Lexer:
                             next_start = self.pos
                             while self.pos < len(self.text) and self.text[self.pos].isalpha():
                                 self._advance()
-                            next_word = self.text[next_start:self.pos]
+                            next_word = self.text[next_start : self.pos]
                             if next_word.upper() == "IN":
-                                self.tokens.append(Token(TokenType.NOT_IN, "NOT IN", start_line, start_col))
+                                self.tokens.append(
+                                    Token(TokenType.NOT_IN, "NOT IN", start_line, start_col)
+                                )
                                 continue
                         # Restore position — it's just NOT
                         self.pos = saved_pos

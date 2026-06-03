@@ -28,7 +28,10 @@ LOOKBACK_MINUTES = 5
 
 
 def _welford_update(
-    count: int, mean: float, variance: float, new_value: float,
+    count: int,
+    mean: float,
+    variance: float,
+    new_value: float,
 ) -> tuple[int, float, float]:
     """Met a jour les statistiques en ligne avec l'algorithme de Welford."""
     count += 1
@@ -75,10 +78,18 @@ def _create_anomaly_incident(
     incident_id = str(uuid.uuid4())
 
     incident = Incident(
-        id=incident_id, created_at=now, updated_at=now,
-        status="open", severity=severity, title=title, description=description,
-        rule_id=rule_id, entity_key=entity_key,
-        start_ts=start_ts, end_ts=end_ts, dedup_hash=dedup_hash,
+        id=incident_id,
+        created_at=now,
+        updated_at=now,
+        status="open",
+        severity=severity,
+        title=title,
+        description=description,
+        rule_id=rule_id,
+        entity_key=entity_key,
+        start_ts=start_ts,
+        end_ts=end_ts,
+        dedup_hash=dedup_hash,
     )
     db.add(incident)
     db.flush()
@@ -88,33 +99,53 @@ def _create_anomaly_incident(
     db.flush()
 
     notify_incident_created(
-        incident_id=incident_id, title=title, severity=severity,
-        description=description, rule_id=rule_id, entity_key=entity_key,
-        status="open", created_at=now.isoformat(),
+        incident_id=incident_id,
+        title=title,
+        severity=severity,
+        description=description,
+        rule_id=rule_id,
+        entity_key=entity_key,
+        status="open",
+        created_at=now.isoformat(),
     )
 
-    broadcaster.publish({
-        "type": "new_incident",
-        "payload": {
-            "id": incident_id, "title": title, "severity": severity,
-            "rule_id": rule_id, "entity_key": entity_key,
-            "status": "open", "created_at": now.isoformat(),
-        },
-    })
+    broadcaster.publish(
+        {
+            "type": "new_incident",
+            "payload": {
+                "id": incident_id,
+                "title": title,
+                "severity": severity,
+                "rule_id": rule_id,
+                "entity_key": entity_key,
+                "status": "open",
+                "created_at": now.isoformat(),
+            },
+        }
+    )
 
     logger.info("Created anomaly incident %s: %s", incident_id, rule_id)
     return True
 
 
 def _get_or_create_baseline(
-    db: Session, metric_key: str, metric_type: str, now: datetime,
+    db: Session,
+    metric_key: str,
+    metric_type: str,
+    now: datetime,
 ) -> AnomalyBaseline:
     """Recupere ou cree une ligne de base d'anomalie pour la metrique donnee."""
     baseline = db.get(AnomalyBaseline, metric_key)
     if baseline is None:
         baseline = AnomalyBaseline(
-            id=metric_key, metric_type=metric_type, metric_key=metric_key.split(":", 1)[1],
-            count=0, mean=0.0, variance=0.0, last_value=0.0, updated_at=now,
+            id=metric_key,
+            metric_type=metric_type,
+            metric_key=metric_key.split(":", 1)[1],
+            count=0,
+            mean=0.0,
+            variance=0.0,
+            last_value=0.0,
+            updated_at=now,
         )
         db.add(baseline)
     return baseline
@@ -131,6 +162,7 @@ def run_anomaly_detection(db: Session) -> dict:
     benign_types: set[str] = set()
     if settings.TRIAGE_ENABLED:
         from apps.api.detection.triage import EVENT_CLASSIFICATION
+
         benign_types = {k for k, v in EVENT_CLASSIFICATION.items() if v == "benign"}
         _load_whitelist(db)
     else:
@@ -157,23 +189,31 @@ def run_anomaly_detection(db: Session) -> dict:
 
         if baseline.count >= MIN_SAMPLES and abs(z) > Z_SCORE_THRESHOLD:
             event_ids = [
-                eid for (eid,) in
-                db.query(Event.id)
+                eid
+                for (eid,) in db.query(Event.id)
                 .filter(Event.event_type == event_type, Event.ts >= window_start)
-                .limit(100).all()
+                .limit(100)
+                .all()
             ]
             if _create_anomaly_incident(
-                db, rule_id="anomaly.volume.v1",
+                db,
+                rule_id="anomaly.volume.v1",
                 title=f"Volume anomaly: {event_type} ({count} events in {LOOKBACK_MINUTES}min)",
                 description=f"Detected {count} '{event_type}' events in {LOOKBACK_MINUTES} min. "
-                            f"Baseline mean: {baseline.mean:.1f}, z-score: {z:.2f}.",
-                severity="high", entity_key=f"event_type:{event_type}",
-                event_ids=event_ids, start_ts=window_start, end_ts=now,
+                f"Baseline mean: {baseline.mean:.1f}, z-score: {z:.2f}.",
+                severity="high",
+                entity_key=f"event_type:{event_type}",
+                event_ids=event_ids,
+                start_ts=window_start,
+                end_ts=now,
             ):
                 incidents_created += 1
 
         new_count, new_mean, new_var = _welford_update(
-            baseline.count, baseline.mean, baseline.variance, float(count),
+            baseline.count,
+            baseline.mean,
+            baseline.variance,
+            float(count),
         )
         baseline.count = new_count
         baseline.mean = new_mean
@@ -198,23 +238,31 @@ def run_anomaly_detection(db: Session) -> dict:
 
         if baseline.count >= MIN_SAMPLES and abs(z) > Z_SCORE_THRESHOLD:
             event_ids = [
-                eid for (eid,) in
-                db.query(Event.id)
+                eid
+                for (eid,) in db.query(Event.id)
                 .filter(Event.src_ip == src_ip, Event.ts >= window_start)
-                .limit(100).all()
+                .limit(100)
+                .all()
             ]
             if _create_anomaly_incident(
-                db, rule_id="anomaly.ip.v1",
+                db,
+                rule_id="anomaly.ip.v1",
                 title=f"IP behavior anomaly: {src_ip} ({count} events in {LOOKBACK_MINUTES}min)",
                 description=f"Detected {count} events from {src_ip} in {LOOKBACK_MINUTES} min. "
-                            f"Baseline mean: {baseline.mean:.1f}, z-score: {z:.2f}.",
-                severity="medium", entity_key=f"src_ip:{src_ip}",
-                event_ids=event_ids, start_ts=window_start, end_ts=now,
+                f"Baseline mean: {baseline.mean:.1f}, z-score: {z:.2f}.",
+                severity="medium",
+                entity_key=f"src_ip:{src_ip}",
+                event_ids=event_ids,
+                start_ts=window_start,
+                end_ts=now,
             ):
                 incidents_created += 1
 
         new_count, new_mean, new_var = _welford_update(
-            baseline.count, baseline.mean, baseline.variance, float(count),
+            baseline.count,
+            baseline.mean,
+            baseline.variance,
+            float(count),
         )
         baseline.count = new_count
         baseline.mean = new_mean

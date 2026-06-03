@@ -31,6 +31,7 @@ router = APIRouter()
 # Request / Response models
 # ---------------------------------------------------------------------------
 
+
 class DetectRequest(BaseModel):
     raw: str = Field(..., description="Raw log line or block to analyse")
 
@@ -42,9 +43,7 @@ class DetectResponse(BaseModel):
 
 
 class ParseRequest(BaseModel):
-    raw: str | list[str] = Field(
-        ..., description="Raw log line(s) — string or list of strings"
-    )
+    raw: str | list[str] = Field(..., description="Raw log line(s) — string or list of strings")
     parser: str | None = Field(
         None, description="Force a specific parser by name (skip auto-detect)"
     )
@@ -111,6 +110,7 @@ class FormatInfo(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _to_parsed_event(ev: dict[str, Any]) -> ParsedEvent:
     ts = ev.get("ts")
     if isinstance(ts, datetime):
@@ -142,6 +142,7 @@ def _find_parser(name: str):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post("/detect", response_model=DetectResponse, summary="Auto-detect log format")
 def api_detect(req: DetectRequest):
@@ -229,10 +230,14 @@ def api_test(req: TestRequest):
                     results.append(TestResult(line=sample, matched=True, parsed=clean))
                     matched += 1
                 else:
-                    results.append(TestResult(line=sample, matched=False, error="Parser returned None"))
+                    results.append(
+                        TestResult(line=sample, matched=False, error="Parser returned None")
+                    )
                     failed += 1
             else:
-                results.append(TestResult(line=sample, matched=False, error="can_parse returned False"))
+                results.append(
+                    TestResult(line=sample, matched=False, error="can_parse returned False")
+                )
                 failed += 1
         except Exception as exc:
             results.append(TestResult(line=sample, matched=False, error=str(exc)))
@@ -247,7 +252,9 @@ def api_test(req: TestRequest):
     )
 
 
-@router.post("/ingest/bulk", response_model=BulkIngestResponse, summary="Bulk ingest with auto-parsing")
+@router.post(
+    "/ingest/bulk", response_model=BulkIngestResponse, summary="Bulk ingest with auto-parsing"
+)
 def api_bulk_ingest(req: BulkIngestRequest):
     """Parse and optionally store multiple log lines at once."""
     parsed_events: list[ParsedEvent] = []

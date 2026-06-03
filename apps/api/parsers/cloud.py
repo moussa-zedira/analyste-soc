@@ -24,26 +24,32 @@ from apps.api.parsers import BaseParser
 
 # v2 default: version account-id interface-id srcaddr dstaddr srcport dstport protocol packets bytes start end action log-status
 _VPC_FLOW_RE = re.compile(
-    r"^(\d+)\s+"              # version
-    r"(\S+)\s+"               # account-id
-    r"(\S+)\s+"               # interface-id
-    r"(\S+)\s+"               # srcaddr
-    r"(\S+)\s+"               # dstaddr
-    r"(\d+)\s+"               # srcport
-    r"(\d+)\s+"               # dstport
-    r"(\d+)\s+"               # protocol
-    r"(\d+)\s+"               # packets
-    r"(\d+)\s+"               # bytes
-    r"(\d+)\s+"               # start (epoch)
-    r"(\d+)\s+"               # end (epoch)
-    r"(\w+)\s+"               # action (ACCEPT/REJECT)
-    r"(\S+)"                  # log-status
+    r"^(\d+)\s+"  # version
+    r"(\S+)\s+"  # account-id
+    r"(\S+)\s+"  # interface-id
+    r"(\S+)\s+"  # srcaddr
+    r"(\S+)\s+"  # dstaddr
+    r"(\d+)\s+"  # srcport
+    r"(\d+)\s+"  # dstport
+    r"(\d+)\s+"  # protocol
+    r"(\d+)\s+"  # packets
+    r"(\d+)\s+"  # bytes
+    r"(\d+)\s+"  # start (epoch)
+    r"(\d+)\s+"  # end (epoch)
+    r"(\w+)\s+"  # action (ACCEPT/REJECT)
+    r"(\S+)"  # log-status
 )
 
 # Protocol numbers
 _PROTO_MAP = {
-    "1": "ICMP", "6": "TCP", "17": "UDP", "47": "GRE", "50": "ESP",
-    "51": "AH", "58": "ICMPv6", "132": "SCTP",
+    "1": "ICMP",
+    "6": "TCP",
+    "17": "UDP",
+    "47": "GRE",
+    "50": "ESP",
+    "51": "AH",
+    "58": "ICMPv6",
+    "132": "SCTP",
 }
 
 
@@ -118,15 +124,15 @@ def _parse_vpc_flow(raw: str) -> dict[str, Any] | None:
 
 # Format: rule_name,MAC,src_ip,dst_ip,src_port,dst_port,protocol,direction,action,(flow_state,pkts_s,bytes_s,pkts_d,bytes_d)
 _AZURE_NSG_RE = re.compile(
-    r"^(\S+),"          # rule name
+    r"^(\S+),"  # rule name
     r"([0-9A-Fa-f]+),"  # MAC
-    r"(\S+),"           # src_ip
-    r"(\S+),"           # dst_ip
-    r"(\d+),"           # src_port
-    r"(\d+),"           # dst_port
-    r"(\w),"            # protocol (T/U)
-    r"(\w),"            # direction (I/O)
-    r"(\w)"             # action (A/D)
+    r"(\S+),"  # src_ip
+    r"(\S+),"  # dst_ip
+    r"(\d+),"  # src_port
+    r"(\d+),"  # dst_port
+    r"(\w),"  # protocol (T/U)
+    r"(\w),"  # direction (I/O)
+    r"(\w)"  # action (A/D)
 )
 
 
@@ -215,6 +221,7 @@ def _parse_gcp_flow(raw: str) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 # Main parser
 # ---------------------------------------------------------------------------
+
 
 class CloudLogParser(BaseParser):
     name = "cloud"

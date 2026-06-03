@@ -67,16 +67,13 @@ class CreateCampaignIn(BaseModel):
     name: str = Field(..., min_length=1)
     engagement_id: str | None = None
     template_name: str = Field(..., min_length=1)
-    landing_page: str = Field(
-        default="", description="GoPhish landing page name"
-    )
+    landing_page: str = Field(default="", description="GoPhish landing page name")
     landing_url: str = Field(..., min_length=1)
     smtp_profile: str = Field(..., min_length=1)
     group_name: str = Field(
         default="",
         description=(
-            "Si fourni: reuse un group GoPhish existant. Sinon un group est "
-            "cree depuis 'targets'."
+            "Si fourni: reuse un group GoPhish existant. Sinon un group est cree depuis 'targets'."
         ),
     )
     targets: list[TargetIn] = Field(default_factory=list)
@@ -158,9 +155,7 @@ def _gophish_or_503() -> GoPhishClient:
 def _get_campaign_or_404(db: Session, cid: str) -> PhishingCampaign:
     c = db.get(PhishingCampaign, cid)
     if c is None:
-        raise HTTPException(
-            status_code=404, detail="Campaign not found"
-        )
+        raise HTTPException(status_code=404, detail="Campaign not found")
     return c
 
 
@@ -287,9 +282,7 @@ async def create_campaign(
     try:
         gp_resp = await client.create_campaign(gp_payload)
     except GoPhishError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"GoPhish create_campaign failed: {exc}"
-        )
+        raise HTTPException(status_code=502, detail=f"GoPhish create_campaign failed: {exc}")
 
     gp_id = gp_resp.get("id") if isinstance(gp_resp, dict) else None
     if not isinstance(gp_id, int):
@@ -302,9 +295,7 @@ async def create_campaign(
     launched_at = None
     if isinstance(gp_resp, dict) and gp_resp.get("launch_date"):
         try:
-            launched_at = datetime.fromisoformat(
-                str(gp_resp["launch_date"]).replace("Z", "+00:00")
-            )
+            launched_at = datetime.fromisoformat(str(gp_resp["launch_date"]).replace("Z", "+00:00"))
         except Exception:  # noqa: BLE001
             launched_at = now
 
@@ -353,9 +344,7 @@ async def create_campaign(
     except Exception:
         db.rollback()
         logger.exception("phishing_campaign_persist_failed")
-        raise HTTPException(
-            status_code=500, detail="Failed to persist campaign"
-        )
+        raise HTTPException(status_code=500, detail="Failed to persist campaign")
 
     db.refresh(c)
 
@@ -368,10 +357,7 @@ async def create_campaign(
             action_type="phishing_launch",
             target=group_name,
             command=payload.template_name,
-            result_summary=(
-                f"campaign={c.id} gophish_id={gp_id} "
-                f"targets={len(payload.targets)}"
-            ),
+            result_summary=(f"campaign={c.id} gophish_id={gp_id} targets={len(payload.targets)}"),
         )
     except Exception:
         logger.exception("phishing_audit_failed")
@@ -393,12 +379,7 @@ def list_campaigns(
         q = q.filter(PhishingCampaign.engagement_id == engagement_id)
     if status_filter:
         q = q.filter(PhishingCampaign.status == status_filter)
-    items = (
-        q.order_by(desc(PhishingCampaign.created_at))
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    items = q.order_by(desc(PhishingCampaign.created_at)).offset(offset).limit(limit).all()
     return [_to_out(c) for c in items]
 
 
@@ -420,10 +401,7 @@ def get_campaign(
     return {
         "campaign": _to_out(c).model_dump(mode="json"),
         "targets": [t.model_dump(mode="json") for t in targets],
-        "results": [
-            ResultOut.model_validate(r).model_dump(mode="json")
-            for r in last_results
-        ],
+        "results": [ResultOut.model_validate(r).model_dump(mode="json") for r in last_results],
     }
 
 
@@ -460,9 +438,7 @@ async def stop_campaign(
     """
     c = _get_campaign_or_404(db, cid)
     if user.role not in ("admin", "lead"):
-        raise HTTPException(
-            status_code=403, detail="admin or lead role required"
-        )
+        raise HTTPException(status_code=403, detail="admin or lead role required")
 
     if c.status in ("completed", "stopped", "failed"):
         return {"status": "noop", "campaign_status": c.status}
@@ -502,8 +478,7 @@ async def stop_campaign(
             target=c.name,
             command="",
             result_summary=(
-                f"campaign={cid} gophish_deleted={gp_deleted} "
-                f"gophish_error={gp_error or 'none'}"
+                f"campaign={cid} gophish_deleted={gp_deleted} gophish_error={gp_error or 'none'}"
             ),
         )
     except Exception:
@@ -523,9 +498,7 @@ async def delete_campaign(
     user: User = Depends(get_current_user),
 ) -> None:
     if user.role != "admin":
-        raise HTTPException(
-            status_code=403, detail="admin role required"
-        )
+        raise HTTPException(status_code=403, detail="admin role required")
     c = _get_campaign_or_404(db, cid)
     gp_id = c.gophish_campaign_id
 
@@ -620,15 +593,9 @@ def campaign_stats(
             {
                 "id": t.id,
                 "email": t.email,
-                "name": (
-                    f"{t.first_name} {t.last_name}".strip() or t.email
-                ),
-                "clicked_at": t.clicked_at.isoformat()
-                if t.clicked_at
-                else None,
-                "submitted_at": t.submitted_at.isoformat()
-                if t.submitted_at
-                else None,
+                "name": (f"{t.first_name} {t.last_name}".strip() or t.email),
+                "clicked_at": t.clicked_at.isoformat() if t.clicked_at else None,
+                "submitted_at": t.submitted_at.isoformat() if t.submitted_at else None,
             }
             for t in c.targets
             if t.clicked_at is not None
@@ -672,9 +639,7 @@ def list_targets(
     q = db.query(PhishingTarget).filter(PhishingTarget.campaign_id == cid)
     if last_status:
         q = q.filter(PhishingTarget.last_status == last_status)
-    items = (
-        q.order_by(PhishingTarget.email).offset(offset).limit(limit).all()
-    )
+    items = q.order_by(PhishingTarget.email).offset(offset).limit(limit).all()
     return [TargetOut.model_validate(t) for t in items]
 
 
@@ -691,9 +656,7 @@ def list_results(
 ) -> list[ResultOut]:
     _get_campaign_or_404(db, cid)
     if event_type and event_type not in VALID_EVENT_TYPES:
-        raise HTTPException(
-            status_code=400, detail=f"unknown event_type: {event_type}"
-        )
+        raise HTTPException(status_code=400, detail=f"unknown event_type: {event_type}")
     q = db.query(PhishingResult).filter(PhishingResult.campaign_id == cid)
     if event_type:
         q = q.filter(PhishingResult.event_type == event_type)
@@ -701,12 +664,7 @@ def list_results(
         q = q.filter(PhishingResult.ts >= since)
     if until:
         q = q.filter(PhishingResult.ts <= until)
-    items = (
-        q.order_by(desc(PhishingResult.ts))
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    items = q.order_by(desc(PhishingResult.ts)).offset(offset).limit(limit).all()
     return [ResultOut.model_validate(r) for r in items]
 
 

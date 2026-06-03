@@ -36,7 +36,9 @@ def mitre_coverage() -> dict[str, object]:
         ],
         "totals": {
             "techniques_known": len(ALL_TECHNIQUES),
-            "techniques_covered": len({tech.id for techs in RULE_MITRE_MAP.values() for tech in techs}),
+            "techniques_covered": len(
+                {tech.id for techs in RULE_MITRE_MAP.values() for tech in techs}
+            ),
             "rules_mapped": len(RULE_MITRE_MAP),
         },
     }

@@ -47,10 +47,12 @@ class PlaybookExecution(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     dry_run: Mapped[bool] = mapped_column(Boolean, default=False)
     started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True,
+        DateTime(timezone=True),
+        nullable=True,
     )
     finished_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True,
+        DateTime(timezone=True),
+        nullable=True,
     )
     duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -74,10 +76,12 @@ class PlaybookStepResult(Base):
     output: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True,
+        DateTime(timezone=True),
+        nullable=True,
     )
     finished_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True,
+        DateTime(timezone=True),
+        nullable=True,
     )
     duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     skipped: Mapped[bool] = mapped_column(Boolean, default=False)

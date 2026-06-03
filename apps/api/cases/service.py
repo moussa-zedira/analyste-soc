@@ -100,8 +100,12 @@ def create_case(
     )
     db.add(case)
     _add_timeline(
-        db, case.id, "created", f"Case '{title}' created (priority={priority})",
-        actor_id, actor_username,
+        db,
+        case.id,
+        "created",
+        f"Case '{title}' created (priority={priority})",
+        actor_id,
+        actor_username,
     )
     db.commit()
     return case
@@ -132,9 +136,13 @@ def transition_case(
     if old in ("open",) and new_status != "open" and not case.sla_responded_at:
         case.sla_responded_at = case.updated_at
     _add_timeline(
-        db, case_id, "status_change",
+        db,
+        case_id,
+        "status_change",
         f"{old} -> {new_status}" + (f": {note}" if note else ""),
-        actor_id, actor_username, data={"from": old, "to": new_status, "note": note},
+        actor_id,
+        actor_username,
+        data={"from": old, "to": new_status, "note": note},
     )
     db.commit()
     return case
@@ -156,9 +164,12 @@ def assign_case(
     case.assignee_username = assignee_username
     case.updated_at = datetime.now(UTC)
     _add_timeline(
-        db, case_id, "assignment",
+        db,
+        case_id,
+        "assignment",
         f"assigned to {assignee_username or assignee_id or '(unassigned)'}",
-        actor_id, actor_username,
+        actor_id,
+        actor_username,
         data={"assignee_id": assignee_id, "assignee_username": assignee_username},
     )
     db.commit()
@@ -177,8 +188,12 @@ def close_case(
     if resolution not in VALID_RESOLUTIONS:
         raise ValueError(f"invalid resolution: {resolution}")
     case = transition_case(
-        db, case_id, "closed",
-        actor_id=actor_id, actor_username=actor_username, note=summary,
+        db,
+        case_id,
+        "closed",
+        actor_id=actor_id,
+        actor_username=actor_username,
+        note=summary,
     )
     case.resolution = resolution
     db.commit()
@@ -196,7 +211,13 @@ def _custody_link(prev_hash: str, actor: str, action: str, ts: datetime) -> dict
         sort_keys=True,
     ).encode()
     h = hashlib.sha256(payload).hexdigest()
-    return {"actor": actor, "action": action, "ts": ts.isoformat(), "prev_hash": prev_hash, "hash": h}
+    return {
+        "actor": actor,
+        "action": action,
+        "ts": ts.isoformat(),
+        "prev_hash": prev_hash,
+        "hash": h,
+    }
 
 
 def add_evidence(
@@ -215,8 +236,9 @@ def add_evidence(
         raise LookupError("case not found")
     now = datetime.now(UTC)
     sha = hashlib.sha256(content.encode("utf-8", errors="ignore")).hexdigest()
-    custody = [_custody_link(prev_hash="", actor=actor_username or "system",
-                             action="collected", ts=now)]
+    custody = [
+        _custody_link(prev_hash="", actor=actor_username or "system", action="collected", ts=now)
+    ]
     ev = CaseEvidence(
         id=str(uuid.uuid4()),
         case_id=case_id,
@@ -231,9 +253,12 @@ def add_evidence(
     )
     db.add(ev)
     _add_timeline(
-        db, case_id, "evidence_added",
+        db,
+        case_id,
+        "evidence_added",
         f"+ evidence [{kind}] {title} (sha256={sha[:12]}…)",
-        actor_id, actor_username,
+        actor_id,
+        actor_username,
         data={"evidence_id": ev.id, "sha256": sha},
     )
     db.commit()
@@ -270,12 +295,8 @@ def compute_sla_status(case: Case) -> dict[str, Any]:
     now = datetime.now(UTC)
     response_deadline = case.created_at + timedelta(minutes=case.sla_response_minutes)
     resolution_deadline = case.created_at + timedelta(minutes=case.sla_resolution_minutes)
-    response_breached = (
-        case.sla_responded_at is None and now > response_deadline
-    )
-    resolution_breached = (
-        case.status != "closed" and now > resolution_deadline
-    )
+    response_breached = case.sla_responded_at is None and now > response_deadline
+    resolution_breached = case.status != "closed" and now > resolution_deadline
     return {
         "response_deadline": response_deadline.isoformat(),
         "resolution_deadline": resolution_deadline.isoformat(),
@@ -295,11 +316,13 @@ def scan_sla_breaches(db: Session) -> list[str]:
             case.sla_breached = True
             breached.append(case.id)
             _add_timeline(
-                db, case.id, "sla_breach",
-                "SLA breached: " + (
-                    "response" if s["response_breached"] else "resolution"
-                ),
-                None, "system", data=s,
+                db,
+                case.id,
+                "sla_breach",
+                "SLA breached: " + ("response" if s["response_breached"] else "resolution"),
+                None,
+                "system",
+                data=s,
             )
     if breached:
         db.commit()

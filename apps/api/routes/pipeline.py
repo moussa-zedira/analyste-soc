@@ -18,6 +18,7 @@ router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 # Request / response schemas
 # ---------------------------------------------------------------------------
 
+
 class IngestRequest(BaseModel):
     events: list[Any] = Field(..., description="Raw events (strings or dicts)")
 
@@ -47,6 +48,7 @@ class ConfigUpdateRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/status")
 async def pipeline_status() -> dict[str, Any]:

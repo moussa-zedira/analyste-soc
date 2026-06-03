@@ -62,7 +62,11 @@ class DefenderConnector(Connector):
             r = await c.post(f"{GRAPH_SECURITY_BASE}{path}", json=payload, headers=headers)
             if r.status_code >= 400:
                 return {"applied": False, "status_code": r.status_code, "error": r.text[:500]}
-            return {"applied": True, "status_code": r.status_code, "response": r.json() if r.content else {}}
+            return {
+                "applied": True,
+                "status_code": r.status_code,
+                "response": r.json() if r.content else {},
+            }
 
     async def isolate_device(self, device_id: str, isolation_type: str = "Full") -> dict[str, Any]:
         if not self.configured:
@@ -79,7 +83,9 @@ class DefenderConnector(Connector):
     async def unisolate_device(self, device_id: str) -> dict[str, Any]:
         if not self.configured:
             return {"applied": False, "reason": "defender_not_configured"}
-        res = await self._post(f"/machines/{device_id}/unisolate", {"Comment": "SOAR lift containment"})
+        res = await self._post(
+            f"/machines/{device_id}/unisolate", {"Comment": "SOAR lift containment"}
+        )
         res["device_id"] = device_id
         return res
 
@@ -100,7 +106,9 @@ class DefenderConnector(Connector):
         res["sha1"] = sha1
         return res
 
-    async def run_script(self, device_id: str, script_name: str, script_args: str = "") -> dict[str, Any]:
+    async def run_script(
+        self, device_id: str, script_name: str, script_args: str = ""
+    ) -> dict[str, Any]:
         """Execute un Live Response script (kill process, etc.)."""
         if not self.configured:
             return {"applied": False, "reason": "defender_not_configured"}

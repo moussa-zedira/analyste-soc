@@ -79,7 +79,7 @@ class LinearConnector(OutboundConnector):
             }
         }
         data = await self._gql(mutation, variables)
-        result = (data.get("issueCreate") or {})
+        result = data.get("issueCreate") or {}
         if not result.get("success"):
             raise RuntimeError(f"linear_create_unsuccessful response={data}")
         issue = result.get("issue") or {}

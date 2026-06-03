@@ -35,6 +35,7 @@ class MISPProvider:
     async def _check_rate_limit(self) -> bool:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return True
@@ -49,6 +50,7 @@ class MISPProvider:
     async def _increment_counter(self) -> None:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return
@@ -164,9 +166,9 @@ class MISPProvider:
                         "info": ev.get("Event", {}).get("info", ""),
                         "date": ev.get("Event", {}).get("date"),
                         "threat_level_id": ev.get("Event", {}).get("threat_level_id"),
-                        "tag_names": [
-                            t.get("name") for t in ev.get("Event", {}).get("Tag", [])
-                        ][:10],
+                        "tag_names": [t.get("name") for t in ev.get("Event", {}).get("Tag", [])][
+                            :10
+                        ],
                         "attribute_count": ev.get("Event", {}).get("attribute_count"),
                         "org": ev.get("Event", {}).get("Orgc", {}).get("name", ""),
                     }
@@ -260,7 +262,9 @@ class MISPProvider:
                         "id": g.get("Galaxy", {}).get("id") if isinstance(g, dict) else None,
                         "name": g.get("Galaxy", {}).get("name", "") if isinstance(g, dict) else "",
                         "type": g.get("Galaxy", {}).get("type", "") if isinstance(g, dict) else "",
-                        "description": g.get("Galaxy", {}).get("description", "")[:200] if isinstance(g, dict) else "",
+                        "description": g.get("Galaxy", {}).get("description", "")[:200]
+                        if isinstance(g, dict)
+                        else "",
                     }
                     for g in galaxies[:20]
                 ],

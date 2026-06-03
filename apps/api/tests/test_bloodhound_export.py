@@ -126,7 +126,12 @@ def test_empty_lists_emit_empty_collections():
 
 
 def test_aces_passed_through_on_user():
-    ace = {"PrincipalSID": "S-1-5-32-544", "PrincipalType": "Group", "RightName": "Owns", "IsInherited": False}
+    ace = {
+        "PrincipalSID": "S-1-5-32-544",
+        "PrincipalType": "Group",
+        "RightName": "Owns",
+        "IsInherited": False,
+    }
     req = BloodHoundExportRequest(
         domain=BHDomain(sid=DOMAIN_SID, name="X"),
         users=[BHUser(sid=f"{DOMAIN_SID}-1", name="A", domain="X", aces=[ace])],
@@ -138,10 +143,15 @@ def test_aces_passed_through_on_user():
 def test_computer_unconstrained_delegation_flag():
     req = BloodHoundExportRequest(
         domain=BHDomain(sid=DOMAIN_SID, name="X"),
-        computers=[BHComputer(
-            sid=f"{DOMAIN_SID}-1", name="DC", domain="X",
-            unconstrained_delegation=True, has_laps=True,
-        )],
+        computers=[
+            BHComputer(
+                sid=f"{DOMAIN_SID}-1",
+                name="DC",
+                domain="X",
+                unconstrained_delegation=True,
+                has_laps=True,
+            )
+        ],
     )
     bundle = build_bloodhound_export(req)
     props = bundle["computers"]["data"][0]["Properties"]

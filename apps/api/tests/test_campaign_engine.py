@@ -255,8 +255,11 @@ def test_load_builtin_scenario_parses_clean():
     sc = load_builtin("quick-recon")
     assert sc.name == "quick-recon"
     assert len(sc.stages) >= 3
-    assert all(st.action.split(".")[0] in {"recon", "detection", "exploit", "c2", "exfil", "post", "implant", "wait", "http"}
-               for st in sc.stages)
+    assert all(
+        st.action.split(".")[0]
+        in {"recon", "detection", "exploit", "c2", "exfil", "post", "implant", "wait", "http"}
+        for st in sc.stages
+    )
 
 
 def test_parse_scenario_validates_required_fields():

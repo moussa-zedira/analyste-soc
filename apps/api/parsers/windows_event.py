@@ -78,8 +78,8 @@ _EVENT_ID_MAP: dict[str, tuple[str, str, str, str | None]] = {
     # PowerShell
     "4104": ("powershell.script_block", "high", "PowerShell script block", "T1059.001"),
     "4103": ("powershell.module_log", "medium", "PowerShell module logging", "T1059.001"),
-    "400":  ("powershell.engine_start", "low", "PowerShell engine started", None),
-    "403":  ("powershell.engine_stop", "low", "PowerShell engine stopped", None),
+    "400": ("powershell.engine_start", "low", "PowerShell engine started", None),
+    "403": ("powershell.engine_stop", "low", "PowerShell engine stopped", None),
     # WMI
     "5861": ("wmi.subscription", "high", "WMI event subscription", "T1546.003"),
     # Remote access
@@ -89,7 +89,7 @@ _EVENT_ID_MAP: dict[str, tuple[str, str, str, str | None]] = {
     "4663": ("object.accessed", "low", "Object access attempted", "T1005"),
     "4656": ("object.handle_requested", "low", "Handle to object requested", None),
     # DNS
-    "770":  ("dns.query", "low", "DNS query", None),
+    "770": ("dns.query", "low", "DNS query", None),
     # Defender
     "1116": ("defender.detected", "high", "Defender detected malware", "T1059"),
     "1117": ("defender.action", "high", "Defender took action", None),
@@ -97,20 +97,32 @@ _EVENT_ID_MAP: dict[str, tuple[str, str, str, str | None]] = {
 
 # Logon types
 _LOGON_TYPE_MAP = {
-    "2": "Interactive", "3": "Network", "4": "Batch", "5": "Service",
-    "7": "Unlock", "8": "NetworkCleartext", "9": "NewCredentials",
-    "10": "RemoteInteractive", "11": "CachedInteractive",
-    "12": "CachedRemoteInteractive", "13": "CachedUnlock",
+    "2": "Interactive",
+    "3": "Network",
+    "4": "Batch",
+    "5": "Service",
+    "7": "Unlock",
+    "8": "NetworkCleartext",
+    "9": "NewCredentials",
+    "10": "RemoteInteractive",
+    "11": "CachedInteractive",
+    "12": "CachedRemoteInteractive",
+    "13": "CachedUnlock",
 }
 
 _LEVEL_MAP = {
-    "1": "critical", "2": "high", "3": "medium", "4": "low", "5": "low",
+    "1": "critical",
+    "2": "high",
+    "3": "medium",
+    "4": "low",
+    "5": "low",
 }
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _find(el: ET.Element | None, tag: str) -> ET.Element | None:
     if el is None:
@@ -158,6 +170,7 @@ def _parse_xml_timestamp(ts_str: str) -> datetime | None:
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 class WindowsEventParser(BaseParser):
     name = "windows_event"

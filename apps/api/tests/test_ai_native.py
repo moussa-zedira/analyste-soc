@@ -38,7 +38,7 @@ def test_call_llm_stub_returns_valid_json():
 
 
 def test_parse_json_strips_markdown_fences():
-    text = "Here is the result:\n```json\n{\"a\": 1}\n```\nThanks"
+    text = 'Here is the result:\n```json\n{"a": 1}\n```\nThanks'
     assert parse_json_response(text) == {"a": 1}
 
 
@@ -60,13 +60,28 @@ def test_parse_json_handles_braces_in_strings():
 
 
 def test_triage_input_returns_required_fields():
-    t = TriageInput(kind="event", title="brute force ssh", severity="high",
-                    src_ip="1.2.3.4", username="admin", event_type="auth_failure",
-                    message="Failed password")
+    t = TriageInput(
+        kind="event",
+        title="brute force ssh",
+        severity="high",
+        src_ip="1.2.3.4",
+        username="admin",
+        event_type="auth_failure",
+        message="Failed password",
+    )
     r = triage_input(t, prefer="stub")
     assert "triage" in r and "llm" in r and "raw_text" in r
-    for field in ("verdict", "confidence", "severity", "summary", "recommended_actions",
-                  "mitre_techniques", "iocs", "root_cause_hypothesis", "tags"):
+    for field in (
+        "verdict",
+        "confidence",
+        "severity",
+        "summary",
+        "recommended_actions",
+        "mitre_techniques",
+        "iocs",
+        "root_cause_hypothesis",
+        "tags",
+    ):
         assert field in r["triage"]
 
 
@@ -82,11 +97,27 @@ def test_triage_llm_metadata_populated():
 
 def _make_docs() -> list[RagDoc]:
     return [
-        RagDoc(id="e1", kind="event", text="ssh brute force admin failed login attempt", metadata={}),
-        RagDoc(id="e2", kind="event", text="dns query suspicious newly registered domain", metadata={}),
-        RagDoc(id="e3", kind="event", text="powershell encoded command execution suspicious", metadata={}),
-        RagDoc(id="e4", kind="incident", text="ssh brute force campaign multiple targets observed", metadata={}),
-        RagDoc(id="e5", kind="event", text="lateral movement smb session multiple hosts", metadata={}),
+        RagDoc(
+            id="e1", kind="event", text="ssh brute force admin failed login attempt", metadata={}
+        ),
+        RagDoc(
+            id="e2", kind="event", text="dns query suspicious newly registered domain", metadata={}
+        ),
+        RagDoc(
+            id="e3",
+            kind="event",
+            text="powershell encoded command execution suspicious",
+            metadata={},
+        ),
+        RagDoc(
+            id="e4",
+            kind="incident",
+            text="ssh brute force campaign multiple targets observed",
+            metadata={},
+        ),
+        RagDoc(
+            id="e5", kind="event", text="lateral movement smb session multiple hosts", metadata={}
+        ),
     ]
 
 
@@ -100,7 +131,9 @@ def test_rag_search_finds_relevant_docs():
 
 def test_rag_search_respects_top_k():
     docs = _make_docs()
-    results = rag_search("query that matches multiple docs ssh brute powershell dns", docs, top_k=2, min_score=0.0)
+    results = rag_search(
+        "query that matches multiple docs ssh brute powershell dns", docs, top_k=2, min_score=0.0
+    )
     assert len(results) <= 2
 
 
@@ -131,8 +164,13 @@ def test_rag_summary_counts_by_kind():
 
 
 def test_sigma_rule_has_required_fields():
-    seed = RuleSeed(title="Test rule", severity="high", event_type="auth_failure",
-                    src_ip="10.0.0.1", username="alice")
+    seed = RuleSeed(
+        title="Test rule",
+        severity="high",
+        event_type="auth_failure",
+        src_ip="10.0.0.1",
+        username="alice",
+    )
     rule = build_sigma_rule(seed)
     for field in ("title", "id", "status", "description", "logsource", "detection", "level"):
         assert field in rule
@@ -142,7 +180,9 @@ def test_sigma_rule_has_required_fields():
 
 
 def test_sigma_rule_keywords_extracted_from_message():
-    seed = RuleSeed(title="t", message="powershell EncodedCommand bypass execution policy unrestricted")
+    seed = RuleSeed(
+        title="t", message="powershell EncodedCommand bypass execution policy unrestricted"
+    )
     rule = build_sigma_rule(seed)
     assert "keywords" in rule["detection"]
     assert len(rule["detection"]["keywords"]) > 0
@@ -156,6 +196,7 @@ def test_sigma_rule_minimal_seed_does_not_crash():
 
 def test_sigma_yaml_renders_valid_yaml():
     import yaml
+
     rule = build_sigma_rule(RuleSeed(title="t", severity="medium", event_type="login"))
     text = render_sigma_yaml(rule)
     parsed = yaml.safe_load(text)
@@ -171,8 +212,12 @@ def test_sigma_mitre_tags_normalized():
 
 
 def test_yara_rule_starts_with_rule_keyword():
-    seed = RuleSeed(title="MyDetection", severity="high", src_ip="1.2.3.4",
-                    message="malicious payload encoded base64")
+    seed = RuleSeed(
+        title="MyDetection",
+        severity="high",
+        src_ip="1.2.3.4",
+        message="malicious payload encoded base64",
+    )
     text = build_yara_rule(seed)
     assert text.startswith("rule AutoGen_")
     assert "$ip_src" in text

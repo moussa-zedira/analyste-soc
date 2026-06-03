@@ -37,9 +37,14 @@ def _save_bookmarks(bookmarks: dict[str, int]) -> None:
     BOOKMARK_FILE.write_text(json.dumps(bookmarks, indent=2))
 
 
-def _event_to_normalized(event_id: int, channel: str, computer: str,
-                         message: str, src_ip: str | None,
-                         username: str | None) -> NormalizedEvent:
+def _event_to_normalized(
+    event_id: int,
+    channel: str,
+    computer: str,
+    message: str,
+    src_ip: str | None,
+    username: str | None,
+) -> NormalizedEvent:
     """Convertit un event Windows en NormalizedEvent."""
     mapping = WINLOG_EVENT_MAP.get(event_id)
     if mapping:
@@ -56,11 +61,13 @@ def _event_to_normalized(event_id: int, channel: str, computer: str,
         src_ip=src_ip,
         username=username,
         message=desc if not message else message[:500],
-        raw=json.dumps({
-            "event_id": event_id,
-            "channel": channel,
-            "computer": computer,
-        }),
+        raw=json.dumps(
+            {
+                "event_id": event_id,
+                "channel": channel,
+                "computer": computer,
+            }
+        ),
     )
 
 
@@ -87,10 +94,7 @@ def collect_windows_logs() -> None:
         for channel in CHANNELS:
             try:
                 hand = win32evtlog.OpenEventLog(None, channel)
-                flags = (
-                    win32evtlog.EVENTLOG_FORWARDS_READ
-                    | win32evtlog.EVENTLOG_SEQUENTIAL_READ
-                )
+                flags = win32evtlog.EVENTLOG_FORWARDS_READ | win32evtlog.EVENTLOG_SEQUENTIAL_READ
 
                 last_record = bookmarks.get(channel, 0)
                 win32evtlog.GetNumberOfEventLogRecords(hand)
@@ -126,8 +130,12 @@ def collect_windows_logs() -> None:
                                     src_ip = ip_val
 
                         normalized = _event_to_normalized(
-                            event_id, channel, computer,
-                            message[:500], src_ip, username,
+                            event_id,
+                            channel,
+                            computer,
+                            message[:500],
+                            src_ip,
+                            username,
                         )
                         batch.append(normalized)
                         bookmarks[channel] = record_num

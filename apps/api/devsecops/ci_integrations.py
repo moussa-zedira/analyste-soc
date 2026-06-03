@@ -78,7 +78,7 @@ jobs:
       - name: Upload SARIF results
         if: always()
         run: |
-          for scan in {' '.join(scans)}; do
+          for scan in {" ".join(scans)}; do
             RUN_ID=$(echo "${{{{ steps.${{scan}}_scan.outputs.run_id_${{scan}} }}}}")
             if [ -n "$RUN_ID" ]; then
               curl -s {api_url}/api/devsecops/runs/$RUN_ID/sarif \\
@@ -392,24 +392,35 @@ def evaluate_quality_gate(
 
 def to_junit_xml(findings: list[dict], run_id: int | str = "0") -> str:
     """Convert findings to JUnit XML format for CI/CD integration."""
-    testsuite = ET.Element("testsuite", {
-        "name": f"DevSecOps Scan Run {run_id}",
-        "tests": str(len(findings)),
-        "failures": str(sum(1 for f in findings if f.get("severity") in ("critical", "high"))),
-        "errors": "0",
-    })
+    testsuite = ET.Element(
+        "testsuite",
+        {
+            "name": f"DevSecOps Scan Run {run_id}",
+            "tests": str(len(findings)),
+            "failures": str(sum(1 for f in findings if f.get("severity") in ("critical", "high"))),
+            "errors": "0",
+        },
+    )
 
     for f in findings:
-        tc = ET.SubElement(testsuite, "testcase", {
-            "name": f.get("title", "Unknown"),
-            "classname": f.get("scan_type", "devsecops"),
-        })
+        tc = ET.SubElement(
+            testsuite,
+            "testcase",
+            {
+                "name": f.get("title", "Unknown"),
+                "classname": f.get("scan_type", "devsecops"),
+            },
+        )
 
         if f.get("severity") in ("critical", "high"):
-            failure = ET.SubElement(tc, "failure", {
-                "message": f.get("title", ""),
-                "type": f.get("severity", "high"),
-            })
+            failure = ET.SubElement(
+                tc,
+                "failure",
+                {
+                    "message": f.get("title", ""),
+                    "type": f.get("severity", "high"),
+                },
+            )
             failure.text = (
                 f"Severity: {f.get('severity')}\n"
                 f"CWE: {f.get('cwe_id', 'N/A')}\n"

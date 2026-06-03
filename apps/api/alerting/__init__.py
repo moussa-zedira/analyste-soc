@@ -84,12 +84,18 @@ async def async_dispatch_alert(incident_data: dict) -> list[dict[str, Any]]:
         if suppress:
             logger.info(
                 "alert_deduped",
-                extra={"fingerprint": getattr(fp_row, "fingerprint", None),
-                       "count": getattr(fp_row, "count", None)},
+                extra={
+                    "fingerprint": getattr(fp_row, "fingerprint", None),
+                    "count": getattr(fp_row, "count", None),
+                },
             )
-            return [{"status": "deduped",
-                     "fingerprint": getattr(fp_row, "fingerprint", None),
-                     "count": getattr(fp_row, "count", None)}]
+            return [
+                {
+                    "status": "deduped",
+                    "fingerprint": getattr(fp_row, "fingerprint", None),
+                    "count": getattr(fp_row, "count", None),
+                }
+            ]
 
         channels = db.query(AlertChannel).filter(AlertChannel.enabled.is_(True)).all()
         incident_severity = incident_data.get("severity", "low")
@@ -110,34 +116,40 @@ async def async_dispatch_alert(incident_data: dict) -> list[dict[str, Any]]:
                 continue
 
             if _check_rate_limit(channel.id):
-                results.append({
-                    "channel_id": channel.id,
-                    "channel_type": channel.channel_type,
-                    "status": "rate_limited",
-                })
+                results.append(
+                    {
+                        "channel_id": channel.id,
+                        "channel_type": channel.channel_type,
+                        "status": "rate_limited",
+                    }
+                )
                 continue
 
             try:
                 config = json.loads(channel.config_json)
             except (json.JSONDecodeError, TypeError):
                 logger.warning("Invalid config_json for channel '%s'", channel.name)
-                results.append({
-                    "channel_id": channel.id,
-                    "channel_type": channel.channel_type,
-                    "status": "error",
-                    "error": "Invalid config_json",
-                })
+                results.append(
+                    {
+                        "channel_id": channel.id,
+                        "channel_type": channel.channel_type,
+                        "status": "error",
+                        "error": "Invalid config_json",
+                    }
+                )
                 continue
 
             sender = _get_sender(channel.channel_type)
             if sender is None:
                 logger.warning("No sender for channel type: %s", channel.channel_type)
-                results.append({
-                    "channel_id": channel.id,
-                    "channel_type": channel.channel_type,
-                    "status": "error",
-                    "error": f"Unknown channel type: {channel.channel_type}",
-                })
+                results.append(
+                    {
+                        "channel_id": channel.id,
+                        "channel_type": channel.channel_type,
+                        "status": "error",
+                        "error": f"Unknown channel type: {channel.channel_type}",
+                    }
+                )
                 continue
 
             tasks.append((channel, config, sender))
@@ -198,6 +210,7 @@ async def _try_global_channels(incident: dict) -> None:
     if settings.SLACK_WEBHOOK_URL:
         try:
             from apps.api.alerting.slack import send_alert as slack_send
+
             await slack_send({"webhook_url": settings.SLACK_WEBHOOK_URL}, incident)
         except Exception:
             logger.exception("Global Slack alert failed")
@@ -205,6 +218,7 @@ async def _try_global_channels(incident: dict) -> None:
     if settings.WEBHOOK_ENABLED and settings.WEBHOOK_URL:
         try:
             from apps.api.alerting.webhook import send_alert as webhook_send
+
             await webhook_send({"url": settings.WEBHOOK_URL}, incident)
         except Exception:
             logger.exception("Global webhook alert failed")

@@ -41,7 +41,9 @@ class ScanRun(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     project_id = Column(Integer, ForeignKey("devsecops_projects.id"), nullable=True, index=True)
-    scan_type = Column(String(32), nullable=False, index=True)  # sast, sca, secrets, dast, container, iac, full
+    scan_type = Column(
+        String(32), nullable=False, index=True
+    )  # sast, sca, secrets, dast, container, iac, full
     status = Column(String(20), default="pending")  # pending, running, completed, failed
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)

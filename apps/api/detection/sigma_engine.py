@@ -39,8 +39,13 @@ logger = logging.getLogger(__name__)
 LOGSOURCE_MAP: dict[str, list[str]] = {
     "authentication": ["auth.fail", "auth.success", "auth.explicit"],
     "windows": [
-        "winlog", "auth.fail", "auth.success", "priv.escalation",
-        "account.created", "account.deleted", "service.installed",
+        "winlog",
+        "auth.fail",
+        "auth.success",
+        "priv.escalation",
+        "account.created",
+        "account.deleted",
+        "service.installed",
     ],
     "linux": ["auth.fail", "auth.success", "priv.escalation", "priv.sudo"],
     "firewall": ["network.blocked", "network.allowed"],
@@ -48,8 +53,11 @@ LOGSOURCE_MAP: dict[str, list[str]] = {
     "ids": ["ids.alert"],
     "process_creation": ["process.created"],
     "security": [
-        "auth.fail", "auth.success", "priv.escalation",
-        "account.created", "account.deleted",
+        "auth.fail",
+        "auth.success",
+        "priv.escalation",
+        "account.created",
+        "account.deleted",
     ],
     "sysmon": ["process.created", "winlog"],
     "network_connection": ["network.allowed", "network.blocked"],
@@ -127,6 +135,7 @@ def _load_pysigma():
     """Importe pySigma + backend ES. Retourne (SigmaRule, LuceneBackend) ou (None, None)."""
     try:
         from sigma.rule import SigmaRule as PySigmaRule
+
         try:
             from sigma.backends.elasticsearch import LuceneBackend
         except Exception:  # pragma: no cover - backend optionnel
@@ -172,6 +181,7 @@ class SigmaEngine:
         sources: list[tuple[str, str]] = []  # (yaml_text, origin_path)
         if source == "builtin":
             from apps.api.detection.sigma_builtin import BUILTIN_SIGMA_RULES
+
             sources = [(y, "builtin") for y in BUILTIN_SIGMA_RULES]
         elif source == "directory":
             if path is None:
@@ -188,9 +198,7 @@ class SigmaEngine:
             # Lazy fetch : delegue au caller (route /sigma/sync). Si `path`
             # pointe vers un repo deja clone, on s'en sert comme directory.
             if path is None:
-                raise ValueError(
-                    "`path` is required for source='repo' (path to cloned SigmaHQ)"
-                )
+                raise ValueError("`path` is required for source='repo' (path to cloned SigmaHQ)")
             return self.load_rules(source="directory", path=path, min_level=min_level)
         elif source == "raw":
             if not yaml_strings:
@@ -245,7 +253,8 @@ class SigmaEngine:
             except Exception as exc:
                 logger.debug(
                     "pySigma compilation failed for '%s' (%s) — fallback legacy",
-                    title, exc,
+                    title,
+                    exc,
                 )
 
         # Conditions legacy (toujours produites pour fallback eval / tests)
@@ -329,8 +338,7 @@ class SigmaEngine:
         # par regle. Les queries restent sequentielles cote DB.
         with ThreadPoolExecutor(max_workers=max_workers) as ex:
             futures = {
-                ex.submit(self.evaluate, db, rule, lookback_minutes): rule
-                for rule in self.rules
+                ex.submit(self.evaluate, db, rule, lookback_minutes): rule for rule in self.rules
             }
             for fut in as_completed(futures):
                 rule = futures[fut]

@@ -57,11 +57,13 @@ def list_log_sources(
         recent = rate_map.get(row.source, 0)
         epm = round(recent / 60, 2)
 
-        results.append({
-            "source": row.source,
-            "event_count": row.event_count,
-            "last_seen": row.last_seen.isoformat() if row.last_seen else None,
-            "events_per_minute": epm,
-        })
+        results.append(
+            {
+                "source": row.source,
+                "event_count": row.event_count,
+                "last_seen": row.last_seen.isoformat() if row.last_seen else None,
+                "events_per_minute": epm,
+            }
+        )
 
     return results

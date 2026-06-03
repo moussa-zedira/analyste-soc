@@ -43,6 +43,7 @@ def _set_env():
     os.environ["ENV"] = "dev"
 
     from apps.api.config import get_settings
+
     get_settings.cache_clear()
 
     yield

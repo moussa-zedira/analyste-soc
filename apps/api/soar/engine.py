@@ -50,10 +50,12 @@ def interpolate(value: Any, variables: dict[str, Any]) -> Any:
         m = _VAR_RE.fullmatch(value)
         if m:
             return _resolve_var(m.group(1), variables)
+
         # Otherwise do string substitution
         def _replacer(match: re.Match) -> str:
             resolved = _resolve_var(match.group(1), variables)
             return str(resolved) if resolved is not None else match.group(0)
+
         return _VAR_RE.sub(_replacer, value)
     if isinstance(value, dict):
         return {k: interpolate(v, variables) for k, v in value.items()}
@@ -112,7 +114,12 @@ def evaluate_condition(condition: dict, variables: dict[str, Any]) -> bool:
 # ---------------------------------------------------------------------------
 
 VALID_TRIGGER_TYPES = {
-    "manual", "on_incident", "on_alert", "on_threshold", "scheduled", "webhook",
+    "manual",
+    "on_incident",
+    "on_alert",
+    "on_threshold",
+    "scheduled",
+    "webhook",
 }
 
 
@@ -142,6 +149,7 @@ def validate_playbook_definition(definition: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 # Playbook Engine
 # ---------------------------------------------------------------------------
+
 
 class PlaybookEngine:
     """Execute un playbook step-by-step avec audit trail."""
@@ -203,13 +211,19 @@ class PlaybookEngine:
 
                 if "parallel" in step_def:
                     results = await self._execute_parallel(
-                        execution.id, idx, step_def, variables,
+                        execution.id,
+                        idx,
+                        step_def,
+                        variables,
                     )
                     for name, res in results.items():
                         variables["steps"][name] = res
                 else:
                     result = await self._execute_step(
-                        execution.id, idx, step_def, variables,
+                        execution.id,
+                        idx,
+                        step_def,
+                        variables,
                     )
                     step_name = step_def.get("name", f"step_{idx}")
                     variables["steps"][step_name] = result
@@ -228,7 +242,9 @@ class PlaybookEngine:
                         # Rollback
                         if rollback_stack and definition.get("rollback_on_failure", True):
                             await self._run_rollback(
-                                execution.id, rollback_stack, variables,
+                                execution.id,
+                                rollback_stack,
+                                variables,
                             )
                         break
             else:
@@ -372,9 +388,7 @@ class PlaybookEngine:
         parallel_steps = step_def.get("parallel", [])
         tasks = []
         for i, sub_step in enumerate(parallel_steps):
-            tasks.append(
-                self._execute_step(execution_id, base_idx * 100 + i, sub_step, variables)
-            )
+            tasks.append(self._execute_step(execution_id, base_idx * 100 + i, sub_step, variables))
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
         merged: dict[str, dict] = {}
         for sub_step, result in zip(parallel_steps, results_list, strict=False):
@@ -392,7 +406,9 @@ class PlaybookEngine:
         variables: dict[str, Any],
     ) -> None:
         """Execute rollback steps in reverse order."""
-        logger.info("Running rollback for execution %s (%d steps)", execution_id, len(rollback_stack))
+        logger.info(
+            "Running rollback for execution %s (%d steps)", execution_id, len(rollback_stack)
+        )
         for i, rb_def in enumerate(reversed(rollback_stack)):
             rb_step = {
                 "name": f"rollback_{i}",
@@ -406,6 +422,7 @@ class PlaybookEngine:
 # ---------------------------------------------------------------------------
 # Trigger matching
 # ---------------------------------------------------------------------------
+
 
 def match_triggers(
     db: Session,
@@ -463,6 +480,7 @@ async def fire_triggers(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _safe_json(obj: Any) -> Any:
     """Make an object JSON-safe for storage."""
     if isinstance(obj, dict):
@@ -480,9 +498,11 @@ def _publish_status(execution_id: str, status: str) -> None:
     """Publish execution status to Redis for real-time updates."""
     try:
         from apps.api.cache import get_redis_client
+
         r = get_redis_client()
         if r is not None:
             import json
+
             r.publish(
                 "soar:executions",
                 json.dumps({"execution_id": execution_id, "status": status}),

@@ -34,7 +34,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                     "name": "check_attachment",
                     "action": "lookup_hash",
                     "params": {"hash": "{{ input.attachment_hash }}", "hash_type": "sha256"},
-                    "condition": {"field": "input.attachment_hash", "operator": "exists", "value": None},
+                    "condition": {
+                        "field": "input.attachment_hash",
+                        "operator": "exists",
+                        "value": None,
+                    },
                 },
                 {
                     "name": "block_sender",
@@ -42,8 +46,16 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                     "params": {"domain": "{{ input.sender_domain }}"},
                     "condition": {
                         "any": [
-                            {"field": "steps.extract_sender_ip.malicious", "operator": "eq", "value": True},
-                            {"field": "steps.check_domain.threat_intel.malicious", "operator": "eq", "value": True},
+                            {
+                                "field": "steps.extract_sender_ip.malicious",
+                                "operator": "eq",
+                                "value": True,
+                            },
+                            {
+                                "field": "steps.check_domain.threat_intel.malicious",
+                                "operator": "eq",
+                                "value": True,
+                            },
                         ]
                     },
                 },
@@ -83,7 +95,10 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                     "name": "isolate",
                     "action": "isolate_host",
                     "params": {"hostname": "{{ input.hostname }}", "isolation_level": "full"},
-                    "rollback": {"action": "isolate_host", "params": {"hostname": "{{ input.hostname }}", "isolation_level": "none"}},
+                    "rollback": {
+                        "action": "isolate_host",
+                        "params": {"hostname": "{{ input.hostname }}", "isolation_level": "none"},
+                    },
                 },
                 {
                     "name": "check_hash",
@@ -105,18 +120,29 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "block_c2_ip",
                     "action": "block_ip_firewall",
-                    "params": {"ip": "{{ input.c2_ip }}", "direction": "both", "duration_hours": 720},
+                    "params": {
+                        "ip": "{{ input.c2_ip }}",
+                        "direction": "both",
+                        "duration_hours": 720,
+                    },
                     "condition": {"field": "input.c2_ip", "operator": "exists", "value": None},
                 },
                 {
                     "name": "quarantine_file",
                     "action": "quarantine_file",
-                    "params": {"file_path": "{{ input.file_path }}", "hostname": "{{ input.hostname }}"},
+                    "params": {
+                        "file_path": "{{ input.file_path }}",
+                        "hostname": "{{ input.hostname }}",
+                    },
                 },
                 {
                     "name": "scan_network",
                     "action": "search_events",
-                    "params": {"query": "{{ input.file_hash }}", "time_range_hours": 72, "limit": 200},
+                    "params": {
+                        "query": "{{ input.file_hash }}",
+                        "time_range_hours": 72,
+                        "limit": 200,
+                    },
                 },
                 {
                     "name": "notify_team",
@@ -153,7 +179,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "block_ip",
                     "action": "block_ip_firewall",
-                    "params": {"ip": "{{ input.src_ip }}", "direction": "inbound", "duration_hours": 24},
+                    "params": {
+                        "ip": "{{ input.src_ip }}",
+                        "direction": "inbound",
+                        "duration_hours": 24,
+                    },
                 },
                 {
                     "name": "check_accounts",
@@ -164,7 +194,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                     "name": "reset_passwords",
                     "action": "rotate_credentials",
                     "params": {"username": "{{ input.target_username }}", "notify_user": True},
-                    "condition": {"field": "input.successful_login", "operator": "eq", "value": True},
+                    "condition": {
+                        "field": "input.successful_login",
+                        "operator": "eq",
+                        "value": True,
+                    },
                 },
                 {
                     "name": "update_incident",
@@ -193,12 +227,19 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                     "name": "isolate",
                     "action": "isolate_host",
                     "params": {"hostname": "{{ input.hostname }}", "isolation_level": "partial"},
-                    "rollback": {"action": "isolate_host", "params": {"hostname": "{{ input.hostname }}", "isolation_level": "none"}},
+                    "rollback": {
+                        "action": "isolate_host",
+                        "params": {"hostname": "{{ input.hostname }}", "isolation_level": "none"},
+                    },
                 },
                 {
                     "name": "capture_traffic",
                     "action": "capture_pcap",
-                    "params": {"interface": "eth0", "filter": "host {{ input.src_ip }}", "duration_seconds": 300},
+                    "params": {
+                        "interface": "eth0",
+                        "filter": "host {{ input.src_ip }}",
+                        "duration_seconds": 300,
+                    },
                 },
                 {
                     "name": "check_dest",
@@ -218,7 +259,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                         "subject": "Data exfiltration alert — {{ input.username }}",
                         "body": "Suspicious data transfer detected from {{ input.hostname }}. Investigation underway.",
                     },
-                    "condition": {"field": "input.manager_email", "operator": "exists", "value": None},
+                    "condition": {
+                        "field": "input.manager_email",
+                        "operator": "exists",
+                        "value": None,
+                    },
                 },
                 {
                     "name": "timeline",
@@ -257,13 +302,21 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "block_c2_ip",
                     "action": "block_ip_firewall",
-                    "params": {"ip": "{{ input.c2_ip }}", "direction": "both", "duration_hours": 8760},
+                    "params": {
+                        "ip": "{{ input.c2_ip }}",
+                        "direction": "both",
+                        "duration_hours": 8760,
+                    },
                     "condition": {"field": "input.c2_ip", "operator": "exists", "value": None},
                 },
                 {
                     "name": "check_lateral",
                     "action": "search_events",
-                    "params": {"query": "{{ input.hostname }}", "time_range_hours": 24, "limit": 500},
+                    "params": {
+                        "query": "{{ input.hostname }}",
+                        "time_range_hours": 24,
+                        "limit": 500,
+                    },
                 },
                 {
                     "name": "verify_backups",
@@ -278,7 +331,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                         "summary": "RANSOMWARE on {{ input.hostname }} — immediate response required",
                         "severity": "critical",
                     },
-                    "condition": {"field": "input.pagerduty_key", "operator": "exists", "value": None},
+                    "condition": {
+                        "field": "input.pagerduty_key",
+                        "operator": "exists",
+                        "value": None,
+                    },
                 },
                 {
                     "name": "slack_alert",
@@ -310,7 +367,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "check_data_access",
                     "action": "search_events",
-                    "params": {"query": "{{ input.username }}", "time_range_hours": 168, "limit": 500},
+                    "params": {
+                        "query": "{{ input.username }}",
+                        "time_range_hours": 168,
+                        "limit": 500,
+                    },
                 },
                 {
                     "name": "geoip_check",
@@ -352,13 +413,28 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "identify_sources",
                     "action": "search_events",
-                    "params": {"query": "{{ input.target_ip }}", "time_range_hours": 1, "limit": 500},
+                    "params": {
+                        "query": "{{ input.target_ip }}",
+                        "time_range_hours": 1,
+                        "limit": 500,
+                    },
                 },
                 {
                     "name": "block_top_ips",
                     "action": "update_waf_rules",
-                    "params": {"rule_type": "rate_limit", "pattern": "{{ input.target_ip }}", "action": "block"},
-                    "rollback": {"action": "update_waf_rules", "params": {"rule_type": "rate_limit", "pattern": "{{ input.target_ip }}", "action": "remove"}},
+                    "params": {
+                        "rule_type": "rate_limit",
+                        "pattern": "{{ input.target_ip }}",
+                        "action": "block",
+                    },
+                    "rollback": {
+                        "action": "update_waf_rules",
+                        "params": {
+                            "rule_type": "rate_limit",
+                            "pattern": "{{ input.target_ip }}",
+                            "action": "remove",
+                        },
+                    },
                 },
                 {
                     "name": "geoip_analysis",
@@ -373,7 +449,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                         "subject": "DDoS attack in progress — requesting upstream filtering",
                         "body": "DDoS targeting {{ input.target_ip }}. Peak: {{ input.peak_rps }} rps. Source analysis attached.",
                     },
-                    "condition": {"field": "input.isp_contact", "operator": "exists", "value": None},
+                    "condition": {
+                        "field": "input.isp_contact",
+                        "operator": "exists",
+                        "value": None,
+                    },
                 },
                 {
                     "name": "notify_team",
@@ -392,7 +472,9 @@ BUILTIN_PLAYBOOKS: list[dict] = [
         "description": "Reponse compromission de compte: desactivation, revocation sessions, verification mouvement lateral.",
         "category": "authentication",
         "trigger_type": "on_alert",
-        "trigger_config": {"rule_ids": ["account_compromise", "credential_theft", "impossible_travel"]},
+        "trigger_config": {
+            "rule_ids": ["account_compromise", "credential_theft", "impossible_travel"]
+        },
         "tags": ["compromise", "account", "lateral"],
         "definition": {
             "rollback_on_failure": False,
@@ -400,7 +482,10 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "disable_account",
                     "action": "disable_user",
-                    "params": {"username": "{{ input.username }}", "reason": "Suspected account compromise"},
+                    "params": {
+                        "username": "{{ input.username }}",
+                        "reason": "Suspected account compromise",
+                    },
                 },
                 {
                     "name": "revoke_sessions",
@@ -448,7 +533,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "search_affected",
                     "action": "search_events",
-                    "params": {"query": "{{ input.cve_id }}", "time_range_hours": 720, "limit": 500},
+                    "params": {
+                        "query": "{{ input.cve_id }}",
+                        "time_range_hours": 720,
+                        "limit": 500,
+                    },
                 },
                 {
                     "name": "schedule_patch",
@@ -518,7 +607,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                     "name": "revoke_if_tor",
                     "action": "revoke_sessions",
                     "params": {"username": "{{ input.username }}"},
-                    "condition": {"field": "steps.check_tor.is_tor_exit", "operator": "eq", "value": True},
+                    "condition": {
+                        "field": "steps.check_tor.is_tor_exit",
+                        "operator": "eq",
+                        "value": True,
+                    },
                 },
                 {
                     "name": "notify_user",
@@ -553,7 +646,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "block_ip",
                     "action": "block_ip_firewall",
-                    "params": {"ip": "{{ input.c2_ip }}", "direction": "both", "duration_hours": 8760},
+                    "params": {
+                        "ip": "{{ input.c2_ip }}",
+                        "direction": "both",
+                        "duration_hours": 8760,
+                    },
                     "condition": {"field": "input.c2_ip", "operator": "exists", "value": None},
                 },
                 {
@@ -564,7 +661,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "check_other_hosts",
                     "action": "search_events",
-                    "params": {"query": "{{ input.c2_domain }}", "time_range_hours": 168, "limit": 500},
+                    "params": {
+                        "query": "{{ input.c2_domain }}",
+                        "time_range_hours": 168,
+                        "limit": 500,
+                    },
                 },
                 {
                     "name": "isolate_host",
@@ -599,7 +700,10 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "quarantine",
                     "action": "quarantine_file",
-                    "params": {"file_path": "{{ input.file_path }}", "hostname": "{{ input.hostname }}"},
+                    "params": {
+                        "file_path": "{{ input.file_path }}",
+                        "hostname": "{{ input.hostname }}",
+                    },
                 },
                 {
                     "name": "check_hash",
@@ -609,7 +713,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "access_logs",
                     "action": "search_events",
-                    "params": {"query": "{{ input.file_path }}", "time_range_hours": 168, "limit": 500},
+                    "params": {
+                        "query": "{{ input.file_path }}",
+                        "time_range_hours": 168,
+                        "limit": 500,
+                    },
                 },
                 {
                     "name": "check_source_ip",
@@ -619,7 +727,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "waf_rule",
                     "action": "update_waf_rules",
-                    "params": {"rule_type": "path", "pattern": "{{ input.file_path }}", "action": "block"},
+                    "params": {
+                        "rule_type": "path",
+                        "pattern": "{{ input.file_path }}",
+                        "action": "block",
+                    },
                 },
                 {
                     "name": "remove_persistence",
@@ -647,7 +759,10 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "revoke_privileges",
                     "action": "disable_user",
-                    "params": {"username": "{{ input.username }}", "reason": "Privilege escalation detected"},
+                    "params": {
+                        "username": "{{ input.username }}",
+                        "reason": "Privilege escalation detected",
+                    },
                 },
                 {
                     "name": "revoke_sessions",
@@ -667,7 +782,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "report",
                     "action": "generate_report",
-                    "params": {"incident_id": "{{ input.incident_id }}", "format": "json", "include_timeline": True},
+                    "params": {
+                        "incident_id": "{{ input.incident_id }}",
+                        "format": "json",
+                        "include_timeline": True,
+                    },
                 },
             ],
         },
@@ -686,7 +805,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "identify_affected",
                     "action": "search_events",
-                    "params": {"query": "{{ input.package_name }}", "time_range_hours": 720, "limit": 500},
+                    "params": {
+                        "query": "{{ input.package_name }}",
+                        "time_range_hours": 720,
+                        "limit": 500,
+                    },
                 },
                 {
                     "name": "check_hash",
@@ -713,7 +836,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                         "summary": "Supply chain attack — {{ input.package_name }} compromised",
                         "severity": "critical",
                     },
-                    "condition": {"field": "input.pagerduty_key", "operator": "exists", "value": None},
+                    "condition": {
+                        "field": "input.pagerduty_key",
+                        "operator": "exists",
+                        "value": None,
+                    },
                 },
                 {
                     "name": "export_iocs",
@@ -744,13 +871,21 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                     },
                     "rollback": {
                         "action": "update_waf_rules",
-                        "params": {"rule_type": "virtual_patch", "pattern": "{{ input.exploit_pattern }}", "action": "remove"},
+                        "params": {
+                            "rule_type": "virtual_patch",
+                            "pattern": "{{ input.exploit_pattern }}",
+                            "action": "remove",
+                        },
                     },
                 },
                 {
                     "name": "search_exploitation",
                     "action": "search_events",
-                    "params": {"query": "{{ input.exploit_signature }}", "time_range_hours": 720, "limit": 500},
+                    "params": {
+                        "query": "{{ input.exploit_signature }}",
+                        "time_range_hours": 720,
+                        "limit": 500,
+                    },
                 },
                 {
                     "name": "check_indicators",
@@ -761,8 +896,16 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                 {
                     "name": "block_known_ips",
                     "action": "block_ip_firewall",
-                    "params": {"ip": "{{ input.attacker_ip }}", "direction": "both", "duration_hours": 8760},
-                    "condition": {"field": "input.attacker_ip", "operator": "exists", "value": None},
+                    "params": {
+                        "ip": "{{ input.attacker_ip }}",
+                        "direction": "both",
+                        "duration_hours": 8760,
+                    },
+                    "condition": {
+                        "field": "input.attacker_ip",
+                        "operator": "exists",
+                        "value": None,
+                    },
                 },
                 {
                     "name": "enhanced_monitoring",
@@ -772,7 +915,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                         "filter": "{{ input.pcap_filter }}",
                         "duration_seconds": 3600,
                     },
-                    "condition": {"field": "input.pcap_filter", "operator": "exists", "value": None},
+                    "condition": {
+                        "field": "input.pcap_filter",
+                        "operator": "exists",
+                        "value": None,
+                    },
                 },
                 {
                     "name": "pagerduty",
@@ -782,7 +929,11 @@ BUILTIN_PLAYBOOKS: list[dict] = [
                         "summary": "Zero-day {{ input.cve_id }} — virtual patch applied, hunting in progress",
                         "severity": "critical",
                     },
-                    "condition": {"field": "input.pagerduty_key", "operator": "exists", "value": None},
+                    "condition": {
+                        "field": "input.pagerduty_key",
+                        "operator": "exists",
+                        "value": None,
+                    },
                 },
                 {
                     "name": "slack_notify",

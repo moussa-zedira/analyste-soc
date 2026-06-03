@@ -35,7 +35,7 @@ from apps.api.models.uba import UserBaseline
 
 LOOKBACK_MIN = 10
 SMOOTHING_ALPHA = 0.5  # Laplace smoothing
-TOP_N_KEEP = 100       # Cap sur src_ips/user_agents pour eviter la croissance
+TOP_N_KEEP = 100  # Cap sur src_ips/user_agents pour eviter la croissance
 HIGH_RISK_THRESHOLD = 70.0
 
 # Pondere chaque dimension : geo et user_agent sont les plus discriminants,
@@ -57,8 +57,13 @@ SCORE_HISTORY_MAX = 168
 
 # Buckets day-of-week (0=lundi .. 6=dimanche, on collapse sam/dim en weekend)
 DAY_BUCKETS: dict[int, str] = {
-    0: "weekday", 1: "weekday", 2: "weekday", 3: "weekday", 4: "weekday",
-    5: "weekend", 6: "weekend",
+    0: "weekday",
+    1: "weekday",
+    2: "weekday",
+    3: "weekday",
+    4: "weekday",
+    5: "weekend",
+    6: "weekend",
 }
 
 
@@ -126,7 +131,9 @@ def _bootstrap_weight(total_events: int) -> float:
     return min(total_events / float(BOOTSTRAP_MIN), 1.0)
 
 
-def _append_history(history: list[dict[str, Any]] | None, score: float, ts: datetime) -> list[dict[str, Any]]:
+def _append_history(
+    history: list[dict[str, Any]] | None, score: float, ts: datetime
+) -> list[dict[str, Any]]:
     h = list(history or [])
     h.append({"ts": ts.isoformat(), "score": round(score, 2)})
     if len(h) > SCORE_HISTORY_MAX:
@@ -148,13 +155,7 @@ def update_baselines(db: Session, since: datetime | None = None) -> dict[str, in
     if since is None:
         since = datetime.now(UTC) - timedelta(minutes=LOOKBACK_MIN)
 
-    events = (
-        db.query(Event)
-        .filter(Event.ts >= since)
-        .order_by(Event.ts.asc())
-        .limit(20000)
-        .all()
-    )
+    events = db.query(Event).filter(Event.ts >= since).order_by(Event.ts.asc()).limit(20000).all()
 
     by_entity: dict[tuple[str, str], list[Event]] = {}
     for ev in events:
@@ -182,8 +183,13 @@ def update_baselines(db: Session, since: datetime | None = None) -> dict[str, in
                 entity_type=etype,
                 entity_key=ekey,
                 total_events=0,
-                hours={}, event_types={}, geos={}, src_ips={}, user_agents={},
-                current_score=0.0, score_reasons={},
+                hours={},
+                event_types={},
+                geos={},
+                src_ips={},
+                user_agents={},
+                current_score=0.0,
+                score_reasons={},
                 previous_score=None,
                 score_history=[],
                 peer_group_id=etype,
@@ -210,9 +216,7 @@ def update_baselines(db: Session, since: datetime | None = None) -> dict[str, in
         baseline.score_reasons = {
             k: round(v / max(len(evs), 1), 2) for k, v in score_per_dim.items()
         }
-        baseline.score_history = _append_history(
-            baseline.score_history, weighted_score, now
-        )
+        baseline.score_history = _append_history(baseline.score_history, weighted_score, now)
         if weighted_score >= HIGH_RISK_THRESHOLD:
             high_risk += 1
 
@@ -356,7 +360,10 @@ def _score_event(
 
 
 def list_baselines(
-    db: Session, *, min_score: float = 0.0, limit: int = 50,
+    db: Session,
+    *,
+    min_score: float = 0.0,
+    limit: int = 50,
 ) -> list[dict[str, Any]]:
     q = (
         db.query(UserBaseline)
@@ -399,7 +406,8 @@ def _baseline_to_dict(b: UserBaseline) -> dict[str, Any]:
         "previous_score": b.previous_score,
         "score_velocity": (
             round((b.current_score or 0.0) - (b.previous_score or 0.0), 2)
-            if b.previous_score is not None else 0.0
+            if b.previous_score is not None
+            else 0.0
         ),
         "peer_group_id": b.peer_group_id,
         "peer_deviation": b.peer_deviation,

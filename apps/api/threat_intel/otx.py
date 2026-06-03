@@ -32,6 +32,7 @@ class OTXProvider:
     async def _check_rate_limit(self) -> bool:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return True
@@ -46,6 +47,7 @@ class OTXProvider:
     async def _increment_counter(self) -> None:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return

@@ -193,8 +193,12 @@ def post_evidence(
 ) -> dict[str, Any]:
     try:
         ev = add_evidence(
-            db, case_id,
-            kind=body.kind, title=body.title, content=body.content, extra=body.extra,
+            db,
+            case_id,
+            kind=body.kind,
+            title=body.title,
+            content=body.content,
+            extra=body.extra,
         )
     except LookupError:
         raise HTTPException(status_code=404, detail="case not found")

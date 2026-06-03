@@ -53,7 +53,9 @@ class GitHubIssuesConnector(OutboundConnector):
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
             r = await client.post(url, json=body, headers=self._headers())
             if r.status_code >= 400:
-                raise RuntimeError(f"github_create_failed status={r.status_code} body={r.text[:300]}")
+                raise RuntimeError(
+                    f"github_create_failed status={r.status_code} body={r.text[:300]}"
+                )
             data = r.json()
         number = data.get("number")
         if number is None:

@@ -177,9 +177,7 @@ def get_scan_stats(db: Session = Depends(get_db)) -> ScanStatsOut:
 
     # Par statut
     by_status_rows = (
-        db.query(ScanResult.status, func.count(ScanResult.id))
-        .group_by(ScanResult.status)
-        .all()
+        db.query(ScanResult.status, func.count(ScanResult.id)).group_by(ScanResult.status).all()
     )
     by_status = {row[0]: row[1] for row in by_status_rows}
 
@@ -233,12 +231,7 @@ def list_scans(
             pass
 
     total = query.count()
-    scans = (
-        query.order_by(ScanResult.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    scans = query.order_by(ScanResult.created_at.desc()).offset(offset).limit(limit).all()
 
     return PaginatedScans(
         items=[_row_to_out(s) for s in scans],
@@ -253,16 +246,12 @@ def get_scan(scan_id: str, db: Session = Depends(get_db)) -> ScanResultDetail:
     """Recupere un scan avec son result_json complet."""
     scan = db.get(ScanResult, scan_id)
     if not scan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
     return _row_to_detail(scan)
 
 
 @router.post("", response_model=ScanResultDetail, status_code=status.HTTP_201_CREATED)
-def create_scan(
-    payload: ScanResultCreate, db: Session = Depends(get_db)
-) -> ScanResultDetail:
+def create_scan(payload: ScanResultCreate, db: Session = Depends(get_db)) -> ScanResultDetail:
     """Enregistre un nouveau resultat de scan."""
     # Validate that result_json is valid JSON
     try:
@@ -297,9 +286,7 @@ def delete_scan(scan_id: str, db: Session = Depends(get_db)) -> None:
     """Supprime un scan."""
     scan = db.get(ScanResult, scan_id)
     if not scan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
     db.delete(scan)
     db.commit()
 
@@ -314,9 +301,7 @@ def export_scan_json(scan_id: str, db: Session = Depends(get_db)):
     """Telecharge le scan au format JSON."""
     scan = db.get(ScanResult, scan_id)
     if not scan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
 
     export_data = {
         "id": scan.id,
@@ -347,9 +332,7 @@ def export_scan_csv(scan_id: str, db: Session = Depends(get_db)):
     """Telecharge les donnees extraites au format CSV (Excel-compatible)."""
     scan = db.get(ScanResult, scan_id)
     if not scan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
 
     try:
         result_data = json.loads(scan.result_json)
@@ -407,25 +390,29 @@ def _extract_csv_rows(data: dict | list, scan: ScanResult) -> list[dict]:
     creds = data.get("credentials", [])
     if creds:
         for c in creds:
-            rows.append({
-                **meta,
-                "type": c.get("type", ""),
-                "username": c.get("username", ""),
-                "password": c.get("password", c.get("hash", "")),
-                "source": c.get("source", ""),
-            })
+            rows.append(
+                {
+                    **meta,
+                    "type": c.get("type", ""),
+                    "username": c.get("username", ""),
+                    "password": c.get("password", c.get("hash", "")),
+                    "source": c.get("source", ""),
+                }
+            )
         return rows
 
     # --- lfi-exploit : fichiers lus ---
     files = data.get("files", data.get("results", []))
     if isinstance(files, list) and files and isinstance(files[0], dict):
         for f in files:
-            rows.append({
-                **meta,
-                "path": f.get("path", f.get("file", "")),
-                "status": f.get("status", ""),
-                "content": str(f.get("content", f.get("data", "")))[:5000],
-            })
+            rows.append(
+                {
+                    **meta,
+                    "path": f.get("path", f.get("file", "")),
+                    "status": f.get("status", ""),
+                    "content": str(f.get("content", f.get("data", "")))[:5000],
+                }
+            )
         return rows
 
     # --- crawl : emails, tokens, endpoints ---
@@ -434,7 +421,9 @@ def _extract_csv_rows(data: dict | list, scan: ScanResult) -> list[dict]:
         if items:
             for item in items:
                 if isinstance(item, dict):
-                    rows.append({**meta, "category": key, **{str(k): str(v) for k, v in item.items()}})
+                    rows.append(
+                        {**meta, "category": key, **{str(k): str(v) for k, v in item.items()}}
+                    )
                 else:
                     rows.append({**meta, "category": key, "value": str(item)})
 
@@ -447,7 +436,9 @@ def _extract_csv_rows(data: dict | list, scan: ScanResult) -> list[dict]:
         if isinstance(items, list) and items:
             for item in items:
                 if isinstance(item, dict):
-                    rows.append({**meta, "category": key, **{str(k): str(v) for k, v in item.items()}})
+                    rows.append(
+                        {**meta, "category": key, **{str(k): str(v) for k, v in item.items()}}
+                    )
                 else:
                     rows.append({**meta, "category": key, "value": str(item)})
 
@@ -458,7 +449,12 @@ def _extract_csv_rows(data: dict | list, scan: ScanResult) -> list[dict]:
     findings = _extract_findings(data)
     if findings:
         for f in findings:
-            flat = {str(k): str(v) if not isinstance(v, (dict, list)) else json.dumps(v, ensure_ascii=False) for k, v in f.items()}
+            flat = {
+                str(k): str(v)
+                if not isinstance(v, (dict, list))
+                else json.dumps(v, ensure_ascii=False)
+                for k, v in f.items()
+            }
             rows.append({**meta, **flat})
         return rows
 
@@ -484,9 +480,7 @@ def export_scan_pdf(scan_id: str, db: Session = Depends(get_db)):
     """Telecharge un rapport PDF professionnel du scan."""
     scan = db.get(ScanResult, scan_id)
     if not scan:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
 
     pdf_bytes = _generate_pdf_report(scan)
     filename = f"scan_{scan.module_id}_{scan_id[:8]}.pdf"
@@ -675,11 +669,7 @@ def _generate_pdf_report(scan: ScanResult) -> bytes:
     # --- Header ---
     elements.append(Paragraph("Pentest Scan Report", title_style))
 
-    created_str = (
-        scan.created_at.strftime("%Y-%m-%d %H:%M:%S UTC")
-        if scan.created_at
-        else "N/A"
-    )
+    created_str = scan.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if scan.created_at else "N/A"
     header_data = [
         ["Date:", created_str],
         ["Module:", scan.module_id],
@@ -757,9 +747,7 @@ def _generate_pdf_report(scan: ScanResult) -> bytes:
                 detail = detail[:117] + "..."
             table_data.append([str(idx), name, sev.upper(), detail])
 
-        findings_table = Table(
-            table_data, colWidths=[1 * cm, 5 * cm, 2.5 * cm, 8.5 * cm]
-        )
+        findings_table = Table(table_data, colWidths=[1 * cm, 5 * cm, 2.5 * cm, 8.5 * cm])
         findings_table.setStyle(
             TableStyle(
                 [
@@ -790,9 +778,7 @@ def _generate_pdf_report(scan: ScanResult) -> bytes:
         elements.append(findings_table)
     else:
         # No structured findings — dump the raw JSON in a readable format
-        elements.append(
-            Paragraph("No structured findings extracted. Raw result data:", body_style)
-        )
+        elements.append(Paragraph("No structured findings extracted. Raw result data:", body_style))
         elements.append(Spacer(1, 3 * mm))
         raw_text = json.dumps(result_data, indent=2, ensure_ascii=False)
         # Truncate if too long

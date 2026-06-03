@@ -30,7 +30,9 @@ class ChatMessage(Base):
     )
     role: Mapped[str] = mapped_column(Text, nullable=False)  # user | assistant | system
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    provider: Mapped[str | None] = mapped_column(Text, nullable=True)  # anthropic | openai | ollama | stub
+    provider: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # anthropic | openai | ollama | stub
     model: Mapped[str | None] = mapped_column(Text, nullable=True)
     tokens_in: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     tokens_out: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

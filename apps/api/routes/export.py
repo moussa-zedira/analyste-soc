@@ -72,17 +72,21 @@ def _build_scan_pdf(scan: ScanHistory) -> bytes:
         ["Date", scan.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if scan.created_at else "N/A"],
     ]
     meta_table = Table(meta_data, colWidths=[100, 350])
-    meta_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#1a1a2e")),
-        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#00BCD4")),
-        ("TEXTCOLOR", (1, 0), (1, -1), colors.white),
-        ("BACKGROUND", (1, 0), (1, -1), colors.HexColor("#0d0d1a")),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
-    ]))
+    meta_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#1a1a2e")),
+                ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#00BCD4")),
+                ("TEXTCOLOR", (1, 0), (1, -1), colors.white),
+                ("BACKGROUND", (1, 0), (1, -1), colors.HexColor("#0d0d1a")),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
+            ]
+        )
+    )
     elements.append(meta_table)
 
     # Open ports
@@ -91,23 +95,29 @@ def _build_scan_pdf(scan: ScanHistory) -> bytes:
         elements.append(Paragraph("Open Ports", heading_style))
         port_data = [["Port", "Service", "State", "Banner"]]
         for p in open_ports:
-            port_data.append([
-                str(p.get("port", "")),
-                p.get("service", ""),
-                p.get("state", ""),
-                (p.get("banner") or "")[:60],
-            ])
+            port_data.append(
+                [
+                    str(p.get("port", "")),
+                    p.get("service", ""),
+                    p.get("state", ""),
+                    (p.get("banner") or "")[:60],
+                ]
+            )
         port_table = Table(port_data, colWidths=[60, 80, 60, 250])
-        port_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#00BCD4")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#0d0d1a")),
-            ("TEXTCOLOR", (0, 1), (-1, -1), colors.white),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ]))
+        port_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#00BCD4")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#0d0d1a")),
+                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ]
+            )
+        )
         elements.append(port_table)
 
     # GeoIP
@@ -117,15 +127,19 @@ def _build_scan_pdf(scan: ScanHistory) -> bytes:
         geo_data = [[k, str(v)] for k, v in geo.items() if v is not None]
         if geo_data:
             geo_table = Table(geo_data, colWidths=[100, 350])
-            geo_table.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#1a1a2e")),
-                ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
-                ("BACKGROUND", (1, 0), (1, -1), colors.HexColor("#0d0d1a")),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ]))
+            geo_table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#1a1a2e")),
+                        ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                        ("BACKGROUND", (1, 0), (1, -1), colors.HexColor("#0d0d1a")),
+                        ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ]
+                )
+            )
             elements.append(geo_table)
 
     # Security score details
@@ -134,22 +148,28 @@ def _build_scan_pdf(scan: ScanHistory) -> bytes:
         elements.append(Paragraph("Security Score Details", heading_style))
         score_data = [["Check", "Status", "Points"]]
         for d in score_details:
-            score_data.append([
-                d.get("check", ""),
-                "PASS" if d.get("passed") else "FAIL",
-                str(d.get("points", 0)),
-            ])
+            score_data.append(
+                [
+                    d.get("check", ""),
+                    "PASS" if d.get("passed") else "FAIL",
+                    str(d.get("points", 0)),
+                ]
+            )
         score_table = Table(score_data, colWidths=[250, 60, 60])
-        score_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#00BCD4")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#0d0d1a")),
-            ("TEXTCOLOR", (0, 1), (-1, -1), colors.white),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ]))
+        score_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#00BCD4")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#0d0d1a")),
+                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
         elements.append(score_table)
 
     # CVEs
@@ -158,30 +178,38 @@ def _build_scan_pdf(scan: ScanHistory) -> bytes:
         elements.append(Paragraph("Vulnerabilities (CVE)", heading_style))
         cve_data = [["CVE ID", "Severity", "Description"]]
         for c in cves:
-            cve_data.append([
-                c.get("id", ""),
-                c.get("severity", ""),
-                (c.get("description") or "")[:80],
-            ])
+            cve_data.append(
+                [
+                    c.get("id", ""),
+                    c.get("severity", ""),
+                    (c.get("description") or "")[:80],
+                ]
+            )
         cve_table = Table(cve_data, colWidths=[100, 60, 290])
-        cve_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EF4444")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#0d0d1a")),
-            ("TEXTCOLOR", (0, 1), (-1, -1), colors.white),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ]))
+        cve_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EF4444")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#0d0d1a")),
+                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ]
+            )
+        )
         elements.append(cve_table)
 
     # Footer
     elements.append(Spacer(1, 10 * mm))
-    elements.append(Paragraph(
-        f"Generated by CyberDef SIEM — {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
-        ParagraphStyle("Footer", parent=normal, fontSize=7, textColor=colors.grey),
-    ))
+    elements.append(
+        Paragraph(
+            f"Generated by CyberDef SIEM — {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+            ParagraphStyle("Footer", parent=normal, fontSize=7, textColor=colors.grey),
+        )
+    )
 
     doc.build(elements)
     return buf.getvalue()
@@ -240,20 +268,27 @@ def _build_incident_pdf(incident: Incident) -> bytes:
         ["Status", incident.status],
         ["Rule", incident.rule_id],
         ["Entity", incident.entity_key],
-        ["Created", incident.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if incident.created_at else "N/A"],
+        [
+            "Created",
+            incident.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if incident.created_at else "N/A",
+        ],
     ]
     meta_table = Table(meta_data, colWidths=[100, 350])
-    meta_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#1a1a2e")),
-        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#00BCD4")),
-        ("TEXTCOLOR", (1, 0), (1, -1), colors.white),
-        ("BACKGROUND", (1, 0), (1, -1), colors.HexColor("#0d0d1a")),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
-    ]))
+    meta_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#1a1a2e")),
+                ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#00BCD4")),
+                ("TEXTCOLOR", (1, 0), (1, -1), colors.white),
+                ("BACKGROUND", (1, 0), (1, -1), colors.HexColor("#0d0d1a")),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
+            ]
+        )
+    )
     elements.append(meta_table)
 
     # Description
@@ -265,32 +300,40 @@ def _build_incident_pdf(incident: Incident) -> bytes:
         elements.append(Paragraph(f"Related Events ({len(incident.events)})", heading_style))
         ev_data = [["Timestamp", "Type", "Source", "Severity", "Source IP"]]
         for ev in incident.events[:50]:
-            ev_data.append([
-                ev.ts.strftime("%H:%M:%S") if ev.ts else "",
-                ev.event_type or "",
-                ev.source or "",
-                ev.severity or "",
-                ev.src_ip or "",
-            ])
+            ev_data.append(
+                [
+                    ev.ts.strftime("%H:%M:%S") if ev.ts else "",
+                    ev.event_type or "",
+                    ev.source or "",
+                    ev.severity or "",
+                    ev.src_ip or "",
+                ]
+            )
         ev_table = Table(ev_data, colWidths=[70, 90, 70, 60, 100])
-        ev_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#00BCD4")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-            ("FONTSIZE", (0, 0), (-1, -1), 7),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#0d0d1a")),
-            ("TEXTCOLOR", (0, 1), (-1, -1), colors.white),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-            ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ]))
+        ev_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#00BCD4")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#0d0d1a")),
+                    ("TEXTCOLOR", (0, 1), (-1, -1), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#333355")),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ]
+            )
+        )
         elements.append(ev_table)
 
     # Footer
     elements.append(Spacer(1, 10 * mm))
-    elements.append(Paragraph(
-        f"Generated by CyberDef SIEM — {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
-        ParagraphStyle("Footer", parent=normal, fontSize=7, textColor=colors.grey),
-    ))
+    elements.append(
+        Paragraph(
+            f"Generated by CyberDef SIEM — {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+            ParagraphStyle("Footer", parent=normal, fontSize=7, textColor=colors.grey),
+        )
+    )
 
     doc.build(elements)
     return buf.getvalue()

@@ -107,11 +107,13 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
     try:
         if cap == "sigma.rules":
             from apps.api.models.sigma_rule import SigmaRule
+
             n = db.query(SigmaRule).count()
             evidence.append(_metric(f"sigma_rules={n}", n))
         elif cap == "ioc.feeds":
             try:
                 from apps.api.models.ioc import IOC, ThreatFeed
+
                 n_active = db.query(IOC).filter(IOC.state == "active").count()
                 evidence.append(_metric(f"iocs_active={n_active}", n_active))
                 rows = (
@@ -128,10 +130,12 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                 logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap == "uba.profiling":
             from apps.api.models.uba import UserBaseline
+
             n = db.query(UserBaseline).count()
             evidence.append(_metric(f"profiles={n}", n))
         elif cap == "case_mgmt.sla":
             from apps.api.models.case import Case
+
             total = db.query(Case).count()
             evidence.append(_metric(f"cases_total={total}", total))
             try:
@@ -149,49 +153,49 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
                 ]
                 if ttrs:
                     mean_ttr = sum(ttrs) / len(ttrs)
-                    evidence.append(_metric(
-                        f"mean_ttr_minutes_30d={mean_ttr:.1f}",
-                        round(mean_ttr, 1),
-                    ))
+                    evidence.append(
+                        _metric(
+                            f"mean_ttr_minutes_30d={mean_ttr:.1f}",
+                            round(mean_ttr, 1),
+                        )
+                    )
                 evidence.append(_metric(f"cases_closed_30d={len(closed)}", len(closed)))
             except Exception:
                 logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap == "audit.immutable":
             from apps.api.models.pentest_audit import PentestAuditLog
+
             n = db.query(PentestAuditLog).count()
             evidence.append(_metric(f"audit_entries={n}", n))
             try:
-                last = (
-                    db.query(PentestAuditLog)
-                    .order_by(PentestAuditLog.id.desc())
-                    .first()
-                )
+                last = db.query(PentestAuditLog).order_by(PentestAuditLog.id.desc()).first()
                 if last is not None:
                     ts_attr = getattr(last, "ts", None) or getattr(last, "created_at", None)
                     if ts_attr is not None:
-                        evidence.append({
-                            "type": "metric",
-                            "ref": f"last_audit={ts_attr.isoformat()}",
-                            "value": ts_attr.isoformat(),
-                        })
+                        evidence.append(
+                            {
+                                "type": "metric",
+                                "ref": f"last_audit={ts_attr.isoformat()}",
+                                "value": ts_attr.isoformat(),
+                            }
+                        )
             except Exception:
                 logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap == "audit.user_actions":
             try:
                 from apps.api.models.audit_log import AuditLog
+
                 n = db.query(AuditLog).count()
                 evidence.append(_metric(f"audit_user_entries={n}", n))
-                last = (
-                    db.query(AuditLog)
-                    .order_by(AuditLog.created_at.desc())
-                    .first()
-                )
+                last = db.query(AuditLog).order_by(AuditLog.created_at.desc()).first()
                 if last is not None and last.created_at is not None:
-                    evidence.append({
-                        "type": "metric",
-                        "ref": f"last_user_action={last.created_at.isoformat()}",
-                        "value": last.created_at.isoformat(),
-                    })
+                    evidence.append(
+                        {
+                            "type": "metric",
+                            "ref": f"last_user_action={last.created_at.isoformat()}",
+                            "value": last.created_at.isoformat(),
+                        }
+                    )
             except Exception:
                 logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap in {
@@ -203,32 +207,37 @@ def _capability_evidence(cap: str, db: Session | None) -> list[dict[str, Any]]:
         }:
             try:
                 from apps.api.models.incident import Incident
+
                 resolved = (
                     db.query(Incident)
                     .filter(Incident.status.in_(["resolved", "closed"]))
                     .filter(Incident.updated_at >= cutoff_30d)
                     .count()
                 )
-                evidence.append(_metric(
-                    f"incidents_resolved_30d={resolved}",
-                    resolved,
-                ))
+                evidence.append(
+                    _metric(
+                        f"incidents_resolved_30d={resolved}",
+                        resolved,
+                    )
+                )
             except Exception:
                 logger.debug("reporter: evidence collection failed", exc_info=True)
         elif cap == "vuln.scan":
             try:
                 from apps.api.models.scan_history import ScanHistory
+
                 n = db.query(ScanHistory).count()
                 evidence.append(_metric(f"scans_total={n}", n))
             except Exception:
                 logger.debug("reporter: evidence collection failed", exc_info=True)
             try:
                 from apps.api.models.devsecops import ScanRun
+
                 runs_30d = (
-                    db.query(ScanRun)
-                    .filter(ScanRun.created_at >= cutoff_30d)
-                    .count()
-                ) if hasattr(ScanRun, "created_at") else db.query(ScanRun).count()
+                    (db.query(ScanRun).filter(ScanRun.created_at >= cutoff_30d).count())
+                    if hasattr(ScanRun, "created_at")
+                    else db.query(ScanRun).count()
+                )
                 evidence.append(_metric(f"devsecops_runs_30d={runs_30d}", runs_30d))
             except Exception:
                 logger.debug("reporter: evidence collection failed", exc_info=True)
@@ -299,6 +308,4 @@ def evaluate_framework(framework: Framework, db: Session | None) -> dict[str, An
 
 
 def evaluate_all(db: Session | None) -> dict[str, Any]:
-    return {
-        fid: evaluate_framework(f, db) for fid, f in ALL_FRAMEWORKS.items()
-    }
+    return {fid: evaluate_framework(f, db) for fid, f in ALL_FRAMEWORKS.items()}

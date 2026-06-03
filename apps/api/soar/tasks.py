@@ -38,9 +38,13 @@ def task_execute_playbook(
             logger.error("Playbook %s not found", playbook_id)
             return {"status": "error", "error": "Playbook not found"}
 
-        execution = db.query(PlaybookExecution).filter(
-            PlaybookExecution.id == execution_id,
-        ).first()
+        execution = (
+            db.query(PlaybookExecution)
+            .filter(
+                PlaybookExecution.id == execution_id,
+            )
+            .first()
+        )
         if not execution:
             logger.error("Execution %s not found", execution_id)
             return {"status": "error", "error": "Execution not found"}
@@ -94,11 +98,16 @@ def task_execute_playbook(
         logger.exception("SOAR task failed for execution %s", execution_id)
         # Mark execution as failed
         try:
-            execution = db.query(PlaybookExecution).filter(
-                PlaybookExecution.id == execution_id,
-            ).first()
+            execution = (
+                db.query(PlaybookExecution)
+                .filter(
+                    PlaybookExecution.id == execution_id,
+                )
+                .first()
+            )
             if execution and execution.status in ("pending", "running"):
                 from datetime import datetime
+
                 execution.status = "failed"
                 execution.error = str(exc)
                 execution.finished_at = datetime.now(UTC)
@@ -119,9 +128,7 @@ def task_fire_triggers(trigger_type: str, context: dict) -> dict:
     try:
         loop = asyncio.new_event_loop()
         try:
-            executions = loop.run_until_complete(
-                fire_triggers(db, trigger_type, context)
-            )
+            executions = loop.run_until_complete(fire_triggers(db, trigger_type, context))
         finally:
             loop.close()
 
@@ -129,8 +136,7 @@ def task_fire_triggers(trigger_type: str, context: dict) -> dict:
             "trigger_type": trigger_type,
             "playbooks_triggered": len(executions),
             "executions": [
-                {"id": e.id, "playbook": e.playbook_name, "status": e.status}
-                for e in executions
+                {"id": e.id, "playbook": e.playbook_name, "status": e.status} for e in executions
             ],
         }
         logger.info("SOAR triggers fired: %s", result)

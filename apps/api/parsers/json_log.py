@@ -22,6 +22,7 @@ from apps.api.parsers import BaseParser, _normalize_severity
 # Dot-notation helper
 # ---------------------------------------------------------------------------
 
+
 def _deep_get(data: dict, dotpath: str, default: Any = None) -> Any:
     """Retrieve a nested value using ``a.b.c`` notation."""
     keys = dotpath.split(".")
@@ -86,8 +87,14 @@ def _parse_ts(raw: Any) -> datetime | None:
 # Format detection helpers
 # ---------------------------------------------------------------------------
 
+
 def _is_ecs(data: dict) -> bool:
-    return "ecs" in data or "ecs.version" in data or "event" in data and isinstance(data.get("event"), dict)
+    return (
+        "ecs" in data
+        or "ecs.version" in data
+        or "event" in data
+        and isinstance(data.get("event"), dict)
+    )
 
 
 def _is_cloudtrail(data: dict) -> bool:
@@ -106,6 +113,7 @@ def _is_gcp_audit(data: dict) -> bool:
 # Format-specific extractors
 # ---------------------------------------------------------------------------
 
+
 def _extract_ecs(data: dict) -> dict[str, Any]:
     event = data.get("event", {}) if isinstance(data.get("event"), dict) else {}
     source_obj = data.get("source", {}) if isinstance(data.get("source"), dict) else {}
@@ -119,10 +127,17 @@ def _extract_ecs(data: dict) -> dict[str, Any]:
             or _deep_get(data, "timestamp")
         ),
         "source": _deep_get(data, "agent.name") or _deep_get(data, "host.name") or "ecs",
-        "event_type": event.get("action") or event.get("category") or event.get("kind") or "ecs.event",
+        "event_type": event.get("action")
+        or event.get("category")
+        or event.get("kind")
+        or "ecs.event",
         "severity": event.get("severity") or event.get("risk_score") or "low",
-        "src_ip": source_obj.get("ip") or _deep_get(data, "source.ip") or _deep_get(data, "client.ip"),
-        "dst_ip": dest_obj.get("ip") or _deep_get(data, "destination.ip") or _deep_get(data, "server.ip"),
+        "src_ip": source_obj.get("ip")
+        or _deep_get(data, "source.ip")
+        or _deep_get(data, "client.ip"),
+        "dst_ip": dest_obj.get("ip")
+        or _deep_get(data, "destination.ip")
+        or _deep_get(data, "server.ip"),
         "username": user_obj.get("name") or _deep_get(data, "user.name"),
         "message": data.get("message") or event.get("original"),
     }
@@ -148,7 +163,8 @@ def _extract_azure(data: dict) -> dict[str, Any]:
         "source": f"azure:{data.get('resourceProviderName', {}).get('value', 'azure') if isinstance(data.get('resourceProviderName'), dict) else data.get('resourceProviderName', 'azure')}",
         "event_type": f"azure.{data.get('operationName', 'unknown')}",
         "severity": _normalize_severity(data.get("level", "low")),
-        "src_ip": _deep_get(data, "httpRequest.clientIpAddress") or _deep_get(data, "callerIpAddress"),
+        "src_ip": _deep_get(data, "httpRequest.clientIpAddress")
+        or _deep_get(data, "callerIpAddress"),
         "dst_ip": None,
         "username": _deep_get(data, "caller") or _deep_get(data, "identity.claims.name"),
         "message": _deep_get(data, "properties.message") or data.get("operationName"),
@@ -171,38 +187,65 @@ def _extract_gcp(data: dict) -> dict[str, Any]:
 
 def _extract_generic(data: dict) -> dict[str, Any]:
     ts_raw = (
-        data.get("timestamp") or data.get("ts") or data.get("time")
-        or data.get("@timestamp") or data.get("datetime") or data.get("date")
+        data.get("timestamp")
+        or data.get("ts")
+        or data.get("time")
+        or data.get("@timestamp")
+        or data.get("datetime")
+        or data.get("date")
     )
     source = (
-        data.get("source") or data.get("hostname") or data.get("host")
-        or data.get("log_source") or "json"
+        data.get("source")
+        or data.get("hostname")
+        or data.get("host")
+        or data.get("log_source")
+        or "json"
     )
     if isinstance(source, dict):
         source = source.get("name") or source.get("ip") or "json"
     event_type = (
-        data.get("event_type") or data.get("type") or data.get("action")
-        or data.get("eventType") or data.get("event") or "system.info"
+        data.get("event_type")
+        or data.get("type")
+        or data.get("action")
+        or data.get("eventType")
+        or data.get("event")
+        or "system.info"
     )
     severity = (
-        data.get("severity") or data.get("level") or data.get("priority")
-        or data.get("risk") or "low"
+        data.get("severity")
+        or data.get("level")
+        or data.get("priority")
+        or data.get("risk")
+        or "low"
     )
     src_ip = (
-        data.get("src_ip") or data.get("source_ip") or data.get("client_ip")
-        or data.get("srcip") or data.get("remote_addr") or _deep_get(data, "source.ip")
+        data.get("src_ip")
+        or data.get("source_ip")
+        or data.get("client_ip")
+        or data.get("srcip")
+        or data.get("remote_addr")
+        or _deep_get(data, "source.ip")
     )
     dst_ip = (
-        data.get("dst_ip") or data.get("dest_ip") or data.get("server_ip")
-        or data.get("dstip") or _deep_get(data, "destination.ip")
+        data.get("dst_ip")
+        or data.get("dest_ip")
+        or data.get("server_ip")
+        or data.get("dstip")
+        or _deep_get(data, "destination.ip")
     )
     username = (
-        data.get("username") or data.get("user") or data.get("actor")
-        or data.get("userName") or _deep_get(data, "user.name")
+        data.get("username")
+        or data.get("user")
+        or data.get("actor")
+        or data.get("userName")
+        or _deep_get(data, "user.name")
     )
     message = (
-        data.get("message") or data.get("msg") or data.get("description")
-        or data.get("summary") or data.get("text")
+        data.get("message")
+        or data.get("msg")
+        or data.get("description")
+        or data.get("summary")
+        or data.get("text")
     )
     return {
         "ts": _parse_ts(ts_raw),
@@ -219,6 +262,7 @@ def _extract_generic(data: dict) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 class JSONLogParser(BaseParser):
     name = "json_log"

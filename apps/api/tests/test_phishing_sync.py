@@ -77,9 +77,7 @@ def test_coerce_details_none_returns_empty() -> None:
 
 
 def test_extract_browser_info_ok() -> None:
-    ip, ua = _extract_browser_info(
-        {"browser": {"address": "1.2.3.4", "user-agent": "curl/8"}}
-    )
+    ip, ua = _extract_browser_info({"browser": {"address": "1.2.3.4", "user-agent": "curl/8"}})
     assert ip == "1.2.3.4"
     assert ua == "curl/8"
 

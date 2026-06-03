@@ -52,11 +52,13 @@ def setup_tracing(app: FastAPI) -> bool:
         logger.warning("otel_import_failed", extra={"error": str(exc)})
         return False
 
-    resource = Resource.create({
-        "service.name": settings.OTEL_SERVICE_NAME,
-        "service.version": "1.0.0",
-        "deployment.environment": settings.ENV,
-    })
+    resource = Resource.create(
+        {
+            "service.name": settings.OTEL_SERVICE_NAME,
+            "service.version": "1.0.0",
+            "deployment.environment": settings.ENV,
+        }
+    )
     sampler = TraceIdRatioBased(max(0.0, min(1.0, settings.OTEL_TRACES_SAMPLER_RATIO)))
     provider = TracerProvider(resource=resource, sampler=sampler)
     exporter = OTLPSpanExporter(
@@ -67,9 +69,7 @@ def setup_tracing(app: FastAPI) -> bool:
     trace.set_tracer_provider(provider)
 
     # /metrics et /healthz: pas de span (bruit pur).
-    FastAPIInstrumentor.instrument_app(
-        app, excluded_urls="/metrics,/health,/livez,/readyz"
-    )
+    FastAPIInstrumentor.instrument_app(app, excluded_urls="/metrics,/health,/livez,/readyz")
 
     # SQLAlchemy : instrumentation au niveau du moteur applicatif.
     try:
@@ -99,18 +99,30 @@ def get_tracer(name: str = "cyberdef"):
     """Retourne un tracer OTel. No-op si OTel desactive."""
     try:
         from opentelemetry import trace
+
         return trace.get_tracer(name)
     except ImportError:
         return _NoopTracer()
 
 
 class _NoopSpan:
-    def __enter__(self): return self
-    def __exit__(self, *args): return False
-    def set_attribute(self, *args, **kwargs): pass
-    def set_status(self, *args, **kwargs): pass
-    def record_exception(self, *args, **kwargs): pass
-    def add_event(self, *args, **kwargs): pass
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def set_attribute(self, *args, **kwargs):
+        pass
+
+    def set_status(self, *args, **kwargs):
+        pass
+
+    def record_exception(self, *args, **kwargs):
+        pass
+
+    def add_event(self, *args, **kwargs):
+        pass
 
 
 class _NoopTracer:
@@ -132,6 +144,7 @@ def traced(name: str | None = None, *, attributes: dict | None = None):
         is_async = inspect.iscoroutinefunction(fn)
 
         if is_async:
+
             @functools.wraps(fn)
             async def awrap(*args, **kwargs):
                 tracer = get_tracer()
@@ -145,10 +158,12 @@ def traced(name: str | None = None, *, attributes: dict | None = None):
                         try:
                             span.record_exception(exc)
                             from opentelemetry.trace import Status, StatusCode
+
                             span.set_status(Status(StatusCode.ERROR, str(exc)))
                         except Exception:
                             logger.debug("tracing: ignored exception", exc_info=True)
                         raise
+
             return awrap
 
         @functools.wraps(fn)
@@ -164,10 +179,12 @@ def traced(name: str | None = None, *, attributes: dict | None = None):
                     try:
                         span.record_exception(exc)
                         from opentelemetry.trace import Status, StatusCode
+
                         span.set_status(Status(StatusCode.ERROR, str(exc)))
                     except Exception:
                         logger.debug("tracing: ignored exception", exc_info=True)
                     raise
+
         return swrap
 
     return decorator
@@ -198,19 +215,24 @@ def setup_celery_tracing() -> bool:
     except ImportError:
         return False
 
-    resource = Resource.create({
-        "service.name": f"{settings.OTEL_SERVICE_NAME}-worker",
-        "deployment.environment": settings.ENV,
-    })
+    resource = Resource.create(
+        {
+            "service.name": f"{settings.OTEL_SERVICE_NAME}-worker",
+            "deployment.environment": settings.ENV,
+        }
+    )
     provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(
-        OTLPSpanExporter(endpoint=endpoint, insecure=settings.OTEL_EXPORTER_OTLP_INSECURE)
-    ))
+    provider.add_span_processor(
+        BatchSpanProcessor(
+            OTLPSpanExporter(endpoint=endpoint, insecure=settings.OTEL_EXPORTER_OTLP_INSECURE)
+        )
+    )
     trace.set_tracer_provider(provider)
 
     CeleryInstrumentor().instrument()
     try:
         from apps.api.db.session import engine
+
         SQLAlchemyInstrumentor().instrument(engine=engine)
     except Exception:  # noqa: BLE001
         pass

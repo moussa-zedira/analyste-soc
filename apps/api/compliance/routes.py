@@ -33,6 +33,7 @@ def _principal(request: Request) -> str:
     if auth.startswith("Bearer "):
         try:
             from apps.api.security import _decode_jwt
+
             payload = _decode_jwt(auth[7:]) or {}
             return str(payload.get("sub") or payload.get("username") or "user")
         except Exception:
@@ -58,8 +59,11 @@ def get_framework_detail(fid: str) -> dict[str, Any]:
         "description": fw.description,
         "controls": [
             {
-                "id": c.id, "title": c.title, "description": c.description,
-                "capabilities": c.capabilities, "mandatory": c.mandatory,
+                "id": c.id,
+                "title": c.title,
+                "description": c.description,
+                "capabilities": c.capabilities,
+                "mandatory": c.mandatory,
             }
             for c in fw.controls
         ],
@@ -82,13 +86,15 @@ def get_global_report(db: Session = Depends(get_db)) -> dict[str, Any]:
     reports = evaluate_all(db)
     summary = []
     for fid, rep in reports.items():
-        summary.append({
-            "id": fid,
-            "name": rep["framework"]["name"],
-            "controls_total": rep["summary"]["controls_total"],
-            "coverage_score": rep["summary"]["coverage_score"],
-            "by_status": rep["summary"]["by_status"],
-        })
+        summary.append(
+            {
+                "id": fid,
+                "name": rep["framework"]["name"],
+                "controls_total": rep["summary"]["controls_total"],
+                "coverage_score": rep["summary"]["coverage_score"],
+                "by_status": rep["summary"]["by_status"],
+            }
+        )
     return {"summary": summary, "reports": reports}
 
 
@@ -173,7 +179,8 @@ def get_assessment_pdf(
     fw = get_framework(a.framework_id)
     framework_meta = (
         {"id": fw.id, "name": fw.name, "version": fw.version, "url": fw.url}
-        if fw else {"id": a.framework_id, "name": a.framework_id}
+        if fw
+        else {"id": a.framework_id, "name": a.framework_id}
     )
     rems = storage.list_remediations(db, framework_id=a.framework_id, limit=200)
     rems_dump = [

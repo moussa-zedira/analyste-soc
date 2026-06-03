@@ -30,12 +30,15 @@ def main() -> None:
 
     if args.command == "syslog":
         from apps.collectors.syslog_receiver import main as syslog_main
+
         syslog_main()
     elif args.command == "winlog":
         from apps.collectors.winlog_collector import main as winlog_main
+
         winlog_main()
     elif args.command == "filewatcher":
         from apps.collectors.file_watcher import main as fw_main
+
         sys.argv = [sys.argv[0]] + args.patterns
         fw_main()
     else:

@@ -102,9 +102,9 @@ def test_audit_safe_role_produces_no_findings():
 def test_audit_default_sa_binding_flagged_high():
     result = audit_manifest(CLUSTER_ADMIN_BIND)
     high_or_critical = [
-        f for f in result["findings"]
-        if f["severity"] in ("high", "critical")
-        and "default" in f["title"].lower()
+        f
+        for f in result["findings"]
+        if f["severity"] in ("high", "critical") and "default" in f["title"].lower()
     ]
     assert len(high_or_critical) >= 1
 
@@ -126,6 +126,7 @@ def test_audit_target_principal_filter():
 def test_audit_invalid_yaml_raises():
     import pytest
     from fastapi import HTTPException
+
     with pytest.raises(HTTPException):
         audit_manifest(":\n  - bad: [unclosed")
 
@@ -143,7 +144,10 @@ def test_dangerous_constants_present():
 
 
 def test_audit_resolves_role_via_binding():
-    multi = WILDCARD_ROLE + "\n---\n" + """
+    multi = (
+        WILDCARD_ROLE
+        + "\n---\n"
+        + """
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -156,11 +160,9 @@ roleRef:
   name: god-role
   apiGroup: rbac.authorization.k8s.io
 """
-    result = audit_manifest(multi)
-    assert any(
-        "god-role" in f["title"] and "alice" in f["title"]
-        for f in result["findings"]
     )
+    result = audit_manifest(multi)
+    assert any("god-role" in f["title"] and "alice" in f["title"] for f in result["findings"])
 
 
 def test_audit_documents_count_matches():

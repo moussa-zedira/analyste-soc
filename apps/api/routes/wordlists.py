@@ -56,19 +56,23 @@ def list_wordlists() -> dict[str, Any]:
     items: list[dict[str, Any]] = []
 
     for name, entries in _BUILTIN_MAP.items():
-        items.append({
-            "name": name,
-            "type": "builtin",
-            "count": len(entries),
-        })
+        items.append(
+            {
+                "name": name,
+                "type": "builtin",
+                "count": len(entries),
+            }
+        )
 
     for name, path in _custom_lists().items():
         line_count = sum(1 for _ in path.open(encoding="utf-8", errors="ignore"))
-        items.append({
-            "name": name,
-            "type": "custom",
-            "count": line_count,
-        })
+        items.append(
+            {
+                "name": name,
+                "type": "custom",
+                "count": line_count,
+            }
+        )
 
     return {"wordlists": items, "total": len(items)}
 
@@ -120,7 +124,9 @@ async def upload_wordlist(file: UploadFile = File(...)) -> dict[str, Any]:
     dest = _CUSTOM_DIR / filename
     dest.write_bytes(content)
 
-    line_count = sum(1 for line in content.decode("utf-8", errors="ignore").splitlines() if line.strip())
+    line_count = sum(
+        1 for line in content.decode("utf-8", errors="ignore").splitlines() if line.strip()
+    )
     return {
         "name": dest.stem,
         "filename": filename,

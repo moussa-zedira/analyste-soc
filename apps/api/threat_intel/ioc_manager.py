@@ -32,9 +32,21 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 IOC_TYPES = {
-    "ip", "domain", "url", "hash_md5", "hash_sha1", "hash_sha256",
-    "email", "filename", "mutex", "registry_key", "user_agent",
-    "cidr", "asn", "cve", "ja3",
+    "ip",
+    "domain",
+    "url",
+    "hash_md5",
+    "hash_sha1",
+    "hash_sha256",
+    "email",
+    "filename",
+    "mutex",
+    "registry_key",
+    "user_agent",
+    "cidr",
+    "asn",
+    "cve",
+    "ja3",
 }
 
 IOC_STATES = {"active", "expired", "revoked", "false_positive"}
@@ -43,13 +55,13 @@ TLP_LEVELS = {"WHITE", "GREEN", "AMBER", "AMBER+STRICT", "RED"}
 
 # Default TTLs per IOC type (in hours)
 DEFAULT_TTL: dict[str, int] = {
-    "ip": 168,        # 7 days
-    "domain": 720,    # 30 days
-    "url": 72,        # 3 days
-    "hash_md5": 8760, # 1 year
+    "ip": 168,  # 7 days
+    "domain": 720,  # 30 days
+    "url": 72,  # 3 days
+    "hash_md5": 8760,  # 1 year
     "hash_sha1": 8760,
     "hash_sha256": 8760,
-    "email": 2160,    # 90 days
+    "email": 2160,  # 90 days
     "filename": 720,
     "mutex": 2160,
     "registry_key": 2160,
@@ -64,6 +76,7 @@ DEFAULT_TTL: dict[str, int] = {
 # ═══════════════════════════════════════════════════════════════════════════
 # CRUD
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def create_ioc(
     db: Session,
@@ -99,7 +112,9 @@ def create_ioc(
         merged_tags = list(set(old_tags + (tags or [])))
         existing.tags_json = json.dumps(merged_tags)
         # Merge MITRE
-        old_mitre = json.loads(existing.mitre_techniques_json) if existing.mitre_techniques_json else []
+        old_mitre = (
+            json.loads(existing.mitre_techniques_json) if existing.mitre_techniques_json else []
+        )
         merged_mitre = list(set(old_mitre + (mitre_techniques or [])))
         existing.mitre_techniques_json = json.dumps(merged_mitre)
         if existing.state == "expired":
@@ -173,11 +188,13 @@ def list_iocs(
     if tag:
         q = q.filter(IOC.tags_json.contains(tag))
     if search:
-        q = q.filter(or_(
-            IOC.value.contains(search),
-            IOC.source.contains(search),
-            IOC.tags_json.contains(search),
-        ))
+        q = q.filter(
+            or_(
+                IOC.value.contains(search),
+                IOC.source.contains(search),
+                IOC.tags_json.contains(search),
+            )
+        )
 
     total = q.count()
     items = q.order_by(IOC.last_seen.desc()).offset(offset).limit(limit).all()
@@ -231,6 +248,7 @@ def mark_false_positive(db: Session, ioc_id: int) -> IOC | None:
 # Expiration
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def expire_stale_iocs(db: Session) -> int:
     """Mark IOCs past their expiry as expired. Returns count."""
     now = datetime.now(UTC)
@@ -246,6 +264,7 @@ def expire_stale_iocs(db: Session) -> int:
 # ═══════════════════════════════════════════════════════════════════════════
 # Sightings
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def record_sighting(
     db: Session,
@@ -285,8 +304,15 @@ def get_sightings(db: Session, ioc_id: int, limit: int = 100) -> list[IOCSightin
 # ═══════════════════════════════════════════════════════════════════════════
 
 RELATIONSHIP_TYPES = {
-    "related-to", "derived-from", "uses", "targets", "attributed-to",
-    "communicates-with", "hosts", "delivers", "exploits",
+    "related-to",
+    "derived-from",
+    "uses",
+    "targets",
+    "attributed-to",
+    "communicates-with",
+    "hosts",
+    "delivers",
+    "exploits",
 }
 
 
@@ -320,27 +346,32 @@ def get_related_iocs(db: Session, ioc_id: int) -> list[dict]:
     for r in rels_out:
         target = db.get(IOC, r.target_ioc_id)
         if target:
-            results.append({
-                "relationship_id": r.id,
-                "direction": "outgoing",
-                "relationship_type": r.relationship_type,
-                "ioc": ioc_to_dict(target),
-            })
+            results.append(
+                {
+                    "relationship_id": r.id,
+                    "direction": "outgoing",
+                    "relationship_type": r.relationship_type,
+                    "ioc": ioc_to_dict(target),
+                }
+            )
     for r in rels_in:
         src = db.get(IOC, r.source_ioc_id)
         if src:
-            results.append({
-                "relationship_id": r.id,
-                "direction": "incoming",
-                "relationship_type": r.relationship_type,
-                "ioc": ioc_to_dict(src),
-            })
+            results.append(
+                {
+                    "relationship_id": r.id,
+                    "direction": "incoming",
+                    "relationship_type": r.relationship_type,
+                    "ioc": ioc_to_dict(src),
+                }
+            )
     return results
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Import / Export
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def bulk_import_stix(db: Session, data: dict | str, source: str = "stix_import") -> dict:
     """Import IOCs from STIX 2.1 bundle. Returns stats."""
@@ -354,9 +385,11 @@ def bulk_import_stix(db: Session, data: dict | str, source: str = "stix_import")
         if not ioc_dict:
             skipped += 1
             continue
-        existing = db.query(IOC).filter(
-            IOC.type == ioc_dict["type"], IOC.value == ioc_dict["value"]
-        ).first()
+        existing = (
+            db.query(IOC)
+            .filter(IOC.type == ioc_dict["type"], IOC.value == ioc_dict["value"])
+            .first()
+        )
         if existing:
             updated += 1
         else:
@@ -419,7 +452,9 @@ def bulk_import_csv(db: Session, csv_text: str, source: str = "csv_import") -> d
     return {"created": created, "updated": updated, "errors": errors}
 
 
-def bulk_import_text(db: Session, text: str, ioc_type: str = "ip", source: str = "text_import") -> dict:
+def bulk_import_text(
+    db: Session, text: str, ioc_type: str = "ip", source: str = "text_import"
+) -> dict:
     """Import IOCs from plain text (one per line)."""
     created = 0
     skipped = 0
@@ -457,7 +492,9 @@ def export_csv(db: Session, state: str | None = "active") -> str:
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["type", "value", "state", "confidence", "tlp", "source", "tags", "first_seen", "last_seen"])
+    writer.writerow(
+        ["type", "value", "state", "confidence", "tlp", "source", "tags", "first_seen", "last_seen"]
+    )
     for ioc in iocs:
         tags = ""
         if ioc.tags_json:
@@ -465,12 +502,19 @@ def export_csv(db: Session, state: str | None = "active") -> str:
                 tags = ";".join(json.loads(ioc.tags_json))
             except Exception as exc:
                 logger.warning("Malformed tags_json on IOC %s during CSV export: %s", ioc.id, exc)
-        writer.writerow([
-            ioc.type, ioc.value, ioc.state, ioc.confidence, ioc.tlp,
-            ioc.source, tags,
-            ioc.first_seen.isoformat() if ioc.first_seen else "",
-            ioc.last_seen.isoformat() if ioc.last_seen else "",
-        ])
+        writer.writerow(
+            [
+                ioc.type,
+                ioc.value,
+                ioc.state,
+                ioc.confidence,
+                ioc.tlp,
+                ioc.source,
+                tags,
+                ioc.first_seen.isoformat() if ioc.first_seen else "",
+                ioc.last_seen.isoformat() if ioc.last_seen else "",
+            ]
+        )
     return output.getvalue()
 
 
@@ -478,21 +522,14 @@ def export_csv(db: Session, state: str | None = "active") -> str:
 # Statistics
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def get_ioc_stats(db: Session) -> dict:
     """Compute IOC statistics."""
     total = db.query(func.count(IOC.id)).scalar() or 0
-    by_type = dict(
-        db.query(IOC.type, func.count(IOC.id)).group_by(IOC.type).all()
-    )
-    by_state = dict(
-        db.query(IOC.state, func.count(IOC.id)).group_by(IOC.state).all()
-    )
-    by_tlp = dict(
-        db.query(IOC.tlp, func.count(IOC.id)).group_by(IOC.tlp).all()
-    )
-    by_source = dict(
-        db.query(IOC.source, func.count(IOC.id)).group_by(IOC.source).all()
-    )
+    by_type = dict(db.query(IOC.type, func.count(IOC.id)).group_by(IOC.type).all())
+    by_state = dict(db.query(IOC.state, func.count(IOC.id)).group_by(IOC.state).all())
+    by_tlp = dict(db.query(IOC.tlp, func.count(IOC.id)).group_by(IOC.tlp).all())
+    by_source = dict(db.query(IOC.source, func.count(IOC.id)).group_by(IOC.source).all())
     avg_confidence = db.query(func.avg(IOC.confidence)).scalar() or 0
     total_sightings = db.query(func.count(IOCSighting.id)).scalar() or 0
     total_relationships = db.query(func.count(IOCRelationship.id)).scalar() or 0
@@ -512,6 +549,7 @@ def get_ioc_stats(db: Session) -> dict:
 # ═══════════════════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def ioc_to_dict(ioc: IOC) -> dict[str, Any]:
     """Serialize an IOC model to dict."""

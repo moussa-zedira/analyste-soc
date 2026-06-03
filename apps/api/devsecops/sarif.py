@@ -57,9 +57,7 @@ def generate_sarif(
                     "markdown": f"**Remediation:** {finding.get('remediation', 'N/A')}",
                 },
                 "defaultConfiguration": {
-                    "level": _SEVERITY_TO_SARIF_LEVEL.get(
-                        finding.get("severity", "info"), "note"
-                    ),
+                    "level": _SEVERITY_TO_SARIF_LEVEL.get(finding.get("severity", "info"), "note"),
                 },
                 "properties": {
                     "security-severity": str(
@@ -73,9 +71,7 @@ def generate_sarif(
         result: dict[str, Any] = {
             "ruleId": rule_id,
             "ruleIndex": list(rules_map.keys()).index(rule_id),
-            "level": _SEVERITY_TO_SARIF_LEVEL.get(
-                finding.get("severity", "info"), "note"
-            ),
+            "level": _SEVERITY_TO_SARIF_LEVEL.get(finding.get("severity", "info"), "note"),
             "message": {
                 "text": finding.get("description", finding.get("title", "")),
             },

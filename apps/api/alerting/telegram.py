@@ -13,9 +13,9 @@ TELEGRAM_API = "https://api.telegram.org"
 
 _SEVERITY_ICON = {
     "critical": "\U0001f534",  # red circle
-    "high": "\U0001f7e0",      # orange circle
-    "medium": "\U0001f7e1",    # yellow circle
-    "low": "\U0001f535",       # blue circle
+    "high": "\U0001f7e0",  # orange circle
+    "medium": "\U0001f7e1",  # yellow circle
+    "low": "\U0001f535",  # blue circle
 }
 
 
@@ -106,6 +106,7 @@ async def send_alert(config: dict[str, Any], incident: dict[str, Any]) -> None:
                 data = resp.json()
                 if resp.status_code == 429:
                     import asyncio
+
                     retry_after = data.get("parameters", {}).get("retry_after", 2)
                     await asyncio.sleep(float(retry_after))
                     continue

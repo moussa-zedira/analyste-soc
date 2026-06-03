@@ -11,9 +11,11 @@ from apps.api.cql.lexer import Lexer, Token, TokenType
 # AST Node types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ASTNode:
     """Base class for all AST nodes."""
+
     pass
 
 
@@ -26,6 +28,7 @@ class Literal(ASTNode):
 @dataclass
 class FieldRef(ASTNode):
     """Reference to a field, possibly with dot notation (e.g., raw.ip)."""
+
     parts: list[str] = field(default_factory=list)
 
     @property
@@ -43,6 +46,7 @@ class Comparison(ASTNode):
 @dataclass
 class ValueList(ASTNode):
     """List of values for IN operator."""
+
     values: list[Literal] = field(default_factory=list)
 
 
@@ -68,6 +72,7 @@ class PipeCommand(ASTNode):
 @dataclass
 class Query(ASTNode):
     """Root AST node."""
+
     filter_expr: ASTNode | None = None
     commands: list[PipeCommand] = field(default_factory=list)
     earliest: str | None = None
@@ -83,12 +88,14 @@ class FunctionCall(ASTNode):
 @dataclass
 class EvalExpression(ASTNode):
     """Represents an eval expression (math, string ops, etc.)."""
+
     expression: str = ""
 
 
 # ---------------------------------------------------------------------------
 # Parser Error
 # ---------------------------------------------------------------------------
+
 
 class ParseError(Exception):
     def __init__(self, message: str, token: Token | None = None):
@@ -104,10 +111,19 @@ class ParseError(Exception):
 # ---------------------------------------------------------------------------
 
 _OPERATOR_TYPES = {
-    TokenType.EQ, TokenType.NEQ, TokenType.GT, TokenType.GTE,
-    TokenType.LT, TokenType.LTE, TokenType.LIKE, TokenType.IN,
-    TokenType.NOT_IN, TokenType.CONTAINS, TokenType.STARTSWITH,
-    TokenType.ENDSWITH, TokenType.MATCHES,
+    TokenType.EQ,
+    TokenType.NEQ,
+    TokenType.GT,
+    TokenType.GTE,
+    TokenType.LT,
+    TokenType.LTE,
+    TokenType.LIKE,
+    TokenType.IN,
+    TokenType.NOT_IN,
+    TokenType.CONTAINS,
+    TokenType.STARTSWITH,
+    TokenType.ENDSWITH,
+    TokenType.MATCHES,
 }
 
 

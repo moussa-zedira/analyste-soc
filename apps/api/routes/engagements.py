@@ -161,18 +161,14 @@ def _check_lead_or_admin(db: Session, user: User, engagement_id: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-@router.post(
-    "", response_model=EngagementOut, status_code=status.HTTP_201_CREATED
-)
+@router.post("", response_model=EngagementOut, status_code=status.HTTP_201_CREATED)
 def create_engagement(
     payload: EngagementCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> EngagementOut:
     if user.role not in ("admin", "lead"):
-        raise HTTPException(
-            status_code=403, detail="admin or lead role required"
-        )
+        raise HTTPException(status_code=403, detail="admin or lead role required")
     if payload.status not in VALID_STATUS:
         raise HTTPException(status_code=400, detail="Invalid status")
 
@@ -243,9 +239,7 @@ def get_engagement(
     if eng is None:
         raise HTTPException(status_code=404, detail="Engagement not found")
     members = (
-        db.query(EngagementMember)
-        .filter(EngagementMember.engagement_id == engagement_id)
-        .all()
+        db.query(EngagementMember).filter(EngagementMember.engagement_id == engagement_id).all()
     )
     last_logs = (
         db.query(OperatorAuditLog)
@@ -307,9 +301,7 @@ def update_engagement(
     return _to_out(eng)
 
 
-@router.post(
-    "/{engagement_id}/members", status_code=status.HTTP_201_CREATED
-)
+@router.post("/{engagement_id}/members", status_code=status.HTTP_201_CREATED)
 def add_member(
     engagement_id: str,
     payload: MemberAdd,
@@ -339,7 +331,12 @@ def add_member(
         existing.role = payload.role
         db.add(existing)
         db.commit()
-        return {"engagement_id": engagement_id, "user_id": payload.user_id, "role": payload.role, "updated": True}
+        return {
+            "engagement_id": engagement_id,
+            "user_id": payload.user_id,
+            "role": payload.role,
+            "updated": True,
+        }
 
     db.add(
         EngagementMember(
@@ -474,9 +471,7 @@ def list_audit_log(
     eng = db.get(Engagement, engagement_id)
     if eng is None:
         raise HTTPException(status_code=404, detail="Engagement not found")
-    q = db.query(OperatorAuditLog).filter(
-        OperatorAuditLog.engagement_id == engagement_id
-    )
+    q = db.query(OperatorAuditLog).filter(OperatorAuditLog.engagement_id == engagement_id)
     if action_type:
         q = q.filter(OperatorAuditLog.action_type == action_type)
     if in_scope is not None:
@@ -523,11 +518,7 @@ def verify_audit_log(
     eng = db.get(Engagement, engagement_id)
     if eng is None:
         raise HTTPException(status_code=404, detail="Engagement not found")
-    items = (
-        db.query(OperatorAuditLog)
-        .filter(OperatorAuditLog.engagement_id == engagement_id)
-        .all()
-    )
+    items = db.query(OperatorAuditLog).filter(OperatorAuditLog.engagement_id == engagement_id).all()
     valid = 0
     tampered: list[str] = []
     for l in items:

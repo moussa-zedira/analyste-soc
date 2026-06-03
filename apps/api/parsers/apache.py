@@ -22,15 +22,15 @@ from apps.api.parsers import BaseParser
 
 # Combined:  IP ident user [date] "method path proto" status bytes "referer" "ua"
 _COMBINED_RE = re.compile(
-    r"(\S+)\s+"             # client IP
-    r"(\S+)\s+"             # ident
-    r"(\S+)\s+"             # user
-    r"\[([^\]]+)\]\s+"      # date
+    r"(\S+)\s+"  # client IP
+    r"(\S+)\s+"  # ident
+    r"(\S+)\s+"  # user
+    r"\[([^\]]+)\]\s+"  # date
     r'"(\S+)\s+(\S+)\s*(\S*)"\s+'  # method path protocol
-    r"(\d{3})\s+"           # status
-    r"(\d+|-)"              # bytes
-    r'(?:\s+"([^"]*)")?'    # referer
-    r'(?:\s+"([^"]*)")?'    # user-agent
+    r"(\d{3})\s+"  # status
+    r"(\d+|-)"  # bytes
+    r'(?:\s+"([^"]*)")?'  # referer
+    r'(?:\s+"([^"]*)")?'  # user-agent
 )
 
 # CLF (no referer/ua):  IP ident user [date] "method path proto" status bytes
@@ -51,7 +51,7 @@ _CLF_RE = re.compile(
 # Apache error:  [day_of_week month day time year] [module:level] [pid tid] [client IP:port] msg
 _APACHE_ERROR_RE = re.compile(
     r"\[(\w+ \w+ \d+ [\d:]+ \d+)\]\s+"
-    r"\[([^\]]+)\]\s+"           # module:level
+    r"\[([^\]]+)\]\s+"  # module:level
     r"(?:\[pid \d+(?::tid \d+)?\]\s+)?"
     r"(?:\[client (\S+?)(?::\d+)?\]\s+)?"
     r"(.*)",
@@ -75,9 +75,21 @@ _NGINX_ERROR_RE = re.compile(
 _SUSPICIOUS_PATTERNS = [
     (re.compile(r"(?:\.\.[\\/]|etc/passwd|etc/shadow|proc/self)", re.I), "path.traversal", "high"),
     (re.compile(r"(?:<script|javascript:|onerror=|onload=|onfocus=)", re.I), "xss.attempt", "high"),
-    (re.compile(r"(?:UNION\s+SELECT|OR\s+1\s*=\s*1|'\s*OR\s*'|--\s*$|;\s*DROP\s)", re.I), "sql.injection", "high"),
-    (re.compile(r"(?:cmd=|exec=|system\(|passthru|shell_exec|eval\()", re.I), "rce.attempt", "critical"),
-    (re.compile(r"(?:wp-admin|wp-login|xmlrpc\.php|wp-content/uploads)", re.I), "scan.wordpress", "medium"),
+    (
+        re.compile(r"(?:UNION\s+SELECT|OR\s+1\s*=\s*1|'\s*OR\s*'|--\s*$|;\s*DROP\s)", re.I),
+        "sql.injection",
+        "high",
+    ),
+    (
+        re.compile(r"(?:cmd=|exec=|system\(|passthru|shell_exec|eval\()", re.I),
+        "rce.attempt",
+        "critical",
+    ),
+    (
+        re.compile(r"(?:wp-admin|wp-login|xmlrpc\.php|wp-content/uploads)", re.I),
+        "scan.wordpress",
+        "medium",
+    ),
     (re.compile(r"(?:\.env|\.git/|\.aws/|\.ssh/|id_rsa)", re.I), "scan.sensitive_files", "high"),
     (re.compile(r"(?:phpinfo|phpmyadmin|adminer|\.sql\.gz)", re.I), "scan.admin_tools", "medium"),
     (re.compile(r"(?:/cgi-bin/|/shell|/c99|/r57|/webshell)", re.I), "scan.webshell", "critical"),
@@ -87,7 +99,10 @@ _SUSPICIOUS_PATTERNS = [
 
 # Suspicious user agents
 _SUSPICIOUS_UA = [
-    (re.compile(r"(?:sqlmap|nikto|nmap|masscan|zgrab|gobuster|dirbuster|wfuzz)", re.I), "scan.tool"),
+    (
+        re.compile(r"(?:sqlmap|nikto|nmap|masscan|zgrab|gobuster|dirbuster|wfuzz)", re.I),
+        "scan.tool",
+    ),
     (re.compile(r"(?:curl|wget|python-requests|httpie)", re.I), "scan.scripted"),
 ]
 
@@ -95,6 +110,7 @@ _SUSPICIOUS_UA = [
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _parse_clf_ts(ts_str: str) -> datetime | None:
     for fmt in ("%d/%b/%Y:%H:%M:%S %z", "%d/%b/%Y:%H:%M:%S"):
@@ -150,6 +166,7 @@ def _classify_error_level(level: str) -> str:
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 class ApacheParser(BaseParser):
     name = "apache"

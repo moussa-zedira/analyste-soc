@@ -38,27 +38,17 @@ class BHDataset(Base):
 
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    source_filename: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
+    source_filename: Mapped[str] = mapped_column(Text, nullable=False, default="")
     engagement_id: Mapped[str | None] = mapped_column(
         Text, ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True
     )
-    bh_schema_version: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=5
-    )
-    nodes_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    edges_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
+    bh_schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    nodes_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    edges_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     uploaded_by: Mapped[str | None] = mapped_column(
         Text, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    uploaded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
     __table_args__ = (
@@ -80,15 +70,11 @@ class BHNode(Base):
     object_type: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False, default="")
     domain: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    high_value: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False
-    )
+    high_value: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     props: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     __table_args__ = (
-        UniqueConstraint(
-            "dataset_id", "sid", name="uq_bh_nodes_dataset_sid"
-        ),
+        UniqueConstraint("dataset_id", "sid", name="uq_bh_nodes_dataset_sid"),
         Index("ix_bh_nodes_dataset_type", "dataset_id", "object_type"),
         Index("ix_bh_nodes_dataset_name", "dataset_id", "name"),
         Index("ix_bh_nodes_high_value", "dataset_id", "high_value"),

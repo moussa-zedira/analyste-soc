@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Pydantic models
 # ======================================================================
 
+
 class TILookupResponse(BaseModel):
     ip: str
     risk_score: int
@@ -84,6 +85,7 @@ class PayloadLookupRequest(BaseModel):
 # Existing endpoints
 # ======================================================================
 
+
 @router.get("/lookup/{ip}", response_model=TILookupResponse)
 async def lookup_ip(
     ip: str,
@@ -127,6 +129,7 @@ def ti_stats(db: Session = Depends(get_db)) -> dict:
     otx_used = 0
     try:
         from apps.api.cache import get_redis_client
+
         r = get_redis_client()
         if r:
             v = r.get("siem:ti:abuseipdb:daily_count")
@@ -169,6 +172,7 @@ async def bulk_check(
 # Provider listing
 # ======================================================================
 
+
 @router.get("/providers")
 def list_providers() -> dict:
     """Liste tous les providers TI disponibles avec leur statut."""
@@ -186,6 +190,7 @@ def list_providers() -> dict:
 # ======================================================================
 # VirusTotal endpoints
 # ======================================================================
+
 
 @router.post("/virustotal/lookup")
 async def virustotal_lookup(payload: GenericLookupRequest) -> dict:
@@ -210,7 +215,10 @@ async def virustotal_lookup(payload: GenericLookupRequest) -> dict:
     elif itype == "url":
         result = await provider.check_url(payload.indicator)
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported indicator_type: {itype}. Use ip, domain, hash, or url.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported indicator_type: {itype}. Use ip, domain, hash, or url.",
+        )
 
     if result is None:
         raise HTTPException(status_code=429, detail="Rate limited or lookup failed")
@@ -230,6 +238,7 @@ async def virustotal_lookup(payload: GenericLookupRequest) -> dict:
 # ======================================================================
 # Shodan endpoints
 # ======================================================================
+
 
 @router.post("/shodan/lookup")
 async def shodan_lookup(payload: GenericLookupRequest) -> dict:
@@ -281,12 +290,16 @@ async def shodan_lookup(payload: GenericLookupRequest) -> dict:
             raise HTTPException(status_code=429, detail="Rate limited or honeypot check failed")
         return {"ip": payload.indicator, "honeypot_score": score}
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported indicator_type: {itype}. Use ip, search, exploit, dns, or honeypot.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported indicator_type: {itype}. Use ip, search, exploit, dns, or honeypot.",
+        )
 
 
 # ======================================================================
 # GreyNoise endpoints
 # ======================================================================
+
 
 @router.post("/greynoise/lookup")
 async def greynoise_lookup(payload: GenericLookupRequest) -> dict:
@@ -332,12 +345,16 @@ async def greynoise_lookup(payload: GenericLookupRequest) -> dict:
             raise HTTPException(status_code=429, detail="Rate limited or context lookup failed")
         return data
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported indicator_type: {itype}. Use ip, riot, noise, or context.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported indicator_type: {itype}. Use ip, riot, noise, or context.",
+        )
 
 
 # ======================================================================
 # CIRCL endpoints
 # ======================================================================
+
 
 @router.post("/circl/lookup")
 async def circl_lookup(payload: GenericLookupRequest) -> dict:
@@ -367,12 +384,16 @@ async def circl_lookup(payload: GenericLookupRequest) -> dict:
             raise HTTPException(status_code=429, detail="Rate limited or hashlookup failed")
         return data
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported indicator_type: {itype}. Use ip, domain, pdns, ssl, or hash.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported indicator_type: {itype}. Use ip, domain, pdns, ssl, or hash.",
+        )
 
 
 # ======================================================================
 # MISP endpoints
 # ======================================================================
+
 
 @router.post("/misp/lookup")
 async def misp_lookup(payload: GenericLookupRequest) -> dict:
@@ -425,12 +446,16 @@ async def misp_lookup(payload: GenericLookupRequest) -> dict:
             raise HTTPException(status_code=429, detail="Rate limited or IOC export failed")
         return data
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported indicator_type: {itype}. Use ip, domain, hash, attribute, event, galaxy, or ioc_export.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported indicator_type: {itype}. Use ip, domain, hash, attribute, event, galaxy, or ioc_export.",
+        )
 
 
 # ======================================================================
 # URLhaus endpoints
 # ======================================================================
+
 
 @router.post("/urlhaus/lookup")
 async def urlhaus_lookup(payload: GenericLookupRequest) -> dict:
@@ -465,4 +490,7 @@ async def urlhaus_lookup(payload: GenericLookupRequest) -> dict:
             raise HTTPException(status_code=429, detail="Rate limited or tag lookup failed")
         return data
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported indicator_type: {itype}. Use ip, host, domain, url, hash, or tag.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported indicator_type: {itype}. Use ip, host, domain, url, hash, or tag.",
+        )

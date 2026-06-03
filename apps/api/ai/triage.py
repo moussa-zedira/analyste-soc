@@ -94,9 +94,7 @@ def _sanitize_user_text(text: str | None, *, max_len: int = MAX_USER_FIELD_LEN) 
     if not text:
         return "", False
     # Strip caracteres de controle ASCII (sauf \n, \t)
-    cleaned = "".join(
-        ch for ch in text if (ord(ch) >= 32 or ch in ("\n", "\t"))
-    )
+    cleaned = "".join(ch for ch in text if (ord(ch) >= 32 or ch in ("\n", "\t")))
     # Truncate
     if len(cleaned) > max_len:
         cleaned = cleaned[:max_len] + "...[TRUNCATED]"
@@ -144,7 +142,11 @@ def _build_prompt(t: TriageInput) -> tuple[str, bool]:
 
     if t.extra:
         # Extra : serialize mais pas wrap (suppose controle interne)
-        parts += ["", "## Extra context (system-provided)", json.dumps(t.extra, indent=2, default=str)[:1500]]
+        parts += [
+            "",
+            "## Extra context (system-provided)",
+            json.dumps(t.extra, indent=2, default=str)[:1500],
+        ]
 
     parts += ["", "Produce the triage JSON now (8 required fields)."]
     return "\n".join(parts), injection_suspected
@@ -211,6 +213,7 @@ def _safe_defaults(severity_hint: str | None = None) -> dict[str, Any]:
 async def triage_input_async(t: TriageInput, prefer: str | None = None) -> dict[str, Any]:
     """Lance le triage (async) et retourne un dict structure + metadonnees LLM."""
     import logging
+
     logger = logging.getLogger(__name__)
 
     prompt, injection_suspected = _build_prompt(t)
@@ -266,7 +269,9 @@ async def triage_input_async(t: TriageInput, prefer: str | None = None) -> dict[
     }
 
 
-async def triage_incident(db: Session, incident_id: str, prefer: str | None = None) -> dict[str, Any]:
+async def triage_incident(
+    db: Session, incident_id: str, prefer: str | None = None
+) -> dict[str, Any]:
     inc = db.query(Incident).filter(Incident.id == incident_id).first()
     if inc is None:
         raise ValueError(f"incident not found: {incident_id}")
@@ -287,6 +292,7 @@ async def triage_event(db: Session, event_id: str, prefer: str | None = None) ->
 def triage_input(t: TriageInput, prefer: str | None = None) -> dict[str, Any]:
     """Wrapper sync. Pour usage en code sync uniquement (tests, scripts)."""
     import asyncio
+
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:

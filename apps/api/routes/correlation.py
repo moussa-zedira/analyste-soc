@@ -35,6 +35,7 @@ router = APIRouter(
 # Pydantic schemas
 # ---------------------------------------------------------------------------
 
+
 class EventPatternSchema(BaseModel):
     event_type: str | None = None
     severity: str | None = None
@@ -118,17 +119,20 @@ class SimulateResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _rule_to_read(rule: CorrelationRule) -> CorrelationRuleRead:
     patterns = []
     for p in rule.event_patterns:
-        patterns.append({
-            "event_type": p.event_type,
-            "severity": p.severity,
-            "field_conditions": p.field_conditions,
-            "regex_conditions": p.regex_conditions,
-            "negate": p.negate,
-            "label": p.label,
-        })
+        patterns.append(
+            {
+                "event_type": p.event_type,
+                "severity": p.severity,
+                "field_conditions": p.field_conditions,
+                "regex_conditions": p.regex_conditions,
+                "negate": p.negate,
+                "label": p.label,
+            }
+        )
     return CorrelationRuleRead(
         id=rule.id,
         name=rule.name,
@@ -165,6 +169,7 @@ def _match_to_read(match: CorrelationMatch) -> CorrelationMatchRead:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/rules", response_model=list[CorrelationRuleRead])
 def list_rules(
     enabled_only: bool = Query(True),
@@ -196,7 +201,7 @@ def create_rule(body: CorrelationRuleCreate) -> CorrelationRuleRead:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid correlation type: {body.correlation_type}. "
-                   f"Valid: {[t.value for t in CorrelationType]}",
+            f"Valid: {[t.value for t in CorrelationType]}",
         )
 
     patterns = [
@@ -284,12 +289,7 @@ def get_recent_matches(
     engine = get_correlation_engine()
     since = datetime.now(UTC) - timedelta(hours=hours_back)
 
-    events = (
-        db.query(Event)
-        .filter(Event.ts >= since)
-        .order_by(Event.ts.asc())
-        .all()
-    )
+    events = db.query(Event).filter(Event.ts >= since).order_by(Event.ts.asc()).all()
 
     matches = engine.evaluate(events, db)
     return [_match_to_read(m) for m in matches]
@@ -306,12 +306,7 @@ def simulate_correlation(
     engine = get_correlation_engine()
     since = datetime.now(UTC) - timedelta(hours=body.hours_back)
 
-    events = (
-        db.query(Event)
-        .filter(Event.ts >= since)
-        .order_by(Event.ts.asc())
-        .all()
-    )
+    events = db.query(Event).filter(Event.ts >= since).order_by(Event.ts.asc()).all()
 
     start = time.monotonic()
 
@@ -392,7 +387,5 @@ def correlation_stats(
         "rules_by_severity": sev_counts,
         "state_machines": len(machines),
         "active_states": len(active_states),
-        "mitre_coverage": list({
-            t for r in rules for t in r.mitre_tactics
-        }),
+        "mitre_coverage": list({t for r in rules for t in r.mitre_tactics}),
     }

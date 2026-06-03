@@ -20,11 +20,11 @@ from apps.api.parsers import BaseParser, _normalize_severity
 
 _LEEF_HEADER_RE = re.compile(
     r"LEEF:(\d+\.\d+)\|"  # version
-    r"([^|]*)\|"           # vendor
-    r"([^|]*)\|"           # product
-    r"([^|]*)\|"           # version
-    r"([^|]*)\|"           # event id
-    r"(.*)",               # rest (optional delimiter byte + attributes)
+    r"([^|]*)\|"  # vendor
+    r"([^|]*)\|"  # product
+    r"([^|]*)\|"  # version
+    r"([^|]*)\|"  # event id
+    r"(.*)",  # rest (optional delimiter byte + attributes)
     re.DOTALL,
 )
 
@@ -89,6 +89,7 @@ def _classify_leef(event_id: str, attrs: dict[str, str]) -> str:
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 class LEEFParser(BaseParser):
     name = "leef"

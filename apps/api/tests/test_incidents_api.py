@@ -46,9 +46,7 @@ def _login_role(api_client, role: str) -> dict[str, str]:
             "role": role,
         },
     )
-    r = api_client.post(
-        "/auth/login", json={"username": f"u-{n}", "password": "Pwd-" + n}
-    )
+    r = api_client.post("/auth/login", json={"username": f"u-{n}", "password": "Pwd-" + n})
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
@@ -84,9 +82,7 @@ def test_patch_incident_transition_open_to_ack(api_client, db_session):
     """PATCH valide open->ack si role lead+."""
     inc = _make_incident(db_session, status="open")
     headers = _login_role(api_client, role="lead")
-    r = api_client.patch(
-        f"/incidents/{inc.id}", headers=headers, json={"status": "ack"}
-    )
+    r = api_client.patch(f"/incidents/{inc.id}", headers=headers, json={"status": "ack"})
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "ack"
 
@@ -95,9 +91,7 @@ def test_patch_incident_invalid_transition_returns_422(api_client, db_session):
     """closed -> ack n'est PAS dans VALID_TRANSITIONS -> 422."""
     inc = _make_incident(db_session, status="closed")
     headers = _login_role(api_client, role="lead")
-    r = api_client.patch(
-        f"/incidents/{inc.id}", headers=headers, json={"status": "ack"}
-    )
+    r = api_client.patch(f"/incidents/{inc.id}", headers=headers, json={"status": "ack"})
     assert r.status_code == 422
 
 
@@ -105,7 +99,5 @@ def test_patch_incident_requires_lead_role(api_client, db_session):
     """Un analyst ne doit pas pouvoir patcher (RoleChecker(lead))."""
     inc = _make_incident(db_session)
     headers = _login_role(api_client, role="analyst")
-    r = api_client.patch(
-        f"/incidents/{inc.id}", headers=headers, json={"status": "ack"}
-    )
+    r = api_client.patch(f"/incidents/{inc.id}", headers=headers, json={"status": "ack"})
     assert r.status_code == 403

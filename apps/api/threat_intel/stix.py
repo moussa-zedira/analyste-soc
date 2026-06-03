@@ -17,22 +17,52 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 SDO_TYPES = {
-    "attack-pattern", "campaign", "course-of-action", "grouping",
-    "identity", "indicator", "infrastructure", "intrusion-set",
-    "location", "malware", "malware-analysis", "note", "observed-data",
-    "opinion", "report", "threat-actor", "tool", "vulnerability",
+    "attack-pattern",
+    "campaign",
+    "course-of-action",
+    "grouping",
+    "identity",
+    "indicator",
+    "infrastructure",
+    "intrusion-set",
+    "location",
+    "malware",
+    "malware-analysis",
+    "note",
+    "observed-data",
+    "opinion",
+    "report",
+    "threat-actor",
+    "tool",
+    "vulnerability",
 }
 
 SRO_TYPES = {"relationship", "sighting"}
 
 SCO_TYPES = {
-    "artifact", "autonomous-system", "directory", "domain-name",
-    "email-addr", "email-message", "file", "ipv4-addr", "ipv6-addr",
-    "mac-addr", "mutex", "network-traffic", "process", "software",
-    "url", "user-account", "windows-registry-key", "x509-certificate",
+    "artifact",
+    "autonomous-system",
+    "directory",
+    "domain-name",
+    "email-addr",
+    "email-message",
+    "file",
+    "ipv4-addr",
+    "ipv6-addr",
+    "mac-addr",
+    "mutex",
+    "network-traffic",
+    "process",
+    "software",
+    "url",
+    "user-account",
+    "windows-registry-key",
+    "x509-certificate",
 }
 
-ALL_STIX_TYPES = SDO_TYPES | SRO_TYPES | SCO_TYPES | {"bundle", "language-content", "marking-definition"}
+ALL_STIX_TYPES = (
+    SDO_TYPES | SRO_TYPES | SCO_TYPES | {"bundle", "language-content", "marking-definition"}
+)
 
 # ---------------------------------------------------------------------------
 # TLP Marking definitions (STIX 2.1)
@@ -89,6 +119,7 @@ TLP_MARKINGS = {
 # ---------------------------------------------------------------------------
 # Deterministic STIX ID generation
 # ---------------------------------------------------------------------------
+
 
 def generate_stix_id(stix_type: str, *args: str) -> str:
     """Generate a deterministic STIX 2.1 ID using UUIDv5.
@@ -181,6 +212,7 @@ def validate_stix_pattern(pattern: str) -> bool:
 # ---------------------------------------------------------------------------
 # SDO / SRO factory helpers
 # ---------------------------------------------------------------------------
+
 
 def make_indicator(
     pattern: str,
@@ -334,6 +366,7 @@ def parse_bundle(data: dict | str) -> list[dict]:
 # Conversion: Internal IOC <-> STIX 2.1
 # ---------------------------------------------------------------------------
 
+
 def ioc_to_stix(ioc_dict: dict) -> dict[str, Any]:
     """Convert an internal IOC dict to a STIX 2.1 Indicator."""
     ioc_type = ioc_dict.get("type", "ip")
@@ -364,7 +397,9 @@ def ioc_to_stix(ioc_dict: dict) -> dict[str, Any]:
     kill_chain_phases = None
     kcp = ioc_dict.get("kill_chain_phase")
     if kcp:
-        kill_chain_phases = [{"kill_chain_name": "lockheed-martin-cyber-kill-chain", "phase_name": kcp}]
+        kill_chain_phases = [
+            {"kill_chain_name": "lockheed-martin-cyber-kill-chain", "phase_name": kcp}
+        ]
 
     external_refs = None
     if mitre:

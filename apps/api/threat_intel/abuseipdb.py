@@ -33,6 +33,7 @@ class AbuseIPDBProvider:
         """Verifie si on a encore du quota."""
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return True
@@ -48,6 +49,7 @@ class AbuseIPDBProvider:
         """Incremente le compteur journalier."""
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return
@@ -83,7 +85,9 @@ class AbuseIPDBProvider:
             data = resp.json().get("data", {})
             score = data.get("abuseConfidenceScore", 0)
             total_reports = data.get("totalReports", 0)
-            categories = [str(c) for c in data.get("reports", [])[0:5]] if data.get("reports") else []
+            categories = (
+                [str(c) for c in data.get("reports", [])[0:5]] if data.get("reports") else []
+            )
 
             return TIResult(
                 indicator=ip,

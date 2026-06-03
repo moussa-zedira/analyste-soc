@@ -20,9 +20,9 @@ _CEF_SEVERITY = {
 # Syslog facility: local0 = 16, severity mapping for PRI calculation
 _SYSLOG_SEVERITY = {
     "critical": 2,  # critical
-    "high": 3,      # error
-    "medium": 4,    # warning
-    "low": 6,       # informational
+    "high": 3,  # error
+    "medium": 4,  # warning
+    "low": 6,  # informational
 }
 
 FACILITY_LOCAL0 = 16
@@ -40,15 +40,17 @@ def _build_cef(incident: dict[str, Any]) -> str:
     def _esc(val: str) -> str:
         return str(val).replace("\\", "\\\\").replace("|", "\\|").replace("=", "\\=")
 
-    extensions = " ".join([
-        f"src={_esc(incident.get('entity_key', 'N/A'))}",
-        f"msg={_esc(incident.get('description', 'N/A')[:512])}",
-        f"cs1={_esc(incident.get('rule_id', 'N/A'))}",
-        "cs1Label=RuleID",
-        f"cn1={incident.get('threat_score', 0)}",
-        "cn1Label=ThreatScore",
-        f"externalId={_esc(incident.get('id', 'N/A'))}",
-    ])
+    extensions = " ".join(
+        [
+            f"src={_esc(incident.get('entity_key', 'N/A'))}",
+            f"msg={_esc(incident.get('description', 'N/A')[:512])}",
+            f"cs1={_esc(incident.get('rule_id', 'N/A'))}",
+            "cs1Label=RuleID",
+            f"cn1={incident.get('threat_score', 0)}",
+            "cn1Label=ThreatScore",
+            f"externalId={_esc(incident.get('id', 'N/A'))}",
+        ]
+    )
 
     return (
         f"CEF:0|CyberDef|SIEM|1.0"

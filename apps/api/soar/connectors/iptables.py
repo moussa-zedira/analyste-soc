@@ -26,7 +26,9 @@ class IPTablesConnector(Connector):
             return False
         try:
             proc = await asyncio.create_subprocess_exec(
-                "iptables", "-L", "-n",
+                "iptables",
+                "-L",
+                "-n",
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
@@ -37,7 +39,8 @@ class IPTablesConnector(Connector):
 
     async def _run(self, *args: str) -> tuple[int, str, str]:
         proc = await asyncio.create_subprocess_exec(
-            "iptables", *args,
+            "iptables",
+            *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -45,7 +48,9 @@ class IPTablesConnector(Connector):
         return proc.returncode or 0, out.decode(errors="replace"), err.decode(errors="replace")
 
     async def _rule_exists(self, ip: str, chain: str) -> bool:
-        rc, _, _ = await self._run("-C", chain, "-s" if chain == "INPUT" else "-d", ip, "-j", "DROP")
+        rc, _, _ = await self._run(
+            "-C", chain, "-s" if chain == "INPUT" else "-d", ip, "-j", "DROP"
+        )
         return rc == 0
 
     async def block_ip(self, ip: str, direction: str = "both") -> dict[str, Any]:
@@ -75,7 +80,11 @@ class IPTablesConnector(Connector):
             else:
                 results["chains"][chain] = f"error: {err.strip()[:200]}"
                 if "Permission denied" in err or "Operation not permitted" in err:
-                    return {"applied": False, "reason": "no_privileges", "detail": err.strip()[:200]}
+                    return {
+                        "applied": False,
+                        "reason": "no_privileges",
+                        "detail": err.strip()[:200],
+                    }
 
         return {"applied": applied_any, **results}
 

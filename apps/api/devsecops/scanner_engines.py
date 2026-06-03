@@ -164,7 +164,8 @@ async def semgrep_scan(target: str) -> list[dict] | None:
         "--quiet",
         "--no-git-ignore",
         "--metrics=off",
-        "--timeout", "120",
+        "--timeout",
+        "120",
         target,
     ]
     rc, stdout, stderr = await _run(cmd)
@@ -187,18 +188,20 @@ async def semgrep_scan(target: str) -> list[dict] | None:
         if isinstance(cwe_raw, str) and "CWE" in cwe_raw.upper():
             cwe = cwe_raw.split(":")[0].strip()
 
-        findings.append(_f(
-            title=r.get("check_id", "semgrep finding"),
-            severity=extra.get("severity", "medium"),
-            scan_type="sast",
-            description=extra.get("message") or meta.get("shortDescription", ""),
-            cwe_id=cwe,
-            file=r.get("path", ""),
-            line=(r.get("start") or {}).get("line", 0),
-            code_snippet=(extra.get("lines") or "")[:1000],
-            remediation=meta.get("fix") or extra.get("fix") or "",
-            raw={"engine": "semgrep", "rule": r.get("check_id")},
-        ))
+        findings.append(
+            _f(
+                title=r.get("check_id", "semgrep finding"),
+                severity=extra.get("severity", "medium"),
+                scan_type="sast",
+                description=extra.get("message") or meta.get("shortDescription", ""),
+                cwe_id=cwe,
+                file=r.get("path", ""),
+                line=(r.get("start") or {}).get("line", 0),
+                code_snippet=(extra.get("lines") or "")[:1000],
+                remediation=meta.get("fix") or extra.get("fix") or "",
+                raw={"engine": "semgrep", "rule": r.get("check_id")},
+            )
+        )
     return findings
 
 
@@ -222,18 +225,20 @@ async def bandit_scan(target: str) -> list[dict] | None:
         cwe_node = r.get("issue_cwe") or {}
         cwe_id = cwe_node.get("id") if isinstance(cwe_node, dict) else None
         cwe = f"CWE-{cwe_id}" if cwe_id else ""
-        findings.append(_f(
-            title=r.get("test_name") or r.get("test_id", "bandit finding"),
-            severity=r.get("issue_severity", "medium"),
-            scan_type="sast",
-            description=r.get("issue_text", ""),
-            cwe_id=cwe,
-            file=r.get("filename", ""),
-            line=r.get("line_number", 0),
-            code_snippet=(r.get("code") or "")[:1000],
-            remediation=r.get("more_info", ""),
-            raw={"engine": "bandit", "test_id": r.get("test_id")},
-        ))
+        findings.append(
+            _f(
+                title=r.get("test_name") or r.get("test_id", "bandit finding"),
+                severity=r.get("issue_severity", "medium"),
+                scan_type="sast",
+                description=r.get("issue_text", ""),
+                cwe_id=cwe,
+                file=r.get("filename", ""),
+                line=r.get("line_number", 0),
+                code_snippet=(r.get("code") or "")[:1000],
+                remediation=r.get("more_info", ""),
+                raw={"engine": "bandit", "test_id": r.get("test_id")},
+            )
+        )
     return findings
 
 
@@ -253,7 +258,8 @@ async def gitleaks_scan(target: str) -> list[dict] | None:
 
     try:
         cmd = [
-            "gitleaks", "detect",
+            "gitleaks",
+            "detect",
             f"--source={target}",
             "--no-git",
             "--report-format=json",
@@ -277,18 +283,20 @@ async def gitleaks_scan(target: str) -> list[dict] | None:
 
         findings: list[dict] = []
         for r in data:
-            findings.append(_f(
-                title=f"Secret leak: {r.get('RuleID') or r.get('Description', 'unknown')}",
-                severity="critical",
-                scan_type="secrets",
-                description=r.get("Description", "Secret detected by Gitleaks"),
-                cwe_id="CWE-798",
-                file=r.get("File", ""),
-                line=r.get("StartLine", 0),
-                code_snippet=(r.get("Match") or r.get("Secret") or "")[:300],
-                remediation="Rotate the credential immediately and remove it from the repository (also from git history if pushed).",
-                raw={"engine": "gitleaks", "rule": r.get("RuleID")},
-            ))
+            findings.append(
+                _f(
+                    title=f"Secret leak: {r.get('RuleID') or r.get('Description', 'unknown')}",
+                    severity="critical",
+                    scan_type="secrets",
+                    description=r.get("Description", "Secret detected by Gitleaks"),
+                    cwe_id="CWE-798",
+                    file=r.get("File", ""),
+                    line=r.get("StartLine", 0),
+                    code_snippet=(r.get("Match") or r.get("Secret") or "")[:300],
+                    remediation="Rotate the credential immediately and remove it from the repository (also from git history if pushed).",
+                    raw={"engine": "gitleaks", "rule": r.get("RuleID")},
+                )
+            )
         return findings
     finally:
         with contextlib.suppress(OSError):
@@ -325,7 +333,9 @@ async def safety_scan(target: str) -> list[dict] | None:
         rc, stdout, stderr = await _run(cmd)
         # Safety exits 64 when vulnerabilities found
         if rc not in (0, 64, 1):
-            slog.warning("safety_failed", rc=rc, file=str(req), stderr=stderr[:300].decode(errors="ignore"))
+            slog.warning(
+                "safety_failed", rc=rc, file=str(req), stderr=stderr[:300].decode(errors="ignore")
+            )
             continue
 
         data = _safe_json_loads(stdout)
@@ -354,17 +364,19 @@ async def safety_scan(target: str) -> list[dict] | None:
                 vuln_id = v.get("vulnerability_id") or v.get("CVE") or ""
                 sev = v.get("severity") or "high"
 
-            findings.append(_f(
-                title=f"Vulnerable dependency: {pkg}@{installed}",
-                severity=sev,
-                scan_type="sca",
-                description=f"{vuln_id}: {desc}",
-                cwe_id="CWE-1395",
-                file=str(req),
-                code_snippet=f"{pkg}=={installed}",
-                remediation=f"Upgrade {pkg} to a non-vulnerable version. See {vuln_id}.",
-                raw={"engine": "safety", "vuln_id": vuln_id},
-            ))
+            findings.append(
+                _f(
+                    title=f"Vulnerable dependency: {pkg}@{installed}",
+                    severity=sev,
+                    scan_type="sca",
+                    description=f"{vuln_id}: {desc}",
+                    cwe_id="CWE-1395",
+                    file=str(req),
+                    code_snippet=f"{pkg}=={installed}",
+                    remediation=f"Upgrade {pkg} to a non-vulnerable version. See {vuln_id}.",
+                    raw={"engine": "safety", "vuln_id": vuln_id},
+                )
+            )
     return findings
 
 
@@ -391,12 +403,16 @@ async def trivy_scan(target: str) -> list[dict] | None:
     slog.info("scan_engine_used", engine="trivy", mode=mode, target=target)
 
     cmd = [
-        "trivy", mode,
-        "--format", "json",
-        "--severity", "MEDIUM,HIGH,CRITICAL",
+        "trivy",
+        mode,
+        "--format",
+        "json",
+        "--severity",
+        "MEDIUM,HIGH,CRITICAL",
         "--quiet",
         "--no-progress",
-        "--scanners", "vuln,misconfig,secret",
+        "--scanners",
+        "vuln,misconfig,secret",
         target,
     ]
     rc, stdout, stderr = await _run(cmd)
@@ -413,46 +429,58 @@ async def trivy_scan(target: str) -> list[dict] | None:
         target_file = result.get("Target", "")
         # Vulnerabilities
         for v in result.get("Vulnerabilities", []) or []:
-            findings.append(_f(
-                title=f"{v.get('VulnerabilityID', 'CVE')} in {v.get('PkgName', '?')}",
-                severity=v.get("Severity", "MEDIUM"),
-                scan_type="container",
-                description=v.get("Title") or v.get("Description", "")[:500],
-                cwe_id=(v.get("CweIDs") or [""])[0],
-                file=target_file,
-                code_snippet=f"{v.get('PkgName','?')} {v.get('InstalledVersion','')} → fixed: {v.get('FixedVersion','-')}",
-                remediation=f"Upgrade {v.get('PkgName','?')} to {v.get('FixedVersion','a patched version')}." if v.get("FixedVersion") else "Apply vendor patch.",
-                raw={"engine": "trivy", "id": v.get("VulnerabilityID")},
-            ))
+            findings.append(
+                _f(
+                    title=f"{v.get('VulnerabilityID', 'CVE')} in {v.get('PkgName', '?')}",
+                    severity=v.get("Severity", "MEDIUM"),
+                    scan_type="container",
+                    description=v.get("Title") or v.get("Description", "")[:500],
+                    cwe_id=(v.get("CweIDs") or [""])[0],
+                    file=target_file,
+                    code_snippet=f"{v.get('PkgName', '?')} {v.get('InstalledVersion', '')} → fixed: {v.get('FixedVersion', '-')}",
+                    remediation=f"Upgrade {v.get('PkgName', '?')} to {v.get('FixedVersion', 'a patched version')}."
+                    if v.get("FixedVersion")
+                    else "Apply vendor patch.",
+                    raw={"engine": "trivy", "id": v.get("VulnerabilityID")},
+                )
+            )
         # Misconfigurations (Dockerfile, k8s, terraform)
         for m in result.get("Misconfigurations", []) or []:
             cause = m.get("CauseMetadata", {}) or {}
-            findings.append(_f(
-                title=f"{m.get('ID','MISCONF')}: {m.get('Title','Misconfiguration')}",
-                severity=m.get("Severity", "MEDIUM"),
-                scan_type="container",
-                description=m.get("Description", ""),
-                cwe_id="",
-                file=target_file,
-                line=cause.get("StartLine", 0),
-                code_snippet=(cause.get("Code", {}) or {}).get("Lines", [{}])[0].get("Content", "") if cause.get("Code") else "",
-                remediation=m.get("Resolution", ""),
-                raw={"engine": "trivy", "id": m.get("ID")},
-            ))
+            findings.append(
+                _f(
+                    title=f"{m.get('ID', 'MISCONF')}: {m.get('Title', 'Misconfiguration')}",
+                    severity=m.get("Severity", "MEDIUM"),
+                    scan_type="container",
+                    description=m.get("Description", ""),
+                    cwe_id="",
+                    file=target_file,
+                    line=cause.get("StartLine", 0),
+                    code_snippet=(cause.get("Code", {}) or {})
+                    .get("Lines", [{}])[0]
+                    .get("Content", "")
+                    if cause.get("Code")
+                    else "",
+                    remediation=m.get("Resolution", ""),
+                    raw={"engine": "trivy", "id": m.get("ID")},
+                )
+            )
         # Secrets in image layers / fs
         for s in result.get("Secrets", []) or []:
-            findings.append(_f(
-                title=f"Secret: {s.get('Title') or s.get('RuleID', 'leaked credential')}",
-                severity=s.get("Severity", "CRITICAL"),
-                scan_type="secrets",
-                description=s.get("Match", ""),
-                cwe_id="CWE-798",
-                file=target_file,
-                line=s.get("StartLine", 0),
-                code_snippet=(s.get("Match") or "")[:300],
-                remediation="Rotate the secret and rebuild without it.",
-                raw={"engine": "trivy", "rule": s.get("RuleID")},
-            ))
+            findings.append(
+                _f(
+                    title=f"Secret: {s.get('Title') or s.get('RuleID', 'leaked credential')}",
+                    severity=s.get("Severity", "CRITICAL"),
+                    scan_type="secrets",
+                    description=s.get("Match", ""),
+                    cwe_id="CWE-798",
+                    file=target_file,
+                    line=s.get("StartLine", 0),
+                    code_snippet=(s.get("Match") or "")[:300],
+                    remediation="Rotate the secret and rebuild without it.",
+                    raw={"engine": "trivy", "rule": s.get("RuleID")},
+                )
+            )
     return findings
 
 
@@ -471,8 +499,10 @@ async def checkov_scan(target: str) -> list[dict] | None:
     arg = "-f" if target_path.is_file() else "-d"
     cmd = [
         "checkov",
-        arg, target,
-        "-o", "json",
+        arg,
+        target,
+        "-o",
+        "json",
         "--quiet",
         "--compact",
         "--soft-fail",
@@ -490,13 +520,19 @@ async def checkov_scan(target: str) -> list[dict] | None:
     blocks = data if isinstance(data, list) else [data]
 
     sev_from_check_id = {  # Checkov often omits severity → infer from framework
-        "CKV_AWS": "high", "CKV_GCP": "high", "CKV_AZURE": "high",
-        "CKV_K8S": "medium", "CKV_DOCKER": "medium", "CKV2": "medium",
+        "CKV_AWS": "high",
+        "CKV_GCP": "high",
+        "CKV_AZURE": "high",
+        "CKV_K8S": "medium",
+        "CKV_DOCKER": "medium",
+        "CKV2": "medium",
     }
 
     findings: list[dict] = []
     for block in blocks:
-        results = (block.get("results") or {}).get("failed_checks", []) if isinstance(block, dict) else []
+        results = (
+            (block.get("results") or {}).get("failed_checks", []) if isinstance(block, dict) else []
+        )
         for c in results:
             check_id = c.get("check_id", "")
             sev = c.get("severity") or next(
@@ -504,19 +540,23 @@ async def checkov_scan(target: str) -> list[dict] | None:
                 "medium",
             )
             file_line = c.get("file_line_range") or [0, 0]
-            findings.append(_f(
-                title=f"{check_id}: {c.get('check_name', 'IaC misconfiguration')}",
-                severity=sev,
-                scan_type="iac",
-                description=c.get("check_name", ""),
-                cwe_id="",
-                file=c.get("file_path", "") or c.get("repo_file_path", ""),
-                line=file_line[0] if file_line else 0,
-                code_snippet="\n".join(
-                    line if isinstance(line, str) else (line[1] if isinstance(line, list) and len(line) > 1 else str(line))
-                    for line in (c.get("code_block") or [])[:10]
-                )[:1000],
-                remediation=c.get("guideline", "") or "Review and fix per Checkov guideline.",
-                raw={"engine": "checkov", "check_id": check_id},
-            ))
+            findings.append(
+                _f(
+                    title=f"{check_id}: {c.get('check_name', 'IaC misconfiguration')}",
+                    severity=sev,
+                    scan_type="iac",
+                    description=c.get("check_name", ""),
+                    cwe_id="",
+                    file=c.get("file_path", "") or c.get("repo_file_path", ""),
+                    line=file_line[0] if file_line else 0,
+                    code_snippet="\n".join(
+                        line
+                        if isinstance(line, str)
+                        else (line[1] if isinstance(line, list) and len(line) > 1 else str(line))
+                        for line in (c.get("code_block") or [])[:10]
+                    )[:1000],
+                    remediation=c.get("guideline", "") or "Review and fix per Checkov guideline.",
+                    raw={"engine": "checkov", "check_id": check_id},
+                )
+            )
     return findings

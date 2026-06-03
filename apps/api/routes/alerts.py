@@ -23,8 +23,10 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 # Pydantic schemas
 # ---------------------------------------------------------------------------
 
+
 class AlertChannelCreate(BaseModel):
     """Create a new alert channel."""
+
     channel_type: str
     name: str
     config_json: str = "{}"
@@ -33,6 +35,7 @@ class AlertChannelCreate(BaseModel):
 
 class AlertChannelUpdate(BaseModel):
     """Update an existing alert channel."""
+
     name: str | None = None
     channel_type: str | None = None
     config_json: str | None = None
@@ -42,6 +45,7 @@ class AlertChannelUpdate(BaseModel):
 
 class AlertChannelRead(BaseModel):
     """Read schema for alert channels."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -56,11 +60,13 @@ class AlertChannelRead(BaseModel):
 
 class AlertChannelToggle(BaseModel):
     """Toggle channel enabled state (backward compat)."""
+
     enabled: bool
 
 
 class AlertRuleCreate(BaseModel):
     """Create a condition-to-channel mapping rule."""
+
     name: str
     description: str = ""
     conditions_json: str = "{}"
@@ -70,6 +76,7 @@ class AlertRuleCreate(BaseModel):
 
 class AlertRuleUpdate(BaseModel):
     """Update an alert rule."""
+
     name: str | None = None
     description: str | None = None
     conditions_json: str | None = None
@@ -80,6 +87,7 @@ class AlertRuleUpdate(BaseModel):
 
 class AlertRuleRead(BaseModel):
     """Read schema for alert rules."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -95,6 +103,7 @@ class AlertRuleRead(BaseModel):
 
 class TestAlertResult(BaseModel):
     """Result of a test alert."""
+
     status: str
     channel_type: str | None = None
     error: str | None = None
@@ -103,6 +112,7 @@ class TestAlertResult(BaseModel):
 # ---------------------------------------------------------------------------
 # Channel endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/channels", response_model=list[AlertChannelRead])
 def list_channels(db: Session = Depends(get_db)) -> list[AlertChannel]:
@@ -290,6 +300,7 @@ async def test_channel(
         raise HTTPException(status_code=404, detail="Alert channel not found")
 
     from apps.api.alerting import send_test_alert
+
     result = await send_test_alert(channel)
     return result
 
@@ -297,6 +308,7 @@ async def test_channel(
 # ---------------------------------------------------------------------------
 # Alert Rule endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/rules", response_model=list[AlertRuleRead])
 def list_rules(db: Session = Depends(get_db)) -> list[AlertRule]:

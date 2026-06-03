@@ -23,6 +23,7 @@ try:
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.pipeline import Pipeline
+
     _ML_AVAILABLE = True
 except ImportError:
     _ML_AVAILABLE = False
@@ -88,8 +89,11 @@ def _load_persisted_classifier() -> bool:
     with _lock:
         _classifier = loaded
         _classifier_info = {**meta, "status": "loaded_from_disk"}
-    logger.info("ml_classifier: loaded persisted model from %s (trained %s)",
-                MODEL_PATH, meta.get("timestamp_train"))
+    logger.info(
+        "ml_classifier: loaded persisted model from %s (trained %s)",
+        MODEL_PATH,
+        meta.get("timestamp_train"),
+    )
     return True
 
 
@@ -104,7 +108,9 @@ def _persist_classifier(pipeline, n_samples: int) -> None:
             "timestamp_train": datetime.now(UTC).isoformat(),
             "n_samples_train": n_samples,
             "n_features": getattr(
-                pipeline.named_steps.get("tfidf"), "max_features", None,
+                pipeline.named_steps.get("tfidf"),
+                "max_features",
+                None,
             ),
             "model_class": type(pipeline.named_steps.get("clf")).__name__,
             "sklearn_version": getattr(sklearn, "__version__", "unknown"),
@@ -133,9 +139,7 @@ def _build_training_data(db: Session) -> tuple[list[str], list[str]]:
     labels: list[str] = []
 
     for inc in incidents:
-        event_msgs = " ".join(
-            e.message or "" for e in (inc.events or [])[:50]
-        )
+        event_msgs = " ".join(e.message or "" for e in (inc.events or [])[:50])
         text = f"{inc.title} {inc.description} {event_msgs}".strip()
         texts.append(text)
         labels.append(inc.severity)
@@ -156,11 +160,7 @@ def train_classifier(db: Session, force_retrain: bool = False) -> dict:
         existing = _classifier
         existing_info = dict(_classifier_info) if _classifier_info else {}
 
-    if (
-        not force_retrain
-        and existing is not None
-        and not _model_is_stale(existing_info)
-    ):
+    if not force_retrain and existing is not None and not _model_is_stale(existing_info):
         return {**existing_info, "status": existing_info.get("status", "trained")}
 
     texts, labels = _build_training_data(db)
@@ -172,10 +172,12 @@ def train_classifier(db: Session, force_retrain: bool = False) -> dict:
             "required": MIN_TRAINING_SAMPLES,
         }
 
-    pipeline = Pipeline([
-        ("tfidf", TfidfVectorizer(max_features=500, stop_words="english")),
-        ("clf", RandomForestClassifier(n_estimators=100, random_state=42)),
-    ])
+    pipeline = Pipeline(
+        [
+            ("tfidf", TfidfVectorizer(max_features=500, stop_words="english")),
+            ("clf", RandomForestClassifier(n_estimators=100, random_state=42)),
+        ]
+    )
     pipeline.fit(texts, labels)
     _persist_classifier(pipeline, n_samples=len(texts))
 
@@ -197,7 +199,9 @@ def train_classifier(db: Session, force_retrain: bool = False) -> dict:
 
 
 def predict_severity(
-    title: str, description: str, event_messages: list[str],
+    title: str,
+    description: str,
+    event_messages: list[str],
 ) -> str | None:
     """Predit la severite d'un nouvel incident."""
     ensure_classifier_loaded()
@@ -217,11 +221,7 @@ def classify_incidents(db: Session) -> dict:
     if train_result.get("status") not in {"trained", "loaded_from_disk"}:
         return {"status": train_result["status"], "incidents_classified": 0}
 
-    incidents = (
-        db.query(Incident)
-        .filter(Incident.suggested_severity.is_(None))
-        .all()
-    )
+    incidents = db.query(Incident).filter(Incident.suggested_severity.is_(None)).all()
 
     classified = 0
     for inc in incidents:

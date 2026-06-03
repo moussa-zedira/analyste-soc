@@ -160,11 +160,14 @@ def compute_threat_scores(db: Session, lookback_hours: int = 24) -> int:
             existing.factors_json = json.dumps(factors)
             existing.updated_at = now
         else:
-            db.add(ThreatScore(
-                ip=ip, score=score,
-                factors_json=json.dumps(factors),
-                updated_at=now,
-            ))
+            db.add(
+                ThreatScore(
+                    ip=ip,
+                    score=score,
+                    factors_json=json.dumps(factors),
+                    updated_at=now,
+                )
+            )
         scored += 1
 
     db.commit()

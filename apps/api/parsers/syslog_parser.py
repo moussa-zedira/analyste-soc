@@ -20,22 +20,41 @@ from apps.api.parsers import BaseParser
 # ---------------------------------------------------------------------------
 
 _FACILITY_NAMES = {
-    0: "kern", 1: "user", 2: "mail", 3: "daemon", 4: "auth", 5: "syslog",
-    6: "lpr", 7: "news", 8: "uucp", 9: "cron", 10: "authpriv", 11: "ftp",
-    12: "ntp", 13: "audit", 14: "alert", 15: "clock",
-    16: "local0", 17: "local1", 18: "local2", 19: "local3",
-    20: "local4", 21: "local5", 22: "local6", 23: "local7",
+    0: "kern",
+    1: "user",
+    2: "mail",
+    3: "daemon",
+    4: "auth",
+    5: "syslog",
+    6: "lpr",
+    7: "news",
+    8: "uucp",
+    9: "cron",
+    10: "authpriv",
+    11: "ftp",
+    12: "ntp",
+    13: "audit",
+    14: "alert",
+    15: "clock",
+    16: "local0",
+    17: "local1",
+    18: "local2",
+    19: "local3",
+    20: "local4",
+    21: "local5",
+    22: "local6",
+    23: "local7",
 }
 
 _SEVERITY_MAP = {
-    0: "critical",   # Emergency
-    1: "critical",   # Alert
-    2: "critical",   # Critical
-    3: "high",       # Error
-    4: "medium",     # Warning
-    5: "low",        # Notice
-    6: "low",        # Informational
-    7: "low",        # Debug
+    0: "critical",  # Emergency
+    1: "critical",  # Alert
+    2: "critical",  # Critical
+    3: "high",  # Error
+    4: "medium",  # Warning
+    5: "low",  # Notice
+    6: "low",  # Informational
+    7: "low",  # Debug
 }
 
 # ---------------------------------------------------------------------------
@@ -45,9 +64,9 @@ _SEVERITY_MAP = {
 _RFC3164_RE = re.compile(
     r"<(\d{1,3})>"
     r"(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+"
-    r"(\S+)\s+"                        # hostname
-    r"(\S+?)(?:\[(\d+)\])?:\s+"        # app[pid]:
-    r"([\s\S]+)"                        # msg (multiline)
+    r"(\S+)\s+"  # hostname
+    r"(\S+?)(?:\[(\d+)\])?:\s+"  # app[pid]:
+    r"([\s\S]+)"  # msg (multiline)
 )
 
 # ---------------------------------------------------------------------------
@@ -55,14 +74,14 @@ _RFC3164_RE = re.compile(
 # ---------------------------------------------------------------------------
 
 _RFC5424_RE = re.compile(
-    r"<(\d{1,3})>(\d+)\s+"             # PRI + version
-    r"(\S+)\s+"                         # timestamp
-    r"(\S+)\s+"                         # hostname
-    r"(\S+)\s+"                         # app-name
-    r"(\S+)\s+"                         # procid
-    r"(\S+)\s+"                         # msgid
-    r"((?:\[.*?\]\s*)*|-)\s*"           # structured data
-    r"([\s\S]*)"                        # msg
+    r"<(\d{1,3})>(\d+)\s+"  # PRI + version
+    r"(\S+)\s+"  # timestamp
+    r"(\S+)\s+"  # hostname
+    r"(\S+)\s+"  # app-name
+    r"(\S+)\s+"  # procid
+    r"(\S+)\s+"  # msgid
+    r"((?:\[.*?\]\s*)*|-)\s*"  # structured data
+    r"([\s\S]*)"  # msg
 )
 
 _SD_ELEMENT_RE = re.compile(r"\[(\S+?)(?:\s+([^\]]+))?\]")
@@ -73,6 +92,7 @@ _IP_RE = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _decode_pri(pri: int) -> tuple[int, int, str, str]:
     """Return (facility_code, severity_code, facility_name, severity_label)."""
@@ -196,6 +216,7 @@ def _parse_5424_timestamp(ts_str: str) -> datetime | None:
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 class SyslogParser(BaseParser):
     name = "syslog"

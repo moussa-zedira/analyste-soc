@@ -14,6 +14,7 @@ from typing import Any
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _safe_float(v: Any) -> float | None:
     if v is None:
         return None
@@ -72,6 +73,7 @@ def register_command(name: str) -> Callable:
     def decorator(fn: Callable) -> Callable:
         _COMMANDS[name] = fn
         return fn
+
     return decorator
 
 
@@ -96,6 +98,7 @@ def list_commands() -> dict[str, dict]:
 # Command implementations
 # ---------------------------------------------------------------------------
 
+
 @register_command("where")
 def cmd_where(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
     """Filter results with an additional condition."""
@@ -116,7 +119,26 @@ def cmd_where(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
         if fval is None:
             continue
         try:
-            if op == ">" and _safe_float(fval) is not None and _safe_float(fval) > float(value_str) or op == ">=" and _safe_float(fval) is not None and _safe_float(fval) >= float(value_str) or op == "<" and _safe_float(fval) is not None and _safe_float(fval) < float(value_str) or op == "<=" and _safe_float(fval) is not None and _safe_float(fval) <= float(value_str) or op in ("=", "==") and str(fval) == value_str or op == "!=" and str(fval) != value_str or op.upper() == "CONTAINS" and value_str.lower() in str(fval).lower():
+            if (
+                op == ">"
+                and _safe_float(fval) is not None
+                and _safe_float(fval) > float(value_str)
+                or op == ">="
+                and _safe_float(fval) is not None
+                and _safe_float(fval) >= float(value_str)
+                or op == "<"
+                and _safe_float(fval) is not None
+                and _safe_float(fval) < float(value_str)
+                or op == "<="
+                and _safe_float(fval) is not None
+                and _safe_float(fval) <= float(value_str)
+                or op in ("=", "==")
+                and str(fval) == value_str
+                or op == "!="
+                and str(fval) != value_str
+                or op.upper() == "CONTAINS"
+                and value_str.lower() in str(fval).lower()
+            ):
                 result.append(row)
         except (ValueError, TypeError):
             continue
@@ -139,7 +161,7 @@ def cmd_stats(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
 
     if by_idx is not None:
         agg_part = " ".join(parts[:by_idx])
-        group_fields = [f.strip().strip(",") for f in parts[by_idx + 1:] if f.strip().strip(",")]
+        group_fields = [f.strip().strip(",") for f in parts[by_idx + 1 :] if f.strip().strip(",")]
     else:
         agg_part = text
         group_fields = []
@@ -183,7 +205,7 @@ def _parse_agg_specs(text: str) -> list[tuple[str, str, str]]:
         alias = ""
         if " as " in part.lower():
             idx = part.lower().index(" as ")
-            alias = part[idx + 4:].strip()
+            alias = part[idx + 4 :].strip()
             part = part[:idx].strip()
 
         m = re.match(r"(\w+)\(([^)]*)\)", part)
@@ -308,7 +330,7 @@ def cmd_timechart(rows: list[dict], args: list[str], raw_text: str) -> list[dict
         parsed = _parse_timespan(span_match.group(1))
         if parsed:
             span = parsed
-        text = text[:span_match.start()] + text[span_match.end():]
+        text = text[: span_match.start()] + text[span_match.end() :]
 
     # Parse remaining: <agg> [by <field>]
     parts = text.strip().split()
@@ -380,7 +402,7 @@ def cmd_eval(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
     if eq_idx < 1:
         return rows
     target_field = text[:eq_idx].strip()
-    expression = text[eq_idx + 1:].strip()
+    expression = text[eq_idx + 1 :].strip()
 
     for row in rows:
         row[target_field] = _eval_expression(expression, row)
@@ -392,7 +414,7 @@ def _eval_expression(expr: str, row: dict) -> Any:
     expr = expr.strip()
 
     # if(condition, true_val, false_val)
-    if_match = re.match(r'if\((.+?),\s*(.+?),\s*(.+?)\)\s*$', expr)
+    if_match = re.match(r"if\((.+?),\s*(.+?),\s*(.+?)\)\s*$", expr)
     if if_match:
         cond, tv, fv = if_match.group(1), if_match.group(2).strip(), if_match.group(3).strip()
         cond_parts = cond.split()
@@ -406,29 +428,29 @@ def _eval_expression(expr: str, row: dict) -> Any:
         return _resolve_val(tv, row) if cond_result else _resolve_val(fv, row)
 
     # len(field)
-    len_match = re.match(r'len\((\w+)\)', expr)
+    len_match = re.match(r"len\((\w+)\)", expr)
     if len_match:
         v = _get_field(row, len_match.group(1))
         return len(str(v)) if v is not None else 0
 
     # lower(field)
-    lower_match = re.match(r'lower\((\w+)\)', expr)
+    lower_match = re.match(r"lower\((\w+)\)", expr)
     if lower_match:
         v = _get_field(row, lower_match.group(1))
         return str(v).lower() if v is not None else ""
 
     # upper(field)
-    upper_match = re.match(r'upper\((\w+)\)', expr)
+    upper_match = re.match(r"upper\((\w+)\)", expr)
     if upper_match:
         v = _get_field(row, upper_match.group(1))
         return str(v).upper() if v is not None else ""
 
     # substr(field, start, length)
-    substr_match = re.match(r'substr\((\w+),\s*(\d+),\s*(\d+)\)', expr)
+    substr_match = re.match(r"substr\((\w+),\s*(\d+),\s*(\d+)\)", expr)
     if substr_match:
         v = str(_get_field(row, substr_match.group(1)) or "")
         start, length = int(substr_match.group(2)), int(substr_match.group(3))
-        return v[start:start + length]
+        return v[start : start + length]
 
     # replace(field, pattern, replacement)
     replace_match = re.match(r'replace\((\w+),\s*["\'](.+?)["\']\s*,\s*["\'](.*)["\']\)', expr)
@@ -437,7 +459,7 @@ def _eval_expression(expr: str, row: dict) -> Any:
         return v.replace(replace_match.group(2), replace_match.group(3))
 
     # concat(...)
-    concat_match = re.match(r'concat\((.+)\)', expr)
+    concat_match = re.match(r"concat\((.+)\)", expr)
     if concat_match:
         parts = [p.strip() for p in concat_match.group(1).split(",")]
         return "".join(str(_resolve_val(p, row) or "") for p in parts)
@@ -646,12 +668,14 @@ def cmd_transaction(rows: list[dict], args: list[str], raw_text: str) -> list[di
             if tx_start and ts and isinstance(ts, datetime) and (ts - tx_start) > maxspan:
                 # Close current transaction, start new one
                 if tx_events:
-                    result.append({
-                        field: key,
-                        "event_count": len(tx_events),
-                        "duration": str(ts - tx_start) if tx_start else "0",
-                        "events": tx_events,
-                    })
+                    result.append(
+                        {
+                            field: key,
+                            "event_count": len(tx_events),
+                            "duration": str(ts - tx_start) if tx_start else "0",
+                            "events": tx_events,
+                        }
+                    )
                 tx_events = [evt]
                 tx_start = ts
             else:
@@ -667,12 +691,14 @@ def cmd_transaction(rows: list[dict], args: list[str], raw_text: str) -> list[di
                 except (ValueError, TypeError):
                     last_ts = tx_start
             dur = str(last_ts - tx_start) if tx_start and isinstance(last_ts, datetime) else "0"
-            result.append({
-                field: key,
-                "event_count": len(tx_events),
-                "duration": dur,
-                "events": tx_events,
-            })
+            result.append(
+                {
+                    field: key,
+                    "event_count": len(tx_events),
+                    "duration": dur,
+                    "events": tx_events,
+                }
+            )
 
     return result
 
@@ -762,7 +788,7 @@ def cmd_rare(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
     counter = Counter(str(_get_field(r, field)) for r in rows if _get_field(r, field) is not None)
     return [
         {field: val, "count": cnt, "percent": round(cnt / len(rows) * 100, 2) if rows else 0}
-        for val, cnt in counter.most_common()[:-n - 1:-1]
+        for val, cnt in counter.most_common()[: -n - 1 : -1]
     ]
 
 
@@ -786,17 +812,61 @@ def cmd_mitre(rows: list[dict], args: list[str], raw_text: str) -> list[dict]:
     """Add MITRE ATT&CK technique info: mitre <field>."""
     # Map common event types to MITRE techniques
     technique_map: dict[str, dict] = {
-        "auth_failure": {"technique_id": "T1110", "technique": "Brute Force", "tactic": "Credential Access"},
-        "process_create": {"technique_id": "T1059", "technique": "Command and Scripting Interpreter", "tactic": "Execution"},
-        "privilege_change": {"technique_id": "T1548", "technique": "Abuse Elevation Control Mechanism", "tactic": "Privilege Escalation"},
-        "rdp_connect": {"technique_id": "T1021.001", "technique": "Remote Desktop Protocol", "tactic": "Lateral Movement"},
-        "ssh_connect": {"technique_id": "T1021.004", "technique": "SSH", "tactic": "Lateral Movement"},
-        "smb_connect": {"technique_id": "T1021.002", "technique": "SMB/Windows Admin Shares", "tactic": "Lateral Movement"},
-        "dns_query": {"technique_id": "T1071.004", "technique": "DNS", "tactic": "Command and Control"},
-        "file_create": {"technique_id": "T1105", "technique": "Ingress Tool Transfer", "tactic": "Command and Control"},
-        "registry_modify": {"technique_id": "T1112", "technique": "Modify Registry", "tactic": "Defense Evasion"},
-        "scheduled_task": {"technique_id": "T1053", "technique": "Scheduled Task/Job", "tactic": "Persistence"},
-        "service_install": {"technique_id": "T1543", "technique": "Create or Modify System Process", "tactic": "Persistence"},
+        "auth_failure": {
+            "technique_id": "T1110",
+            "technique": "Brute Force",
+            "tactic": "Credential Access",
+        },
+        "process_create": {
+            "technique_id": "T1059",
+            "technique": "Command and Scripting Interpreter",
+            "tactic": "Execution",
+        },
+        "privilege_change": {
+            "technique_id": "T1548",
+            "technique": "Abuse Elevation Control Mechanism",
+            "tactic": "Privilege Escalation",
+        },
+        "rdp_connect": {
+            "technique_id": "T1021.001",
+            "technique": "Remote Desktop Protocol",
+            "tactic": "Lateral Movement",
+        },
+        "ssh_connect": {
+            "technique_id": "T1021.004",
+            "technique": "SSH",
+            "tactic": "Lateral Movement",
+        },
+        "smb_connect": {
+            "technique_id": "T1021.002",
+            "technique": "SMB/Windows Admin Shares",
+            "tactic": "Lateral Movement",
+        },
+        "dns_query": {
+            "technique_id": "T1071.004",
+            "technique": "DNS",
+            "tactic": "Command and Control",
+        },
+        "file_create": {
+            "technique_id": "T1105",
+            "technique": "Ingress Tool Transfer",
+            "tactic": "Command and Control",
+        },
+        "registry_modify": {
+            "technique_id": "T1112",
+            "technique": "Modify Registry",
+            "tactic": "Defense Evasion",
+        },
+        "scheduled_task": {
+            "technique_id": "T1053",
+            "technique": "Scheduled Task/Job",
+            "tactic": "Persistence",
+        },
+        "service_install": {
+            "technique_id": "T1543",
+            "technique": "Create or Modify System Process",
+            "tactic": "Persistence",
+        },
     }
     field = raw_text.strip() or "event_type"
     for row in rows:
@@ -832,7 +902,7 @@ def cmd_trendline(rows: list[dict], args: list[str], raw_text: str) -> list[dict
             if i < span - 1:
                 row[trend_col] = None
             else:
-                window = [v for v in values[i - span + 1:i + 1] if v is not None]
+                window = [v for v in values[i - span + 1 : i + 1] if v is not None]
                 row[trend_col] = statistics.mean(window) if window else None
 
     elif trend_type == "ema":
@@ -854,10 +924,18 @@ def cmd_trendline(rows: list[dict], args: list[str], raw_text: str) -> list[dict
             if i < span - 1:
                 row[trend_col] = None
             else:
-                window = [(j + 1, values[i - span + 1 + j]) for j in range(span) if values[i - span + 1 + j] is not None]
+                window = [
+                    (j + 1, values[i - span + 1 + j])
+                    for j in range(span)
+                    if values[i - span + 1 + j] is not None
+                ]
                 if window:
                     total_weight = sum(w for w, _ in window)
-                    row[trend_col] = round(sum(w * v for w, v in window) / total_weight, 4) if total_weight else None
+                    row[trend_col] = (
+                        round(sum(w * v for w, v in window) / total_weight, 4)
+                        if total_weight
+                        else None
+                    )
                 else:
                     row[trend_col] = None
 
@@ -871,7 +949,7 @@ def cmd_fillnull(rows: list[dict], args: list[str], raw_text: str) -> list[dict]
     fill_value: Any = 0
     fields: list[str] = []
 
-    value_match = re.match(r'value=(\S+)\s*(.*)', text)
+    value_match = re.match(r"value=(\S+)\s*(.*)", text)
     if value_match:
         fill_value = value_match.group(1).strip("'\"")
         remaining = value_match.group(2)
@@ -981,7 +1059,7 @@ _COMMAND_EXAMPLES: dict[str, list[str]] = {
     ],
     "regex": ['| regex field=message "powershell.*-enc"'],
     "eval": [
-        '| eval risk = ti_score * 10',
+        "| eval risk = ti_score * 10",
         '| eval label = if(severity = "high", "CRITICAL", "normal")',
     ],
     "rename": ["| rename src_ip as source_address"],

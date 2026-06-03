@@ -25,6 +25,7 @@ def get_cached(indicator: str, source: str, db: Session) -> TIResult | None:
     # Level 1: Redis
     try:
         from apps.api.cache import get_redis_client
+
         r = get_redis_client()
         if r:
             raw = r.get(_redis_key(indicator, source))
@@ -37,6 +38,7 @@ def get_cached(indicator: str, source: str, db: Session) -> TIResult | None:
     # Level 2: PostgreSQL
     try:
         from apps.api.models.ti_cache import TICache
+
         row = (
             db.query(TICache)
             .filter(TICache.indicator == indicator, TICache.source == source)
@@ -70,6 +72,7 @@ def set_cached(result: TIResult, db: Session) -> None:
 def _set_redis(indicator: str, source: str, result: TIResult) -> None:
     try:
         from apps.api.cache import get_redis_client
+
         r = get_redis_client()
         if r:
             data = {
@@ -106,16 +109,18 @@ def _set_db(result: TIResult, db: Session) -> None:
             existing.expires_at = expires
             existing.updated_at = datetime.now(UTC)
         else:
-            db.add(TICache(
-                indicator=result.indicator,
-                source=result.source,
-                risk_score=result.risk_score,
-                is_malicious=result.is_malicious,
-                categories_json=json.dumps(result.categories),
-                tags_json=json.dumps(result.tags),
-                total_reports=result.total_reports,
-                expires_at=expires,
-            ))
+            db.add(
+                TICache(
+                    indicator=result.indicator,
+                    source=result.source,
+                    risk_score=result.risk_score,
+                    is_malicious=result.is_malicious,
+                    categories_json=json.dumps(result.categories),
+                    tags_json=json.dumps(result.tags),
+                    total_reports=result.total_reports,
+                    expires_at=expires,
+                )
+            )
         db.commit()
     except Exception:
         db.rollback()

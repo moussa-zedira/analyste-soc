@@ -27,32 +27,38 @@ def _get_providers() -> list:
     abuseipdb_key = getattr(settings, "ABUSEIPDB_API_KEY", "")
     if abuseipdb_key:
         from apps.api.threat_intel.abuseipdb import AbuseIPDBProvider
+
         providers.append(AbuseIPDBProvider(abuseipdb_key))
 
     otx_key = getattr(settings, "OTX_API_KEY", "")
     if otx_key:
         from apps.api.threat_intel.otx import OTXProvider
+
         providers.append(OTXProvider(otx_key))
 
     vt_key = getattr(settings, "VIRUSTOTAL_API_KEY", "")
     if vt_key:
         from apps.api.threat_intel.virustotal import VirusTotalProvider
+
         providers.append(VirusTotalProvider(vt_key))
 
     shodan_key = getattr(settings, "SHODAN_API_KEY", "")
     if shodan_key:
         from apps.api.threat_intel.shodan import ShodanProvider
+
         providers.append(ShodanProvider(shodan_key))
 
     greynoise_key = getattr(settings, "GREYNOISE_API_KEY", "")
     if greynoise_key:
         from apps.api.threat_intel.greynoise import GreyNoiseProvider
+
         providers.append(GreyNoiseProvider(greynoise_key))
 
     misp_url = getattr(settings, "MISP_URL", "")
     misp_key = getattr(settings, "MISP_API_KEY", "")
     if misp_url and misp_key:
         from apps.api.threat_intel.misp import MISPProvider
+
         verify_ssl = getattr(settings, "MISP_VERIFY_SSL", True)
         providers.append(MISPProvider(misp_url, misp_key, verify_ssl))
 
@@ -60,10 +66,12 @@ def _get_providers() -> list:
     circl_user = getattr(settings, "CIRCL_PDNS_USER", "")
     circl_pass = getattr(settings, "CIRCL_PDNS_PASSWORD", "")
     from apps.api.threat_intel.circl import CIRCLProvider
+
     providers.append(CIRCLProvider(circl_user, circl_pass))
 
     # URLhaus — free, no key required, always available
     from apps.api.threat_intel.urlhaus import URLhausProvider
+
     providers.append(URLhausProvider())
 
     return providers
@@ -74,12 +82,38 @@ def get_provider_status() -> list[dict]:
     settings = get_settings()
 
     all_providers = [
-        {"name": "abuseipdb", "configured": bool(getattr(settings, "ABUSEIPDB_API_KEY", "")), "requires_key": True},
-        {"name": "otx", "configured": bool(getattr(settings, "OTX_API_KEY", "")), "requires_key": True},
-        {"name": "virustotal", "configured": bool(getattr(settings, "VIRUSTOTAL_API_KEY", "")), "requires_key": True},
-        {"name": "shodan", "configured": bool(getattr(settings, "SHODAN_API_KEY", "")), "requires_key": True},
-        {"name": "greynoise", "configured": bool(getattr(settings, "GREYNOISE_API_KEY", "")), "requires_key": True},
-        {"name": "misp", "configured": bool(getattr(settings, "MISP_URL", "") and getattr(settings, "MISP_API_KEY", "")), "requires_key": True},
+        {
+            "name": "abuseipdb",
+            "configured": bool(getattr(settings, "ABUSEIPDB_API_KEY", "")),
+            "requires_key": True,
+        },
+        {
+            "name": "otx",
+            "configured": bool(getattr(settings, "OTX_API_KEY", "")),
+            "requires_key": True,
+        },
+        {
+            "name": "virustotal",
+            "configured": bool(getattr(settings, "VIRUSTOTAL_API_KEY", "")),
+            "requires_key": True,
+        },
+        {
+            "name": "shodan",
+            "configured": bool(getattr(settings, "SHODAN_API_KEY", "")),
+            "requires_key": True,
+        },
+        {
+            "name": "greynoise",
+            "configured": bool(getattr(settings, "GREYNOISE_API_KEY", "")),
+            "requires_key": True,
+        },
+        {
+            "name": "misp",
+            "configured": bool(
+                getattr(settings, "MISP_URL", "") and getattr(settings, "MISP_API_KEY", "")
+            ),
+            "requires_key": True,
+        },
         {"name": "circl", "configured": True, "requires_key": False},
         {"name": "urlhaus", "configured": True, "requires_key": False},
     ]
@@ -174,30 +208,34 @@ async def lookup_ip_manual(ip: str, db: Session) -> dict:
                 record_result(provider.name, "cache_hit")
             except Exception as exc:
                 logger.debug("Failed to record cache_hit metric for %s: %s", provider.name, exc)
-            results.append({
-                "source": cached.source,
-                "risk_score": cached.risk_score,
-                "is_malicious": cached.is_malicious,
-                "categories": cached.categories,
-                "tags": cached.tags,
-                "total_reports": cached.total_reports,
-                "cached": True,
-            })
+            results.append(
+                {
+                    "source": cached.source,
+                    "risk_score": cached.risk_score,
+                    "is_malicious": cached.is_malicious,
+                    "categories": cached.categories,
+                    "tags": cached.tags,
+                    "total_reports": cached.total_reports,
+                    "cached": True,
+                }
+            )
             continue
 
         try:
             result = await provider.check_ip(ip)
             if result:
                 set_cached(result, db)
-                results.append({
-                    "source": result.source,
-                    "risk_score": result.risk_score,
-                    "is_malicious": result.is_malicious,
-                    "categories": result.categories,
-                    "tags": result.tags,
-                    "total_reports": result.total_reports,
-                    "cached": False,
-                })
+                results.append(
+                    {
+                        "source": result.source,
+                        "risk_score": result.risk_score,
+                        "is_malicious": result.is_malicious,
+                        "categories": result.categories,
+                        "tags": result.tags,
+                        "total_reports": result.total_reports,
+                        "cached": False,
+                    }
+                )
         except Exception:
             logger.exception("Provider %s failed for manual lookup %s", provider.name, ip)
 

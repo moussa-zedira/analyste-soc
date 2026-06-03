@@ -38,6 +38,4 @@ class SigmaRuleCache(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
-    __table_args__ = (
-        Index("ix_sigma_cache_level_enabled", "level", "enabled"),
-    )
+    __table_args__ = (Index("ix_sigma_cache_level_enabled", "level", "enabled"),)

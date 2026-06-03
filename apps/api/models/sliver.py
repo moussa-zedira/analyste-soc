@@ -42,12 +42,8 @@ class SliverSession(Base):
     remote_address: Mapped[str] = mapped_column(Text, nullable=False, default="")
     pid: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    first_contact: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    last_checkin: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    first_contact: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_checkin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     engagement_id: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )  # FK soft -> engagements.id (ajoute en 018)
@@ -75,9 +71,7 @@ class SliverImplantBuild(Base):
     build_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     engagement_id: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_by: Mapped[str | None] = mapped_column(
         Text, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -104,12 +98,8 @@ class SliverCommand(Base):
     executed_by: Mapped[str | None] = mapped_column(
         Text, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    executed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    executed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (

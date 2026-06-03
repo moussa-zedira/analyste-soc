@@ -57,9 +57,7 @@ def evaluate_rule(rule: Rule, events: list[Event]) -> list[RuleMatch]:
     return matches
 
 
-def _sliding_window(
-    rule: Rule, group_key: str, events: list[Event]
-) -> list[RuleMatch]:
+def _sliding_window(rule: Rule, group_key: str, events: list[Event]) -> list[RuleMatch]:
     """Fenetre glissante a deux pointeurs sur les evenements tries pour un groupe."""
     matches: list[RuleMatch] = []
     left = 0

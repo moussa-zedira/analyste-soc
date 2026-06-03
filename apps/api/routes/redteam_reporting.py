@@ -78,9 +78,7 @@ async def get_engagement_pdf(
         logger.exception("redteam_pdf_generate_failed")
         raise HTTPException(status_code=500, detail="PDF generation failed")
 
-    client = (data.get("engagement", {}).get("client_name") or "client").replace(
-        " ", "_"
-    )
+    client = (data.get("engagement", {}).get("client_name") or "client").replace(" ", "_")
     date = datetime.now(UTC).strftime("%Y%m%d")
     filename = f"redteam_report_{client}_{date}.pdf"
     headers = {"Content-Disposition": f"attachment; filename={filename}"}

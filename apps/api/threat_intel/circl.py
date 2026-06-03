@@ -37,6 +37,7 @@ class CIRCLProvider:
     async def _check_rate_limit(self) -> bool:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return True
@@ -51,6 +52,7 @@ class CIRCLProvider:
     async def _increment_counter(self) -> None:
         try:
             from apps.api.cache import get_redis_client
+
             r = get_redis_client()
             if r is None:
                 return
@@ -116,6 +118,7 @@ class CIRCLProvider:
             for line in resp.text.strip().splitlines():
                 if line.strip():
                     import json
+
                     try:
                         records.append(json.loads(line))
                     except Exception:
@@ -168,7 +171,12 @@ class CIRCLProvider:
             }
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
-                return {"indicator": indicator, "certificate_count": 0, "certificates": [], "subjects": {}}
+                return {
+                    "indicator": indicator,
+                    "certificate_count": 0,
+                    "certificates": [],
+                    "subjects": {},
+                }
             logger.warning("CIRCL PSSL error for %s: %s", indicator, e.response.status_code)
             return None
         except Exception:

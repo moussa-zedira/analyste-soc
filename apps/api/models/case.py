@@ -32,7 +32,9 @@ class Case(Base):
     # SLA
     sla_response_minutes: Mapped[int] = mapped_column(Integer, default=60)
     sla_resolution_minutes: Mapped[int] = mapped_column(Integer, default=480)  # 8h
-    sla_responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_responded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     sla_breached: Mapped[bool] = mapped_column(default=False, index=True)
     # Liens
     incident_ids: Mapped[list] = mapped_column(JSON, default=list)

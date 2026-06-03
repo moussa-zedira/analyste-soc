@@ -300,8 +300,7 @@ async def browser_ingest(
             target=payload.host_target,
             command=f"family={payload.family}",
             result_summary=(
-                f"persisted={res.get('persisted', 0)} "
-                f"skipped={res.get('skipped_duplicates', 0)}"
+                f"persisted={res.get('persisted', 0)} skipped={res.get('skipped_duplicates', 0)}"
             ),
         )
     except Exception:
@@ -331,12 +330,7 @@ def list_credentials(
         q = q.filter(HarvestedCredential.cred_type == cred_type)
     if source:
         q = q.filter(HarvestedCredential.source == source)
-    items = (
-        q.order_by(desc(HarvestedCredential.harvested_at))
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    items = q.order_by(desc(HarvestedCredential.harvested_at)).offset(offset).limit(limit).all()
     return [CredentialOut.model_validate(c) for c in items]
 
 
@@ -353,9 +347,7 @@ def get_credential(
 
     if reveal:
         if user.role != "admin":
-            raise HTTPException(
-                status_code=403, detail="admin role required to reveal secret"
-            )
+            raise HTTPException(status_code=403, detail="admin role required to reveal secret")
         data = entry.data or {}
         try:
             record_operator_action(
@@ -365,9 +357,7 @@ def get_credential(
                 action_type="credential_reveal",
                 target=entry.target,
                 command="",
-                result_summary=(
-                    f"cred_id={cred_id} type={entry.cred_type}"
-                ),
+                result_summary=(f"cred_id={cred_id} type={entry.cred_type}"),
             )
         except Exception:
             logger.exception("reveal_audit_failed")

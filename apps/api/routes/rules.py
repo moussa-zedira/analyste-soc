@@ -72,22 +72,24 @@ def list_rules() -> list[dict]:
     result = []
     for r in rules:
         techniques = get_techniques_for_rule(r.id)
-        result.append({
-            "id": r.id,
-            "event_type": r.event_type,
-            "threshold_count": r.threshold_count,
-            "time_window_seconds": int(r.time_window.total_seconds()),
-            "severity": r.severity.value,
-            "tags": list(r.tags),
-            "enabled": r.enabled,
-            "mitre_techniques": [
-                {
-                    "technique_id": t.id,
-                    "technique_name": t.name,
-                    "tactic_id": t.tactic_id,
-                    "tactic_name": t.tactic_name,
-                }
-                for t in techniques
-            ],
-        })
+        result.append(
+            {
+                "id": r.id,
+                "event_type": r.event_type,
+                "threshold_count": r.threshold_count,
+                "time_window_seconds": int(r.time_window.total_seconds()),
+                "severity": r.severity.value,
+                "tags": list(r.tags),
+                "enabled": r.enabled,
+                "mitre_techniques": [
+                    {
+                        "technique_id": t.id,
+                        "technique_name": t.name,
+                        "tactic_id": t.tactic_id,
+                        "tactic_name": t.tactic_name,
+                    }
+                    for t in techniques
+                ],
+            }
+        )
     return result

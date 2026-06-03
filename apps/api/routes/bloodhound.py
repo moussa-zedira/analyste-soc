@@ -44,9 +44,7 @@ from apps.api.pentest.bloodhound.pivot import (
 )
 
 logger = logging.getLogger("apps.api.pentest.bloodhound")
-router = APIRouter(
-    prefix="/redteam/bloodhound", tags=["Red Team BloodHound"]
-)
+router = APIRouter(prefix="/redteam/bloodhound", tags=["Red Team BloodHound"])
 
 
 MAX_UPLOAD_BYTES = 200 * 1024 * 1024  # 200 MB
@@ -152,9 +150,7 @@ async def upload_dataset(
     if engagement_id:
         eng = db.get(Engagement, engagement_id)
         if eng is None:
-            raise HTTPException(
-                status_code=400, detail="Unknown engagement_id"
-            )
+            raise HTTPException(status_code=400, detail="Unknown engagement_id")
 
     try:
         content = await file.read()
@@ -183,9 +179,7 @@ async def upload_dataset(
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:  # noqa: BLE001
         logger.exception("BloodHound import failed: %s", exc)
-        raise HTTPException(
-            status_code=500, detail="BloodHound import failed"
-        )
+        raise HTTPException(status_code=500, detail="BloodHound import failed")
 
     return _to_out(ds)
 
@@ -201,12 +195,7 @@ def list_datasets(
     q = db.query(BHDataset)
     if engagement_id:
         q = q.filter(BHDataset.engagement_id == engagement_id)
-    items = (
-        q.order_by(desc(BHDataset.uploaded_at))
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    items = q.order_by(desc(BHDataset.uploaded_at)).offset(offset).limit(limit).all()
     return [_to_out(d) for d in items]
 
 
@@ -233,9 +222,7 @@ def delete_dataset(
     user: User = Depends(get_current_user),
 ) -> None:
     if user.role != "admin":
-        raise HTTPException(
-            status_code=403, detail="admin role required"
-        )
+        raise HTTPException(status_code=403, detail="admin role required")
     ds = _get_dataset_or_404(db, dataset_id)
     db.delete(ds)
     db.commit()
@@ -352,9 +339,7 @@ def host_paths_to_high_value(
     node = _find_node_by_hostname(db, dataset_id, hostname)
     if node is None:
         return {"host": None, "paths": []}
-    paths = paths_to_high_value(
-        db, dataset_id, node.sid, max_hops=max_hops, max_paths=max_paths
-    )
+    paths = paths_to_high_value(db, dataset_id, node.sid, max_hops=max_hops, max_paths=max_paths)
     return {
         "host": {
             "sid": node.sid,
@@ -387,9 +372,7 @@ def pivot_from_session(
     if payload.session_id and (not hostname or not username):
         sess = db.get(SliverSession, payload.session_id)
         if sess is None:
-            raise HTTPException(
-                status_code=404, detail="Sliver session not found"
-            )
+            raise HTTPException(status_code=404, detail="Sliver session not found")
         hostname = hostname or sess.hostname
         username = username or sess.username
 
@@ -410,7 +393,5 @@ def pivot_from_session(
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("pivot-from-session failed: %s", exc)
-        raise HTTPException(
-            status_code=500, detail="pivot computation failed"
-        )
+        raise HTTPException(status_code=500, detail="pivot computation failed")
     return result

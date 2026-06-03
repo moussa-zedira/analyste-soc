@@ -138,7 +138,9 @@ def get_integration_types() -> dict[str, list[str]]:
 
 
 @router.post("/integrations", response_model=IntegrationRead, status_code=status.HTTP_201_CREATED)
-def create_integration(payload: IntegrationCreate, db: Session = Depends(get_db)) -> IntegrationRead:
+def create_integration(
+    payload: IntegrationCreate, db: Session = Depends(get_db)
+) -> IntegrationRead:
     _validate_type(payload.integration_type)
     _validate_severity(payload.severity_min)
 

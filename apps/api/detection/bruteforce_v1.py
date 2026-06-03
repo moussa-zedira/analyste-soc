@@ -98,9 +98,7 @@ def run(db: Session) -> dict:
 
     # ---- update checkpoint ----
     if checkpoint is None:
-        checkpoint = RuleCheckpoint(
-            rule_id=RULE_ID, last_ts=max_ts, updated_at=now
-        )
+        checkpoint = RuleCheckpoint(rule_id=RULE_ID, last_ts=max_ts, updated_at=now)
         db.add(checkpoint)
     else:
         checkpoint.last_ts = max_ts
@@ -138,18 +136,12 @@ def _detect_for_ip(db: Session, ip: str, events: list[Event]) -> int:
         dedup_hash = _compute_dedup_hash(RULE_ID, entity_key, end_ts)
 
         # Check dedup
-        existing = (
-            db.query(Incident.id)
-            .filter(Incident.dedup_hash == dedup_hash)
-            .first()
-        )
+        existing = db.query(Incident.id).filter(Incident.dedup_hash == dedup_hash).first()
         if existing is not None:
             continue
 
         # Distinct usernames
-        usernames = sorted(
-            {e.username for e in window_events if e.username}
-        )
+        usernames = sorted({e.username for e in window_events if e.username})
         username_info = (
             f"Usernames targeted: {', '.join(usernames)}"
             if usernames

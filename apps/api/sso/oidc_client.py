@@ -89,9 +89,7 @@ class OIDCClient:
             self._discovery = await discover_oidc(self.provider.issuer_url)
         return self._discovery
 
-    async def authorize_url(
-        self, state: str, code_verifier: str, redirect_uri: str
-    ) -> str:
+    async def authorize_url(self, state: str, code_verifier: str, redirect_uri: str) -> str:
         """Construit l'URL d'authorize avec PKCE S256."""
         disco = await self._ensure_discovery()
         params = {
@@ -105,9 +103,7 @@ class OIDCClient:
         }
         return f"{disco['authorization_endpoint']}?{urlencode(params)}"
 
-    async def exchange_code(
-        self, code: str, code_verifier: str, redirect_uri: str
-    ) -> dict:
+    async def exchange_code(self, code: str, code_verifier: str, redirect_uri: str) -> dict:
         """POST token endpoint -> {access_token, id_token, refresh_token?, ...}."""
         disco = await self._ensure_discovery()
         data = {

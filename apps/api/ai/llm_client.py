@@ -111,7 +111,10 @@ def _classify(exc: Exception) -> _Retryable | _Fatal:
                     wait = None
             return _Retryable(f"HTTP {status}", retry_after=wait, status=status)
         return _Fatal(f"HTTP {status}: {exc.response.text[:200]}", status=status)
-    if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError, httpx.RemoteProtocolError)):
+    if isinstance(
+        exc,
+        (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError, httpx.RemoteProtocolError),
+    ):
         return _Retryable(f"network: {type(exc).__name__}: {exc}")
     return _Fatal(f"{type(exc).__name__}: {exc}")
 
@@ -207,7 +210,10 @@ def _refresh_daily_cost_cache(day: str | None = None) -> dict[str, Any] | None:
                     func.sum(AiCostLog.cost_usd_total),
                 )
                 .filter(AiCostLog.ts >= day_start)
-                .filter(AiCostLog.ts < datetime.strptime(day_end_iso, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC))
+                .filter(
+                    AiCostLog.ts
+                    < datetime.strptime(day_end_iso, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
+                )
                 .group_by(AiCostLog.provider)
                 .all()
             )
@@ -393,7 +399,9 @@ async def _attempt_with_retry(
             if provider == "anthropic":
                 resp = await _call_anthropic_async(prompt, system, model, max_tokens, api_key)
             elif provider == "ollama":
-                resp = await _call_ollama_async(prompt, system, model, max_tokens, api_key or DEFAULT_OLLAMA_URL)
+                resp = await _call_ollama_async(
+                    prompt, system, model, max_tokens, api_key or DEFAULT_OLLAMA_URL
+                )
             else:
                 resp = await _call_openai_async(prompt, system, model, max_tokens, api_key)
             _log_cost(
@@ -431,7 +439,11 @@ async def _attempt_with_retry(
             )
             logger.warning(
                 "LLM %s attempt %d/%d failed (%s) — retry in %.1fs",
-                provider, attempt + 1, MAX_RETRIES, classified, wait,
+                provider,
+                attempt + 1,
+                MAX_RETRIES,
+                classified,
+                wait,
             )
             await asyncio.sleep(wait)
 
@@ -499,14 +511,18 @@ async def call(
 
     def _append_fallbacks(exclude: str) -> None:
         if exclude != "anthropic" and anth_key:
-            order.append(("anthropic", anth_key, os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")))
+            order.append(
+                ("anthropic", anth_key, os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5"))
+            )
         if exclude != "openai" and oai_key:
             order.append(("openai", oai_key, os.environ.get("OPENAI_MODEL", "gpt-4o-mini")))
         if exclude != "ollama" and ollama_enabled:
             order.append(("ollama", ollama_url, ollama_model))
 
     if chosen == "anthropic" and anth_key:
-        order.append(("anthropic", anth_key, os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5")))
+        order.append(
+            ("anthropic", anth_key, os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5"))
+        )
         _append_fallbacks("anthropic")
     elif chosen == "openai" and oai_key:
         order.append(("openai", oai_key, os.environ.get("OPENAI_MODEL", "gpt-4o-mini")))
@@ -525,7 +541,9 @@ async def call(
             )
         except Exception as e:
             last_err = e
-            logger.warning("LLM provider %s exhausted retries (%s) — trying next fallback", provider, e)
+            logger.warning(
+                "LLM provider %s exhausted retries (%s) — trying next fallback", provider, e
+            )
             continue
 
     # Tous les providers ont echoue : retour stub avec marker error
@@ -571,7 +589,9 @@ def call_llm(
         raise RuntimeError(
             "call_llm() is sync; you are inside an async context. Use `await call(...)` instead."
         )
-    return asyncio.run(call(prompt, system=system, max_tokens=max_tokens, prefer=prefer, operation=operation))
+    return asyncio.run(
+        call(prompt, system=system, max_tokens=max_tokens, prefer=prefer, operation=operation)
+    )
 
 
 # ── Status / parse ───────────────────────────────────────────────────
@@ -642,6 +662,7 @@ def get_daily_cost(day: str | None = None) -> dict[str, Any]:
     """Retourne l'agregation Redis (sinon recalcule)."""
     try:
         from apps.api.cache import _get_redis
+
         if day is None:
             day = datetime.now(UTC).strftime("%Y-%m-%d")
         r = _get_redis()

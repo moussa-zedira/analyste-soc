@@ -23,6 +23,7 @@ router = APIRouter(dependencies=[Depends(require_api_key)])
 # Pydantic schemas
 # ---------------------------------------------------------------------------
 
+
 class PlaybookCreate(BaseModel):
     name: str
     description: str = ""
@@ -143,6 +144,7 @@ class SoarMetrics(BaseModel):
 # Startup: seed built-in playbooks
 # ---------------------------------------------------------------------------
 
+
 def seed_builtin_playbooks(db: Session) -> int:
     """Insert or update built-in playbooks. Returns count of seeded playbooks."""
     from apps.api.soar.playbooks_builtin import BUILTIN_PLAYBOOKS
@@ -150,9 +152,14 @@ def seed_builtin_playbooks(db: Session) -> int:
     count = 0
     for pb_def in BUILTIN_PLAYBOOKS:
         name = pb_def["name"]
-        existing = db.query(Playbook).filter(
-            Playbook.name == name, Playbook.builtin.is_(True),
-        ).first()
+        existing = (
+            db.query(Playbook)
+            .filter(
+                Playbook.name == name,
+                Playbook.builtin.is_(True),
+            )
+            .first()
+        )
 
         now = datetime.now(UTC)
         if existing:
@@ -191,6 +198,7 @@ def seed_builtin_playbooks(db: Session) -> int:
 # ---------------------------------------------------------------------------
 # Endpoints: Playbooks
 # ---------------------------------------------------------------------------
+
 
 @router.get("/playbooks", response_model=list[PlaybookSummary])
 def list_playbooks(
@@ -269,6 +277,7 @@ async def execute_playbook(
 
     # Launch via Celery for long-running execution
     from apps.api.soar.tasks import task_execute_playbook
+
     now = datetime.now(UTC)
     execution_id = str(uuid.uuid4())
 
@@ -349,16 +358,19 @@ async def simulate_playbook(
 # Endpoints: Actions
 # ---------------------------------------------------------------------------
 
+
 @router.get("/actions", response_model=list[ActionInfo])
 def list_available_actions():
     """List all registered SOAR actions."""
     from apps.api.soar.actions import list_actions
+
     return list_actions()
 
 
 # ---------------------------------------------------------------------------
 # Endpoints: Connectors diagnostic
 # ---------------------------------------------------------------------------
+
 
 @router.get("/connectors")
 async def list_soar_connectors():
@@ -381,6 +393,7 @@ async def list_soar_connectors():
 # Endpoints: Executions
 # ---------------------------------------------------------------------------
 
+
 @router.get("/executions", response_model=list[ExecutionRead])
 def list_executions(
     status_filter: str | None = Query(None, alias="status"),
@@ -400,9 +413,13 @@ def list_executions(
 @router.get("/executions/{execution_id}", response_model=ExecutionDetail)
 def get_execution_detail(execution_id: str, db: Session = Depends(get_db)):
     """Get execution detail with all step results."""
-    execution = db.query(PlaybookExecution).filter(
-        PlaybookExecution.id == execution_id,
-    ).first()
+    execution = (
+        db.query(PlaybookExecution)
+        .filter(
+            PlaybookExecution.id == execution_id,
+        )
+        .first()
+    )
     if not execution:
         raise HTTPException(status_code=404, detail="Execution not found")
 
@@ -422,18 +439,25 @@ def get_execution_detail(execution_id: str, db: Session = Depends(get_db)):
 @router.post("/executions/{execution_id}/cancel")
 def cancel_execution(execution_id: str, db: Session = Depends(get_db)):
     """Cancel a running execution."""
-    execution = db.query(PlaybookExecution).filter(
-        PlaybookExecution.id == execution_id,
-    ).first()
+    execution = (
+        db.query(PlaybookExecution)
+        .filter(
+            PlaybookExecution.id == execution_id,
+        )
+        .first()
+    )
     if not execution:
         raise HTTPException(status_code=404, detail="Execution not found")
     if execution.status not in ("pending", "running"):
-        raise HTTPException(status_code=400, detail=f"Cannot cancel execution in state: {execution.status}")
+        raise HTTPException(
+            status_code=400, detail=f"Cannot cancel execution in state: {execution.status}"
+        )
 
     # Try to revoke the Celery task
     if execution.celery_task_id:
         try:
             from apps.api.celery_app import celery
+
             celery.control.revoke(execution.celery_task_id, terminate=True)
         except Exception:
             logger.debug("soar: ignored exception", exc_info=True)
@@ -445,6 +469,7 @@ def cancel_execution(execution_id: str, db: Session = Depends(get_db)):
     # Publish cancel status
     try:
         from apps.api.soar.engine import _publish_status
+
         _publish_status(execution_id, "cancelled")
     except Exception:
         logger.debug("soar: ignored exception", exc_info=True)
@@ -455,6 +480,7 @@ def cancel_execution(execution_id: str, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # Endpoints: Metrics
 # ---------------------------------------------------------------------------
+
 
 @router.get("/metrics", response_model=SoarMetrics)
 def get_soar_metrics(db: Session = Depends(get_db)):
@@ -468,11 +494,19 @@ def get_soar_metrics(db: Session = Depends(get_db)):
     completed = db.query(PlaybookExecution).filter(PlaybookExecution.status == "completed").count()
     failed = db.query(PlaybookExecution).filter(PlaybookExecution.status == "failed").count()
     cancelled = db.query(PlaybookExecution).filter(PlaybookExecution.status == "cancelled").count()
-    running = db.query(PlaybookExecution).filter(PlaybookExecution.status.in_(("running", "pending"))).count()
+    running = (
+        db.query(PlaybookExecution)
+        .filter(PlaybookExecution.status.in_(("running", "pending")))
+        .count()
+    )
 
-    avg_dur = db.query(func.avg(PlaybookExecution.duration_ms)).filter(
-        PlaybookExecution.duration_ms.isnot(None),
-    ).scalar()
+    avg_dur = (
+        db.query(func.avg(PlaybookExecution.duration_ms))
+        .filter(
+            PlaybookExecution.duration_ms.isnot(None),
+        )
+        .scalar()
+    )
 
     success_rate = round(completed / total_exec * 100, 1) if total_exec > 0 else 0.0
 
@@ -491,10 +525,7 @@ def get_soar_metrics(db: Session = Depends(get_db)):
 
     # Recent executions
     recent = (
-        db.query(PlaybookExecution)
-        .order_by(PlaybookExecution.created_at.desc())
-        .limit(10)
-        .all()
+        db.query(PlaybookExecution).order_by(PlaybookExecution.created_at.desc()).limit(10).all()
     )
     recent_list = [
         {

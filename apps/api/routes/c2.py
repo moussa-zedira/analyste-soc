@@ -67,9 +67,7 @@ class GenerateImplantRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-async def _engagement_guard(
-    db: Session, engagement_id: str | None, target: str | None
-) -> None:
+async def _engagement_guard(db: Session, engagement_id: str | None, target: str | None) -> None:
     """Si V4.3b est disponible, applique assert_engagement_allows."""
     try:
         from apps.api.pentest.engagement.guard import assert_engagement_allows
@@ -346,10 +344,7 @@ async def list_implants_route(
 ) -> dict:
     """Combine la liste DB locale + la liste cote Sliver server."""
     local = (
-        db.query(SliverImplantBuild)
-        .order_by(SliverImplantBuild.created_at.desc())
-        .limit(200)
-        .all()
+        db.query(SliverImplantBuild).order_by(SliverImplantBuild.created_at.desc()).limit(200).all()
     )
     local_list = [
         {

@@ -79,8 +79,7 @@ def coverage_trend(
         .all()
     )
     return [
-        {"date": r.assessed_at.isoformat(), "score": r.coverage_score, "id": r.id}
-        for r in rows
+        {"date": r.assessed_at.isoformat(), "score": r.coverage_score, "id": r.id} for r in rows
     ]
 
 

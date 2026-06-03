@@ -146,9 +146,7 @@ def _login_role(api_client, role: str) -> dict[str, str]:
             "role": role,
         },
     )
-    r = api_client.post(
-        "/auth/login", json={"username": f"u-{n}", "password": "Pwd-" + n}
-    )
+    r = api_client.post("/auth/login", json={"username": f"u-{n}", "password": "Pwd-" + n})
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
@@ -157,9 +155,7 @@ def _login_role(api_client, role: str) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def test_create_campaign_blocks_when_kill_switch_active(
-    api_client, monkeypatch
-):
+def test_create_campaign_blocks_when_kill_switch_active(api_client, monkeypatch):
     _register_gophish_env(monkeypatch)
     eng_id = _make_engagement(kill_switch=True)
     headers = _login_role(api_client, "lead")
@@ -186,9 +182,7 @@ def test_create_campaign_blocks_when_kill_switch_active(
     assert r.status_code == 423
 
 
-def test_create_campaign_blocks_when_status_not_active(
-    api_client, monkeypatch
-):
+def test_create_campaign_blocks_when_status_not_active(api_client, monkeypatch):
     _register_gophish_env(monkeypatch)
     eng_id = _make_engagement(status="paused")
     headers = _login_role(api_client, "lead")
@@ -202,9 +196,7 @@ def test_create_campaign_blocks_when_status_not_active(
             "template_name": "T",
             "landing_url": "https://x.test/",
             "smtp_profile": "S",
-            "targets": [
-                {"email": "a@acme.com", "first_name": "", "last_name": "", "position": ""}
-            ],
+            "targets": [{"email": "a@acme.com", "first_name": "", "last_name": "", "position": ""}],
         },
     )
     assert r.status_code == 409
@@ -237,9 +229,7 @@ def test_create_campaign_blocks_out_of_scope_emails(api_client, monkeypatch):
     assert "ok@acme.com" not in body["detail"]["emails"]
 
 
-def test_create_campaign_blocks_when_before_start_date(
-    api_client, monkeypatch
-):
+def test_create_campaign_blocks_when_before_start_date(api_client, monkeypatch):
     _register_gophish_env(monkeypatch)
     future = datetime.now(UTC) + timedelta(days=7)
     eng_id = _make_engagement(start_at=future)
@@ -254,9 +244,7 @@ def test_create_campaign_blocks_when_before_start_date(
             "template_name": "T",
             "landing_url": "https://x.test/",
             "smtp_profile": "S",
-            "targets": [
-                {"email": "a@acme.com", "first_name": "", "last_name": "", "position": ""}
-            ],
+            "targets": [{"email": "a@acme.com", "first_name": "", "last_name": "", "position": ""}],
         },
     )
     assert r.status_code == 412
@@ -267,9 +255,7 @@ def test_create_campaign_blocks_when_before_start_date(
 # ---------------------------------------------------------------------------
 
 
-def test_stop_campaign_sets_status_stopped_and_audits(
-    api_client, db_session, monkeypatch
-):
+def test_stop_campaign_sets_status_stopped_and_audits(api_client, db_session, monkeypatch):
     from apps.api.models.phishing import PhishingCampaign
     from apps.api.pentest.phishing import gophish_client as gc
 
@@ -284,9 +270,7 @@ def test_stop_campaign_sets_status_stopped_and_audits(
     camp_id = _make_campaign(engagement_id=eng_id, status="sending")
     headers = _login_role(api_client, "lead")
 
-    r = api_client.post(
-        f"/redteam/phishing/campaigns/{camp_id}/stop", headers=headers
-    )
+    r = api_client.post(f"/redteam/phishing/campaigns/{camp_id}/stop", headers=headers)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["status"] == "stopped"
@@ -305,9 +289,7 @@ def test_stop_campaign_noop_when_already_completed(api_client, monkeypatch):
     camp_id = _make_campaign(engagement_id=eng_id, status="completed")
     headers = _login_role(api_client, "lead")
 
-    r = api_client.post(
-        f"/redteam/phishing/campaigns/{camp_id}/stop", headers=headers
-    )
+    r = api_client.post(f"/redteam/phishing/campaigns/{camp_id}/stop", headers=headers)
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "noop"
 
@@ -376,9 +358,7 @@ def test_sync_campaign_dedups_events_and_recomputes_counts(monkeypatch):
         assert c.clicked_count == 1
         assert c.submitted_count == 0
 
-        events = (
-            db.query(PhishingResult).filter_by(campaign_id=camp_id).all()
-        )
+        events = db.query(PhishingResult).filter_by(campaign_id=camp_id).all()
         assert len(events) == 3
         opened = [e for e in events if e.event_type == "email_opened"][0]
         assert opened.ip_address == "1.2.3.4"

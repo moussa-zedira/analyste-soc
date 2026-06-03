@@ -73,12 +73,14 @@ def _send_webhook(url: str, payload: dict, max_retries: int = 3) -> None:
             if e.code < 500 and e.code != 429:
                 logger.warning("Webhook rejected (HTTP %d), not retrying", e.code)
                 return
-            logger.warning("Webhook attempt %d/%d failed (HTTP %d)", attempt + 1, max_retries, e.code)
+            logger.warning(
+                "Webhook attempt %d/%d failed (HTTP %d)", attempt + 1, max_retries, e.code
+            )
         except Exception:
             logger.warning("Webhook attempt %d/%d failed", attempt + 1, max_retries, exc_info=True)
 
         if attempt < max_retries - 1:
-            time.sleep(2 ** attempt)
+            time.sleep(2**attempt)
 
     logger.error("Webhook delivery to %s failed after %d attempts", url, max_retries)
 

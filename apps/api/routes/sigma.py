@@ -136,9 +136,7 @@ def sync_sigmahq(
     try:
         _ensure_sigmahq_repo(repo_url, cache_dir)
     except Exception as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Failed to fetch SigmaHQ repo: {exc}"
-        ) from exc
+        raise HTTPException(status_code=502, detail=f"Failed to fetch SigmaHQ repo: {exc}") from exc
 
     engine = SigmaEngine()
     loaded = 0
@@ -146,9 +144,7 @@ def sync_sigmahq(
     skipped = 0
     min_level_rank = {"low": 1, "medium": 2, "high": 3}.get(payload.min_level.lower(), 2)
 
-    existing_ids = {
-        r for (r,) in db.query(SigmaRuleCache.rule_id).all()
-    }
+    existing_ids = {r for (r,) in db.query(SigmaRuleCache.rule_id).all()}
 
     for sub in SIGMAHQ_TARGET_DIRS:
         target = cache_dir / sub

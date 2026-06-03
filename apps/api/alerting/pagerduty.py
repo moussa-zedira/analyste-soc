@@ -99,12 +99,11 @@ async def send_alert(config: dict[str, Any], incident: dict[str, Any]) -> None:
                 resp = await client.post(EVENTS_API_URL, json=payload)
                 if resp.status_code == 429:
                     import asyncio
-                    await asyncio.sleep(2 ** attempt)
+
+                    await asyncio.sleep(2**attempt)
                     continue
                 resp.raise_for_status()
-                logger.info(
-                    "PagerDuty event %s sent (dedup=%s)", action, payload.get("dedup_key")
-                )
+                logger.info("PagerDuty event %s sent (dedup=%s)", action, payload.get("dedup_key"))
                 return
             except httpx.TransportError:
                 if attempt == 2:

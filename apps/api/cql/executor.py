@@ -64,7 +64,18 @@ EVENT_FIELDS: dict[str, dict[str, str]] = {
 }
 
 # Field type info for operator validation
-_STRING_FIELDS = {"id", "source", "event_type", "severity", "src_ip", "dst_ip", "username", "message", "raw", "ti_tags"}
+_STRING_FIELDS = {
+    "id",
+    "source",
+    "event_type",
+    "severity",
+    "src_ip",
+    "dst_ip",
+    "username",
+    "message",
+    "raw",
+    "ti_tags",
+}
 _NUMERIC_FIELDS = {"ti_score"}
 _DATETIME_FIELDS = {"ts"}
 
@@ -110,6 +121,7 @@ def _parse_relative_time(s: str) -> datetime:
 # ---------------------------------------------------------------------------
 # AST to SQLAlchemy WHERE clause
 # ---------------------------------------------------------------------------
+
 
 def _ast_to_filter(node: ASTNode):
     """Convert an AST filter expression to a SQLAlchemy filter clause."""
@@ -186,6 +198,7 @@ def _comparison_to_filter(node: Comparison):
 # Event row to dict
 # ---------------------------------------------------------------------------
 
+
 def _event_to_dict(event: Event) -> dict[str, Any]:
     return {
         "id": event.id,
@@ -206,6 +219,7 @@ def _event_to_dict(event: Event) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Main executor
 # ---------------------------------------------------------------------------
+
 
 def execute_cql(
     query_str: str,
@@ -228,7 +242,7 @@ def execute_cql(
                 "execution_time_ms": float,
                 "query": str,
                 "commands": [...],
-            }
+            },
         }
     """
     start_time = time.time()
@@ -344,7 +358,7 @@ def execute_cql(
     # Apply pagination (only if no stats/aggregation commands were used)
     total = len(rows)
     if not has_stats:
-        rows = rows[offset:offset + limit]
+        rows = rows[offset : offset + limit]
 
     elapsed_ms = round((time.time() - start_time) * 1000, 2)
 
@@ -385,16 +399,15 @@ def explain_cql(query_str: str) -> dict[str, Any]:
     # Optimization hints
     hints: list[str] = []
     if not ast.earliest and not ast.latest:
-        hints.append("No time range specified; defaults to last 24h. Add 'earliest=-7d' for wider range.")
+        hints.append(
+            "No time range specified; defaults to last 24h. Add 'earliest=-7d' for wider range."
+        )
     if unindexed_fields:
         hints.append(f"Fields without index: {', '.join(unindexed_fields)}. Query may be slower.")
     if any(cmd.name == "stats" for cmd in ast.commands):
         hints.append("Stats command will aggregate results in memory after DB fetch.")
 
-    commands = [
-        {"name": cmd.name, "args": cmd.raw_text}
-        for cmd in ast.commands
-    ]
+    commands = [{"name": cmd.name, "args": cmd.raw_text} for cmd in ast.commands]
 
     return {
         "valid": True,

@@ -21,44 +21,98 @@ from apps.api.parsers import BaseParser, _normalize_severity
 # ---------------------------------------------------------------------------
 
 _TS_HEADERS = {
-    "timestamp", "ts", "time", "datetime", "date", "event_time",
-    "eventtime", "start_time", "created", "log_time", "@timestamp",
-    "receive_time", "generated_time",
+    "timestamp",
+    "ts",
+    "time",
+    "datetime",
+    "date",
+    "event_time",
+    "eventtime",
+    "start_time",
+    "created",
+    "log_time",
+    "@timestamp",
+    "receive_time",
+    "generated_time",
 }
 
 _SOURCE_HEADERS = {
-    "source", "hostname", "host", "device", "log_source",
-    "device_name", "appliance", "sensor",
+    "source",
+    "hostname",
+    "host",
+    "device",
+    "log_source",
+    "device_name",
+    "appliance",
+    "sensor",
 }
 
 _EVENT_TYPE_HEADERS = {
-    "event_type", "type", "action", "event", "category",
-    "eventtype", "event_name", "activity",
+    "event_type",
+    "type",
+    "action",
+    "event",
+    "category",
+    "eventtype",
+    "event_name",
+    "activity",
 }
 
 _SEVERITY_HEADERS = {
-    "severity", "level", "priority", "risk", "sev",
-    "threat_level", "risk_level",
+    "severity",
+    "level",
+    "priority",
+    "risk",
+    "sev",
+    "threat_level",
+    "risk_level",
 }
 
 _SRC_IP_HEADERS = {
-    "src_ip", "source_ip", "srcip", "src", "client_ip",
-    "source_address", "srcaddr", "remote_addr", "attacker_ip",
+    "src_ip",
+    "source_ip",
+    "srcip",
+    "src",
+    "client_ip",
+    "source_address",
+    "srcaddr",
+    "remote_addr",
+    "attacker_ip",
 }
 
 _DST_IP_HEADERS = {
-    "dst_ip", "dest_ip", "dstip", "dst", "server_ip",
-    "destination_address", "dstaddr", "target_ip",
+    "dst_ip",
+    "dest_ip",
+    "dstip",
+    "dst",
+    "server_ip",
+    "destination_address",
+    "dstaddr",
+    "target_ip",
 }
 
 _USER_HEADERS = {
-    "username", "user", "actor", "account", "user_name",
-    "src_user", "login", "userid", "subject",
+    "username",
+    "user",
+    "actor",
+    "account",
+    "user_name",
+    "src_user",
+    "login",
+    "userid",
+    "subject",
 }
 
 _MSG_HEADERS = {
-    "message", "msg", "description", "summary", "detail",
-    "reason", "info", "text", "log_message",
+    "message",
+    "msg",
+    "description",
+    "summary",
+    "detail",
+    "reason",
+    "info",
+    "text",
+    "log_message",
 }
 
 
@@ -93,6 +147,7 @@ def _detect_delimiter(sample: str) -> str:
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 class CSVLogParser(BaseParser):
     """Generic CSV/TSV log parser with auto-detection.
@@ -186,9 +241,7 @@ class CSVLogParser(BaseParser):
         mapped.setdefault("severity", "low")
         return mapped
 
-    def _auto_map(
-        self, record: dict[str, str], headers: list[str], raw: str
-    ) -> dict[str, Any]:
+    def _auto_map(self, record: dict[str, str], headers: list[str], raw: str) -> dict[str, Any]:
         def _get(candidates: set[str]) -> str | None:
             idx = _find_header(headers, candidates)
             if idx is not None and idx < len(headers):
@@ -201,9 +254,12 @@ class CSVLogParser(BaseParser):
         ts = None
         if ts_raw:
             for fmt in (
-                "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ",
-                "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d %H:%M:%S",
-                "%Y/%m/%d %H:%M:%S", "%m/%d/%Y %H:%M:%S",
+                "%Y-%m-%dT%H:%M:%S.%fZ",
+                "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%dT%H:%M:%S%z",
+                "%Y-%m-%d %H:%M:%S",
+                "%Y/%m/%d %H:%M:%S",
+                "%m/%d/%Y %H:%M:%S",
                 "%d/%b/%Y:%H:%M:%S %z",
             ):
                 try:

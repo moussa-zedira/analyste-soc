@@ -17,14 +17,27 @@ INTERNAL_IPS = [f"10.0.1.{i}" for i in range(10, 50)]
 DNS_SERVERS = ["8.8.8.8", "1.1.1.1"]
 
 USERNAMES = [
-    "admin", "root", "administrator", "jsmith", "svc_backup",
-    "test", "deploy", "guest", "sa", "postgres",
+    "admin",
+    "root",
+    "administrator",
+    "jsmith",
+    "svc_backup",
+    "test",
+    "deploy",
+    "guest",
+    "sa",
+    "postgres",
 ]
 
 SUSPICIOUS_DOMAINS = [
-    "malware-c2.xyz", "exfil-data.top", "phishing-kit.tk",
-    "darkweb-proxy.ml", "cryptominer.buzz", "botnet-ctrl.ga",
-    "ransom-payment.cf", "stealer-panel.ru",
+    "malware-c2.xyz",
+    "exfil-data.top",
+    "phishing-kit.tk",
+    "darkweb-proxy.ml",
+    "cryptominer.buzz",
+    "botnet-ctrl.ga",
+    "ransom-payment.cf",
+    "stealer-panel.ru",
 ]
 
 SCAN_PORTS = [22, 23, 25, 80, 443, 445, 1433, 3306, 3389, 5432, 8080, 8443]
@@ -250,9 +263,7 @@ def run(eps: float = DEFAULT_EPS, duration: int | None = None) -> None:
             _send_and_count(event_data)
 
             if stats["total"] % 20 == 0 and stats["total"] > 0:
-                breakdown = " | ".join(
-                    f"{k}: {v}" for k, v in stats.items() if k != "total"
-                )
+                breakdown = " | ".join(f"{k}: {v}" for k, v in stats.items() if k != "total")
                 print(f"[SIMULATOR] Total: {stats['total']} | {breakdown}")
 
             time.sleep(delay)

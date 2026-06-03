@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class TransitionResult(StrEnum):
     """Resultat d'une tentative de transition."""
+
     ADVANCED = "advanced"
     COMPLETED = "completed"
     NO_MATCH = "no_match"
@@ -112,6 +113,7 @@ class StateStore:
         self._redis_checked = True
         try:
             from apps.api.cache import get_redis_client
+
             self._redis = get_redis_client()
         except Exception:
             self._redis = None
@@ -260,6 +262,7 @@ class StateStore:
 # State Machine Engine
 # ---------------------------------------------------------------------------
 
+
 class StateMachineEngine:
     """Moteur de machines a etats pour la detection stateful.
 
@@ -313,19 +316,24 @@ class StateMachineEngine:
             else:
                 # Try to advance existing state
                 transition_result, new_state = self._try_advance(
-                    machine, state, event, now,
+                    machine,
+                    state,
+                    event,
+                    now,
                 )
                 if transition_result == TransitionResult.COMPLETED:
-                    completions.append({
-                        "machine_id": machine.id,
-                        "machine_name": machine.name,
-                        "severity": machine.severity,
-                        "group_key": group_key,
-                        "group_values": state.group_values,
-                        "event_ids": state.matched_event_ids,
-                        "mitre_tactics": machine.mitre_tactics,
-                        "history": state.history,
-                    })
+                    completions.append(
+                        {
+                            "machine_id": machine.id,
+                            "machine_name": machine.name,
+                            "severity": machine.severity,
+                            "group_key": group_key,
+                            "group_values": state.group_values,
+                            "event_ids": state.matched_event_ids,
+                            "mitre_tactics": machine.mitre_tactics,
+                            "history": state.history,
+                        }
+                    )
                     self._store.remove_state(machine.id, group_key)
                 elif transition_result == TransitionResult.ADVANCED:
                     if new_state:
@@ -402,13 +410,15 @@ class StateMachineEngine:
                 entered_at=now,
                 last_transition=now,
                 matched_event_ids=[event.id],
-                history=[{
-                    "from": initial.name,
-                    "to": transition.to_state,
-                    "event_type": event.event_type,
-                    "event_id": event.id,
-                    "timestamp": now,
-                }],
+                history=[
+                    {
+                        "from": initial.name,
+                        "to": transition.to_state,
+                        "event_type": event.event_type,
+                        "event_id": event.id,
+                        "timestamp": now,
+                    }
+                ],
             )
             return state
 
@@ -447,13 +457,15 @@ class StateMachineEngine:
             state.current_state = transition.to_state
             state.last_transition = now
             state.matched_event_ids.append(event.id)
-            state.history.append({
-                "from": transition.from_state,
-                "to": transition.to_state,
-                "event_type": event.event_type,
-                "event_id": event.id,
-                "timestamp": now,
-            })
+            state.history.append(
+                {
+                    "from": transition.from_state,
+                    "to": transition.to_state,
+                    "event_type": event.event_type,
+                    "event_id": event.id,
+                    "timestamp": now,
+                }
+            )
 
             # Check if final state
             for s in machine.states:
@@ -474,6 +486,7 @@ class StateMachineEngine:
             return False
 
         import re as re_mod
+
         for fld, expected in transition.conditions.items():
             val = getattr(event, fld, None)
             if val is None or val != expected:
@@ -491,6 +504,7 @@ class StateMachineEngine:
 # Built-in state machines
 # ---------------------------------------------------------------------------
 
+
 def get_builtin_machines() -> list[StateMachineDefinition]:
     """Retourne les machines a etats integrees."""
     return [
@@ -504,41 +518,51 @@ def get_builtin_machines() -> list[StateMachineDefinition]:
             ),
             states=[
                 StateDefinition(
-                    name="idle", is_initial=True, timeout=0,
+                    name="idle",
+                    is_initial=True,
+                    timeout=0,
                     description="Waiting for initial reconnaissance",
                 ),
                 StateDefinition(
-                    name="recon", timeout=7200,
+                    name="recon",
+                    timeout=7200,
                     mitre_tactic="reconnaissance",
                     description="Reconnaissance activity detected",
                 ),
                 StateDefinition(
-                    name="weaponize", timeout=3600,
+                    name="weaponize",
+                    timeout=3600,
                     mitre_tactic="resource-development",
                     description="Weaponization indicators found",
                 ),
                 StateDefinition(
-                    name="deliver", timeout=3600,
+                    name="deliver",
+                    timeout=3600,
                     mitre_tactic="initial-access",
                     description="Delivery mechanism used",
                 ),
                 StateDefinition(
-                    name="exploit", timeout=1800,
+                    name="exploit",
+                    timeout=1800,
                     mitre_tactic="execution",
                     description="Exploitation occurred",
                 ),
                 StateDefinition(
-                    name="install", timeout=3600,
+                    name="install",
+                    timeout=3600,
                     mitre_tactic="persistence",
                     description="Persistence installed",
                 ),
                 StateDefinition(
-                    name="c2", timeout=3600,
+                    name="c2",
+                    timeout=3600,
                     mitre_tactic="command-and-control",
                     description="C2 channel established",
                 ),
                 StateDefinition(
-                    name="actions", timeout=3600, is_final=True,
+                    name="actions",
+                    timeout=3600,
+                    is_final=True,
                     mitre_tactic="exfiltration",
                     description="Actions on objectives detected",
                 ),
@@ -561,12 +585,15 @@ def get_builtin_machines() -> list[StateMachineDefinition]:
             group_by=["src_ip"],
             severity="critical",
             mitre_tactics=[
-                "reconnaissance", "initial-access", "execution",
-                "persistence", "command-and-control", "exfiltration",
+                "reconnaissance",
+                "initial-access",
+                "execution",
+                "persistence",
+                "command-and-control",
+                "exfiltration",
             ],
             tags=["kill-chain", "apt", "full-attack"],
         ),
-
         # Account takeover state machine
         StateMachineDefinition(
             id="fsm-account-takeover",
@@ -574,22 +601,29 @@ def get_builtin_machines() -> list[StateMachineDefinition]:
             description="Tracks account takeover from enumeration to abuse.",
             states=[
                 StateDefinition(
-                    name="idle", is_initial=True, timeout=0,
+                    name="idle",
+                    is_initial=True,
+                    timeout=0,
                 ),
                 StateDefinition(
-                    name="enum", timeout=1800,
+                    name="enum",
+                    timeout=1800,
                     description="Account enumeration detected",
                 ),
                 StateDefinition(
-                    name="brute", timeout=600,
+                    name="brute",
+                    timeout=600,
                     description="Brute force in progress",
                 ),
                 StateDefinition(
-                    name="compromised", timeout=3600,
+                    name="compromised",
+                    timeout=3600,
                     description="Account compromised",
                 ),
                 StateDefinition(
-                    name="abuse", timeout=3600, is_final=True,
+                    name="abuse",
+                    timeout=3600,
+                    is_final=True,
                     description="Account being abused",
                 ),
             ],
@@ -606,11 +640,12 @@ def get_builtin_machines() -> list[StateMachineDefinition]:
             group_by=["src_ip"],
             severity="critical",
             mitre_tactics=[
-                "credential-access", "initial-access", "privilege-escalation",
+                "credential-access",
+                "initial-access",
+                "privilege-escalation",
             ],
             tags=["account-takeover", "credential-attack"],
         ),
-
         # Ransomware progression
         StateMachineDefinition(
             id="fsm-ransomware",
@@ -627,20 +662,31 @@ def get_builtin_machines() -> list[StateMachineDefinition]:
             transitions=[
                 TransitionDefinition("idle", "access", "exploit.attempt"),
                 TransitionDefinition("idle", "access", "auth.success"),
-                TransitionDefinition("access", "discovery", "process.exec",
-                                     regex_conditions={"message": r"(net\s|whoami|ipconfig|systeminfo)"}),
+                TransitionDefinition(
+                    "access",
+                    "discovery",
+                    "process.exec",
+                    regex_conditions={"message": r"(net\s|whoami|ipconfig|systeminfo)"},
+                ),
                 TransitionDefinition("discovery", "lateral", "lateral.movement"),
                 TransitionDefinition("discovery", "lateral", "conn.rdp"),
                 TransitionDefinition("lateral", "staging", "file.archive"),
                 TransitionDefinition("lateral", "staging", "data.transfer"),
-                TransitionDefinition("staging", "encryption", "file.modify",
-                                     regex_conditions={"message": r"\.(encrypted|locked|crypt)"}),
+                TransitionDefinition(
+                    "staging",
+                    "encryption",
+                    "file.modify",
+                    regex_conditions={"message": r"\.(encrypted|locked|crypt)"},
+                ),
             ],
             group_by=["src_ip"],
             severity="critical",
             mitre_tactics=[
-                "initial-access", "discovery", "lateral-movement",
-                "collection", "impact",
+                "initial-access",
+                "discovery",
+                "lateral-movement",
+                "collection",
+                "impact",
             ],
             tags=["ransomware", "encryption", "full-attack"],
         ),

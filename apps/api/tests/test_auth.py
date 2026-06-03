@@ -40,6 +40,7 @@ def _set_env():
         os.environ[key] = value
 
     from apps.api.config import get_settings
+
     get_settings.cache_clear()
 
     yield

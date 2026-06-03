@@ -69,7 +69,9 @@ class StartRequest(BaseModel):
         "full_pentest",
         description="quick_recon, web_full, network_full, stealth, full_pentest, red_team, api_audit, custom",
     )
-    scope: list[str] = Field(default_factory=list, description="Authorized scope (IPs, CIDRs, domains)")
+    scope: list[str] = Field(
+        default_factory=list, description="Authorized scope (IPs, CIDRs, domains)"
+    )
     options: dict[str, Any] = Field(default_factory=dict)
     custom_phases: list[str] = Field(
         default_factory=list,
@@ -93,7 +95,9 @@ async def start_orchestration(body: StartRequest):
     try:
         profile = ScanProfile(body.profile)
     except ValueError:
-        raise HTTPException(400, f"Invalid profile: {body.profile}. Valid: {[p.value for p in ScanProfile]}")
+        raise HTTPException(
+            400, f"Invalid profile: {body.profile}. Valid: {[p.value for p in ScanProfile]}"
+        )
 
     # Validate custom phases
     custom_phases = None
@@ -105,7 +109,9 @@ async def start_orchestration(body: StartRequest):
             try:
                 custom_phases.append(Phase(p))
             except ValueError:
-                raise HTTPException(400, f"Invalid phase '{p}'. Valid: {[ph.value for ph in Phase]}")
+                raise HTTPException(
+                    400, f"Invalid phase '{p}'. Valid: {[ph.value for ph in Phase]}"
+                )
 
     scope = body.scope if body.scope else [body.target]
 
@@ -377,12 +383,14 @@ async def orchestrator_ws(websocket: WebSocket, orch_id: str):
 
             # Complete
             if state.status in ("completed", "failed", "cancelled"):
-                await websocket.send_json({
-                    "type": "complete",
-                    "id": orch_id,
-                    "status": state.status,
-                    "summary": state.summary(),
-                })
+                await websocket.send_json(
+                    {
+                        "type": "complete",
+                        "id": orch_id,
+                        "status": state.status,
+                        "summary": state.summary(),
+                    }
+                )
                 break
 
             await asyncio.sleep(2)

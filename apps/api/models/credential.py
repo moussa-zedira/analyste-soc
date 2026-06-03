@@ -49,21 +49,15 @@ class HarvestedCredential(Base):
     # sha256(source|cred_type|identifier|secret-head) pour dedup idempotent
     data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # contenu structure (hash, cookie value, etc.) — peut etre redige en sortie
-    mitre_technique: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
+    mitre_technique: Mapped[str] = mapped_column(Text, nullable=False, default="")
     harvested_by: Mapped[str | None] = mapped_column(
         Text, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    harvested_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    harvested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
     __table_args__ = (
-        UniqueConstraint(
-            "engagement_id", "fingerprint", name="uq_cred_engagement_fp"
-        ),
+        UniqueConstraint("engagement_id", "fingerprint", name="uq_cred_engagement_fp"),
         Index("ix_credential_engagement", "engagement_id"),
         Index("ix_credential_type", "cred_type"),
         Index("ix_credential_harvested_at", "harvested_at"),
@@ -87,28 +81,18 @@ class ExfilTransfer(Base):
     # bucket/folder ou URL de destination
     object_key: Mapped[str] = mapped_column(Text, nullable=False, default="")
     # clef (chemin) de l'objet transfere
-    size_bytes: Mapped[int] = mapped_column(
-        BigInteger, nullable=False, default=0
-    )
-    content_type: Mapped[str] = mapped_column(
-        Text, nullable=False, default=""
-    )
+    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    content_type: Mapped[str] = mapped_column(Text, nullable=False, default="")
     sha256: Mapped[str] = mapped_column(Text, nullable=False, default="")
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
     # pending | uploading | ok | error | aborted
     error: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    mitre_technique: Mapped[str] = mapped_column(
-        Text, nullable=False, default="T1537"
-    )
+    mitre_technique: Mapped[str] = mapped_column(Text, nullable=False, default="T1537")
     initiated_by: Mapped[str | None] = mapped_column(
         Text, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     response_meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     __table_args__ = (

@@ -66,18 +66,14 @@ def _create_token(data: dict, token_type: TokenType, lifetime: timedelta) -> tup
 def create_access_token(data: dict) -> str:
     """Crée un jeton d'accès JWT court."""
     settings = get_settings()
-    token, _ = _create_token(
-        data, "access", timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
-    )
+    token, _ = _create_token(data, "access", timedelta(minutes=settings.JWT_EXPIRE_MINUTES))
     return token
 
 
 def create_refresh_token(data: dict) -> str:
     """Cree un jeton refresh long."""
     settings = get_settings()
-    token, _ = _create_token(
-        data, "refresh", timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS)
-    )
+    token, _ = _create_token(data, "refresh", timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS))
     return token
 
 
@@ -165,7 +161,9 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
 
     user = db.get(User, user_id)
     if user is None or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive"
+        )
     return user
 
 

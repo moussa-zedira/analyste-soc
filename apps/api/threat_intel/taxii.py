@@ -35,6 +35,7 @@ TAXII_CONTENT_TYPE = "application/taxii+json;version=2.1"
 # TAXII 2.1 CLIENT
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TAXIIClient:
     """Client TAXII 2.1 asynchrone."""
 
@@ -79,7 +80,10 @@ class TAXIIClient:
             async with httpx.AsyncClient(verify=self.verify_ssl, timeout=self.timeout) as client:
                 resp = await self._cb.call(
                     client.get,
-                    url, headers=self._build_headers(), auth=self._build_auth(), params=params,
+                    url,
+                    headers=self._build_headers(),
+                    auth=self._build_auth(),
+                    params=params,
                 )
                 if resp.status_code == 200:
                     return resp.json()
@@ -246,6 +250,7 @@ class TAXIIClient:
 
 router = APIRouter(prefix="/taxii2", tags=["TAXII 2.1"])
 
+
 # Helper to build TAXII JSON responses
 def _taxii_response(data: Any, status_code: int = 200) -> JSONResponse:
     return JSONResponse(
@@ -259,24 +264,28 @@ def _taxii_response(data: Any, status_code: int = 200) -> JSONResponse:
 def taxii_discovery(request: Request) -> JSONResponse:
     """TAXII 2.1 Discovery endpoint."""
     base = str(request.base_url).rstrip("/")
-    return _taxii_response({
-        "title": "CyberDef TAXII Server",
-        "description": "TAXII 2.1 server for the Cyber Defense Dashboard",
-        "contact": "admin@cyberdef.local",
-        "default": f"{base}/taxii2/api/",
-        "api_roots": [f"{base}/taxii2/api/"],
-    })
+    return _taxii_response(
+        {
+            "title": "CyberDef TAXII Server",
+            "description": "TAXII 2.1 server for the Cyber Defense Dashboard",
+            "contact": "admin@cyberdef.local",
+            "default": f"{base}/taxii2/api/",
+            "api_roots": [f"{base}/taxii2/api/"],
+        }
+    )
 
 
 @router.get("/api/")
 def taxii_api_root(request: Request) -> JSONResponse:
     """TAXII 2.1 API Root information."""
-    return _taxii_response({
-        "title": "CyberDef API Root",
-        "description": "Primary API root for CyberDef threat intelligence",
-        "versions": ["application/taxii+json;version=2.1"],
-        "max_content_length": 10485760,
-    })
+    return _taxii_response(
+        {
+            "title": "CyberDef API Root",
+            "description": "Primary API root for CyberDef threat intelligence",
+            "versions": ["application/taxii+json;version=2.1"],
+            "max_content_length": 10485760,
+        }
+    )
 
 
 @router.get("/api/collections/")
@@ -290,15 +299,19 @@ def taxii_list_collections(db: Session = Depends(get_db)) -> JSONResponse:
             try:
                 media = json.loads(c.media_types_json)
             except Exception as exc:
-                logger.warning("Failed to parse media_types_json for collection %s: %s", c.collection_id, exc)
-        collections.append({
-            "id": c.collection_id,
-            "title": c.title,
-            "description": c.description or "",
-            "can_read": c.can_read,
-            "can_write": c.can_write,
-            "media_types": media,
-        })
+                logger.warning(
+                    "Failed to parse media_types_json for collection %s: %s", c.collection_id, exc
+                )
+        collections.append(
+            {
+                "id": c.collection_id,
+                "title": c.title,
+                "description": c.description or "",
+                "can_read": c.can_read,
+                "can_write": c.can_write,
+                "media_types": media,
+            }
+        )
     return _taxii_response({"collections": collections})
 
 
@@ -313,15 +326,19 @@ def taxii_get_collection(collection_id: str, db: Session = Depends(get_db)) -> J
         try:
             media = json.loads(col.media_types_json)
         except Exception as exc:
-            logger.warning("Failed to parse media_types_json for collection %s: %s", col.collection_id, exc)
-    return _taxii_response({
-        "id": col.collection_id,
-        "title": col.title,
-        "description": col.description or "",
-        "can_read": col.can_read,
-        "can_write": col.can_write,
-        "media_types": media,
-    })
+            logger.warning(
+                "Failed to parse media_types_json for collection %s: %s", col.collection_id, exc
+            )
+    return _taxii_response(
+        {
+            "id": col.collection_id,
+            "title": col.title,
+            "description": col.description or "",
+            "can_read": col.can_read,
+            "can_write": col.can_write,
+            "media_types": media,
+        }
+    )
 
 
 @router.get("/api/collections/{collection_id}/objects/")
@@ -350,7 +367,9 @@ def taxii_get_objects(
             dt = datetime.fromisoformat(added_after.replace("Z", "+00:00"))
             q = q.filter(STIXObject.added > dt)
         except Exception as exc:
-            logger.warning("Invalid added_after filter %r in taxii_get_objects: %s", added_after, exc)
+            logger.warning(
+                "Invalid added_after filter %r in taxii_get_objects: %s", added_after, exc
+            )
     if type:
         q = q.filter(STIXObject.stix_type == type)
     if id:
@@ -402,38 +421,47 @@ def taxii_add_objects(
         stix_type = obj.get("type", "unknown")
         try:
             # Upsert: replace if same stix_id exists
-            existing = db.query(STIXObject).filter(
-                STIXObject.collection_id == collection_id,
-                STIXObject.stix_id == stix_id,
-            ).first()
+            existing = (
+                db.query(STIXObject)
+                .filter(
+                    STIXObject.collection_id == collection_id,
+                    STIXObject.stix_id == stix_id,
+                )
+                .first()
+            )
             if existing:
                 existing.object_json = json.dumps(obj, default=str)
                 existing.stix_version = obj.get("modified")
                 existing.added = datetime.now(UTC)
             else:
-                db.add(STIXObject(
-                    collection_id=collection_id,
-                    stix_id=stix_id,
-                    stix_type=stix_type,
-                    spec_version=obj.get("spec_version", "2.1"),
-                    stix_version=obj.get("modified"),
-                    object_json=json.dumps(obj, default=str),
-                ))
+                db.add(
+                    STIXObject(
+                        collection_id=collection_id,
+                        stix_id=stix_id,
+                        stix_type=stix_type,
+                        spec_version=obj.get("spec_version", "2.1"),
+                        stix_version=obj.get("modified"),
+                        object_json=json.dumps(obj, default=str),
+                    )
+                )
             successes.append(stix_id)
         except Exception as e:
             failures.append({"id": stix_id, "message": str(e)})
 
     db.commit()
 
-    return _taxii_response({
-        "id": f"status--{collection_id}",
-        "status": "complete",
-        "total_count": len(stix_objects),
-        "success_count": len(successes),
-        "failure_count": len(failures),
-        "successes": [{"id": s} for s in successes],
-        "failures": failures,
-    }, status_code=202)
+    return _taxii_response(
+        {
+            "id": f"status--{collection_id}",
+            "status": "complete",
+            "total_count": len(stix_objects),
+            "success_count": len(successes),
+            "failure_count": len(failures),
+            "successes": [{"id": s} for s in successes],
+            "failures": failures,
+        },
+        status_code=202,
+    )
 
 
 @router.get("/api/collections/{collection_id}/manifest/")
@@ -462,12 +490,14 @@ def taxii_manifest(
 
     entries = []
     for o in items:
-        entries.append({
-            "id": o.stix_id,
-            "date_added": o.added.isoformat() if o.added else None,
-            "version": o.stix_version or o.spec_version,
-            "media_type": TAXII_CONTENT_TYPE,
-        })
+        entries.append(
+            {
+                "id": o.stix_id,
+                "date_added": o.added.isoformat() if o.added else None,
+                "version": o.stix_version or o.spec_version,
+                "media_type": TAXII_CONTENT_TYPE,
+            }
+        )
 
     more = (next + limit) < total
     resp: dict[str, Any] = {"objects": entries, "more": more}
@@ -488,10 +518,14 @@ def taxii_delete_object(
     if not col:
         raise HTTPException(status_code=404, detail="Collection not found")
 
-    obj = db.query(STIXObject).filter(
-        STIXObject.collection_id == collection_id,
-        STIXObject.stix_id == object_id,
-    ).first()
+    obj = (
+        db.query(STIXObject)
+        .filter(
+            STIXObject.collection_id == collection_id,
+            STIXObject.stix_id == object_id,
+        )
+        .first()
+    )
     if not obj:
         raise HTTPException(status_code=404, detail="Object not found")
 

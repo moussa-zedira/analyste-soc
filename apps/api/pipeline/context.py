@@ -115,6 +115,7 @@ class EventContext:
             tags = ti.get("tags", [])
             if tags:
                 import json
+
                 base["ti_tags"] = json.dumps(tags[:20])
         if self.score and not base.get("ti_score"):
             base["ti_score"] = self.score

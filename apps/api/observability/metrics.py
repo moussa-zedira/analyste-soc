@@ -88,9 +88,7 @@ detection_rule_matches_total = Counter(
 
 
 def record_rule_match(engine: str, rule_id: str, severity: str) -> None:
-    detection_rule_matches_total.labels(
-        engine=engine, rule_id=rule_id, severity=severity
-    ).inc()
+    detection_rule_matches_total.labels(engine=engine, rule_id=rule_id, severity=severity).inc()
 
 
 # ─────────────────────────────────────────────────────────────────────

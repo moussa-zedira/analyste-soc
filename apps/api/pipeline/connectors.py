@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # IOC -> TI : when IOC matched, auto-enrich with full TI details
 # ---------------------------------------------------------------------------
 
+
 async def ioc_to_ti_enrich(ioc_value: str, ioc_type: str = "ip") -> dict[str, Any] | None:
     """When an IOC is matched, fetch full TI details for richer context."""
     if ioc_type != "ip":
@@ -49,6 +50,7 @@ async def ioc_to_ti_enrich(ioc_value: str, ioc_type: str = "ip") -> dict[str, An
 # ---------------------------------------------------------------------------
 # Detection -> Incident : auto-create incident from detection with dedup
 # ---------------------------------------------------------------------------
+
 
 def detection_to_incident(
     db: Any,
@@ -100,6 +102,7 @@ def detection_to_incident(
 # Incident -> SOAR : auto-trigger matching playbooks
 # ---------------------------------------------------------------------------
 
+
 async def incident_to_soar(
     incident_id: str,
     severity: str,
@@ -120,11 +123,13 @@ async def incident_to_soar(
             }
             executions = await fire_triggers(db, "on_incident", context)
             for exe in executions:
-                results.append({
-                    "execution_id": exe.id,
-                    "playbook_name": exe.playbook_name,
-                    "status": exe.status,
-                })
+                results.append(
+                    {
+                        "execution_id": exe.id,
+                        "playbook_name": exe.playbook_name,
+                        "status": exe.status,
+                    }
+                )
         finally:
             db.close()
     except Exception:
@@ -135,6 +140,7 @@ async def incident_to_soar(
 # ---------------------------------------------------------------------------
 # SOAR -> Alert : notify on playbook completion/failure
 # ---------------------------------------------------------------------------
+
 
 async def soar_to_alert(
     execution_id: str,
@@ -168,6 +174,7 @@ async def soar_to_alert(
 # Correlation -> Incident : create incident from correlation match
 # ---------------------------------------------------------------------------
 
+
 def correlation_to_incident(
     db: Any,
     rule_id: str,
@@ -184,9 +191,7 @@ def correlation_to_incident(
 
     now = datetime.now(UTC)
     bucket = now.strftime("%Y-%m-%dT%H:%M")
-    dedup = hashlib.sha256(
-        f"corr:{rule_id}|{group_key}|{bucket}".encode()
-    ).hexdigest()
+    dedup = hashlib.sha256(f"corr:{rule_id}|{group_key}|{bucket}".encode()).hexdigest()
 
     existing = db.query(Incident).filter(Incident.dedup_hash == dedup).first()
     if existing:
@@ -222,6 +227,7 @@ def correlation_to_incident(
 # Event -> CQL : make pipeline events immediately searchable
 # ---------------------------------------------------------------------------
 
+
 def event_to_cql_index(event_dict: dict[str, Any]) -> None:
     """Push event data to CQL search index (Redis-based) for fast lookup."""
     try:
@@ -247,6 +253,7 @@ def event_to_cql_index(event_dict: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # Finding -> IOC : auto-create IOC from pentest findings
 # ---------------------------------------------------------------------------
+
 
 def finding_to_ioc(
     db: Any,
@@ -297,6 +304,7 @@ def finding_to_ioc(
 # ---------------------------------------------------------------------------
 # Scan -> Event : convert scan results to events for pipeline processing
 # ---------------------------------------------------------------------------
+
 
 def scan_result_to_event(scan_result: dict[str, Any]) -> dict[str, Any]:
     """Convert a scan result dict into a raw event dict for pipeline ingestion."""

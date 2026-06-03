@@ -81,11 +81,7 @@ async def dispatch_to_integrations(db: Session, incident: dict[str, Any]) -> lis
     incident_severity = (incident.get("severity") or "low").lower()
     incident_rank = SEVERITY_RANK.get(incident_severity, 0)
 
-    integrations = (
-        db.query(OutboundIntegration)
-        .filter(OutboundIntegration.enabled.is_(True))
-        .all()
-    )
+    integrations = db.query(OutboundIntegration).filter(OutboundIntegration.enabled.is_(True)).all()
 
     eligible: list[tuple[OutboundIntegration, OutboundConnector]] = []
     for integ in integrations:
@@ -94,7 +90,9 @@ async def dispatch_to_integrations(db: Session, incident: dict[str, Any]) -> lis
             continue
         connector = _build_connector(integ)
         if connector is None or not connector.is_configured():
-            logger.info("integration_skipped_unconfigured id=%s type=%s", integ.id, integ.integration_type)
+            logger.info(
+                "integration_skipped_unconfigured id=%s type=%s", integ.id, integ.integration_type
+            )
             continue
         eligible.append((integ, connector))
 
@@ -199,8 +197,7 @@ async def sync_all_open_tickets(db: Session, max_age_minutes: int = 60) -> dict[
     tickets: list[IncidentTicket] = (
         db.query(IncidentTicket)
         .filter(
-            (IncidentTicket.last_synced_at.is_(None))
-            | (IncidentTicket.last_synced_at < cutoff)
+            (IncidentTicket.last_synced_at.is_(None)) | (IncidentTicket.last_synced_at < cutoff)
         )
         .all()
     )

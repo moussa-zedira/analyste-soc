@@ -28,6 +28,7 @@ _HTTP = httpx.AsyncClient(timeout=15.0, follow_redirects=True, verify=False)
 # Response schema
 # ---------------------------------------------------------------------------
 
+
 class ReconResponse(BaseModel):
     target: str
     target_type: str
@@ -53,6 +54,7 @@ class ReconResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _is_ip(t: str) -> bool:
     try:
         ipaddress.ip_address(t)
@@ -64,6 +66,7 @@ def _is_ip(t: str) -> bool:
 # ---------------------------------------------------------------------------
 # Module 1 — WHOIS (via RDAP)
 # ---------------------------------------------------------------------------
+
 
 async def _get_whois(domain: str) -> dict | None:
     try:
@@ -106,6 +109,7 @@ async def _get_whois(domain: str) -> dict | None:
 # Module 2 — DNS Records
 # ---------------------------------------------------------------------------
 
+
 async def _get_dns(domain: str) -> dict[str, list[str]]:
     records: dict[str, list[str]] = {}
     rtypes = ["A", "AAAA", "MX", "NS", "TXT", "SOA", "CNAME", "SRV", "CAA"]
@@ -134,6 +138,7 @@ async def _get_dns(domain: str) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 # Module 3 — Subdomains (Certificate Transparency)
 # ---------------------------------------------------------------------------
+
 
 async def _get_subdomains(domain: str) -> list[dict]:
     subs: set[str] = set()
@@ -167,6 +172,7 @@ async def _get_subdomains(domain: str) -> list[dict]:
 # Module 4 — Reverse IP
 # ---------------------------------------------------------------------------
 
+
 async def _get_reverse_ip(ip: str) -> list[str]:
     try:
         r = await _HTTP.get(
@@ -185,11 +191,14 @@ async def _get_reverse_ip(ip: str) -> list[str]:
 # Module 5 — GeoIP
 # ---------------------------------------------------------------------------
 
+
 async def _get_geo(ip: str) -> dict | None:
     try:
         r = await _HTTP.get(
             f"http://ip-api.com/json/{ip}",
-            params={"fields": "status,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query"},
+            params={
+                "fields": "status,country,countryCode,region,regionName,city,zip,lat,lon,timezone,isp,org,as,query"
+            },
         )
         if r.status_code == 200:
             d = r.json()
@@ -204,9 +213,18 @@ async def _get_geo(ip: str) -> dict | None:
 # Module 6 — Tech Fingerprint
 # ---------------------------------------------------------------------------
 
+
 async def _get_tech(target: str) -> dict | None:
-    fp: dict = {"server": None, "powered_by": None, "framework": None,
-                "cms": None, "cdn": None, "language": None, "cookies": [], "detected": []}
+    fp: dict = {
+        "server": None,
+        "powered_by": None,
+        "framework": None,
+        "cms": None,
+        "cdn": None,
+        "language": None,
+        "cookies": [],
+        "detected": [],
+    }
     detected: list[str] = []
     try:
         r = await _HTTP.get(f"https://{target}", timeout=12.0)
@@ -223,8 +241,13 @@ async def _get_tech(target: str) -> dict | None:
                 detected.append(name.title())
 
         # CDN detection
-        cdn_map = {"cf-cache-status": "Cloudflare", "x-amz-cf-id": "CloudFront",
-                    "x-vercel-id": "Vercel", "x-netlify": "Netlify", "fly-request-id": "Fly.io"}
+        cdn_map = {
+            "cf-cache-status": "Cloudflare",
+            "x-amz-cf-id": "CloudFront",
+            "x-vercel-id": "Vercel",
+            "x-netlify": "Netlify",
+            "fly-request-id": "Fly.io",
+        }
         for hdr, cdn in cdn_map.items():
             if hdr in h:
                 fp["cdn"] = cdn
@@ -233,15 +256,26 @@ async def _get_tech(target: str) -> dict | None:
 
         # Language / framework from headers
         pb = (fp["powered_by"] or "").lower()
-        lang_map = {"php": "PHP", "asp.net": "ASP.NET", "express": "Express.js", "next.js": "Next.js"}
+        lang_map = {
+            "php": "PHP",
+            "asp.net": "ASP.NET",
+            "express": "Express.js",
+            "next.js": "Next.js",
+        }
         for key, name in lang_map.items():
             if key in pb:
                 fp["language"] = name
                 detected.append(name)
 
         # CMS from body
-        cms_map = {"wp-content": "WordPress", "drupal": "Drupal", "joomla": "Joomla",
-                    "shopify": "Shopify", "wix.com": "Wix", "squarespace": "Squarespace"}
+        cms_map = {
+            "wp-content": "WordPress",
+            "drupal": "Drupal",
+            "joomla": "Joomla",
+            "shopify": "Shopify",
+            "wix.com": "Wix",
+            "squarespace": "Squarespace",
+        }
         for key, name in cms_map.items():
             if key in body:
                 fp["cms"] = name
@@ -249,9 +283,16 @@ async def _get_tech(target: str) -> dict | None:
                 break
 
         # Framework from body
-        fw_map = {"__next": "Next.js", "react": "React", "__vue": "Vue.js",
-                   "angular": "Angular", "laravel": "Laravel", "django": "Django",
-                   "ruby on rails": "Ruby on Rails", "flask": "Flask"}
+        fw_map = {
+            "__next": "Next.js",
+            "react": "React",
+            "__vue": "Vue.js",
+            "angular": "Angular",
+            "laravel": "Laravel",
+            "django": "Django",
+            "ruby on rails": "Ruby on Rails",
+            "flask": "Flask",
+        }
         for key, name in fw_map.items():
             if key in body:
                 fp["framework"] = name
@@ -287,6 +328,7 @@ async def _get_tech(target: str) -> dict | None:
 # Module 7 — SSL Certificate
 # ---------------------------------------------------------------------------
 
+
 async def _get_ssl(hostname: str) -> dict | None:
     def _do() -> dict | None:
         try:
@@ -318,17 +360,23 @@ async def _get_ssl(hostname: str) -> dict | None:
                     expired = False
                     if not_after:
                         try:
-                            exp = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=UTC)
+                            exp = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(
+                                tzinfo=UTC
+                            )
                             days = (exp - datetime.now(UTC)).days
                             expired = days < 0
                         except Exception:
                             logger.debug("recon: ignored exception", exc_info=True)
 
                     return {
-                        "subject": subj, "issuer": " / ".join(issuer_parts),
-                        "not_before": cert.get("notBefore"), "not_after": not_after,
-                        "days_remaining": days, "serial": cert.get("serialNumber"),
-                        "san": san[:50], "protocol": proto,
+                        "subject": subj,
+                        "issuer": " / ".join(issuer_parts),
+                        "not_before": cert.get("notBefore"),
+                        "not_after": not_after,
+                        "days_remaining": days,
+                        "serial": cert.get("serialNumber"),
+                        "san": san[:50],
+                        "protocol": proto,
                         "cipher": ci[0] if ci else None,
                         "key_size": ci[2] if ci and len(ci) > 2 else None,
                         "is_expired": expired,
@@ -343,6 +391,7 @@ async def _get_ssl(hostname: str) -> dict | None:
 # ---------------------------------------------------------------------------
 # Module 8 — HTTP Headers Audit
 # ---------------------------------------------------------------------------
+
 
 async def _get_headers(target: str) -> dict | None:
     try:
@@ -395,12 +444,15 @@ async def _get_headers(target: str) -> dict | None:
 # Module 9 — Wayback Machine
 # ---------------------------------------------------------------------------
 
+
 async def _get_wayback(domain: str) -> dict | None:
     try:
         r = await _HTTP.get(
             "https://web.archive.org/cdx/search/cdx",
             params={
-                "url": f"{domain}/*", "output": "json", "limit": "50",
+                "url": f"{domain}/*",
+                "output": "json",
+                "limit": "50",
                 "fl": "timestamp,original,statuscode,mimetype",
                 "collapse": "urlkey",
             },
@@ -417,12 +469,14 @@ async def _get_wayback(domain: str) -> dict | None:
         urls = []
         for row in data:
             entry = dict(zip(header, row, strict=False))
-            urls.append({
-                "timestamp": entry.get("timestamp", ""),
-                "url": entry.get("original", ""),
-                "status": entry.get("statuscode", ""),
-                "mimetype": entry.get("mimetype", ""),
-            })
+            urls.append(
+                {
+                    "timestamp": entry.get("timestamp", ""),
+                    "url": entry.get("original", ""),
+                    "status": entry.get("statuscode", ""),
+                    "mimetype": entry.get("mimetype", ""),
+                }
+            )
 
         timestamps = [u["timestamp"] for u in urls if u["timestamp"]]
         return {
@@ -440,26 +494,72 @@ async def _get_wayback(domain: str) -> dict | None:
 # Module 10 — Google Dorks
 # ---------------------------------------------------------------------------
 
+
 def _generate_dorks(domain: str) -> list[dict]:
     return [
-        {"label": "Documents sensibles", "query": f'site:{domain} filetype:pdf OR filetype:doc OR filetype:xls OR filetype:xlsx OR filetype:csv', "category": "files"},
-        {"label": "Pages de login", "query": f'site:{domain} inurl:login OR inurl:admin OR inurl:dashboard OR inurl:signin', "category": "auth"},
-        {"label": "APIs exposees", "query": f'site:{domain} inurl:api OR inurl:swagger OR inurl:graphql OR inurl:v1 OR inurl:v2', "category": "api"},
-        {"label": "Fichiers de config/backup", "query": f'site:{domain} ext:sql OR ext:bak OR ext:log OR ext:env OR ext:cfg OR ext:conf', "category": "config"},
-        {"label": "Listing de repertoires", "query": f'site:{domain} intitle:"index of" "parent directory"', "category": "dirs"},
-        {"label": "Messages d'erreur", "query": f'site:{domain} intext:"error" OR intext:"exception" OR intext:"stack trace" OR intext:"syntax error"', "category": "errors"},
-        {"label": "Fichiers de donnees", "query": f'site:{domain} ext:xml OR ext:json OR ext:yaml OR ext:yml', "category": "data"},
-        {"label": "WordPress", "query": f'site:{domain} inurl:wp-content OR inurl:wp-admin OR inurl:wp-includes', "category": "cms"},
-        {"label": "Credentials leakes", "query": f'"{domain}" password OR credentials OR secret OR api_key OR token', "category": "leak"},
-        {"label": "Sous-domaines indexes", "query": f'site:*.{domain} -www', "category": "recon"},
-        {"label": "Fichiers exposes", "query": f'site:{domain} ext:php intitle:phpinfo OR inurl:info.php', "category": "info"},
-        {"label": "Cameras / IoT", "query": f'site:{domain} inurl:"/view/view.shtml" OR inurl:"/cgi-bin" OR intitle:"webcam"', "category": "iot"},
+        {
+            "label": "Documents sensibles",
+            "query": f"site:{domain} filetype:pdf OR filetype:doc OR filetype:xls OR filetype:xlsx OR filetype:csv",
+            "category": "files",
+        },
+        {
+            "label": "Pages de login",
+            "query": f"site:{domain} inurl:login OR inurl:admin OR inurl:dashboard OR inurl:signin",
+            "category": "auth",
+        },
+        {
+            "label": "APIs exposees",
+            "query": f"site:{domain} inurl:api OR inurl:swagger OR inurl:graphql OR inurl:v1 OR inurl:v2",
+            "category": "api",
+        },
+        {
+            "label": "Fichiers de config/backup",
+            "query": f"site:{domain} ext:sql OR ext:bak OR ext:log OR ext:env OR ext:cfg OR ext:conf",
+            "category": "config",
+        },
+        {
+            "label": "Listing de repertoires",
+            "query": f'site:{domain} intitle:"index of" "parent directory"',
+            "category": "dirs",
+        },
+        {
+            "label": "Messages d'erreur",
+            "query": f'site:{domain} intext:"error" OR intext:"exception" OR intext:"stack trace" OR intext:"syntax error"',
+            "category": "errors",
+        },
+        {
+            "label": "Fichiers de donnees",
+            "query": f"site:{domain} ext:xml OR ext:json OR ext:yaml OR ext:yml",
+            "category": "data",
+        },
+        {
+            "label": "WordPress",
+            "query": f"site:{domain} inurl:wp-content OR inurl:wp-admin OR inurl:wp-includes",
+            "category": "cms",
+        },
+        {
+            "label": "Credentials leakes",
+            "query": f'"{domain}" password OR credentials OR secret OR api_key OR token',
+            "category": "leak",
+        },
+        {"label": "Sous-domaines indexes", "query": f"site:*.{domain} -www", "category": "recon"},
+        {
+            "label": "Fichiers exposes",
+            "query": f"site:{domain} ext:php intitle:phpinfo OR inurl:info.php",
+            "category": "info",
+        },
+        {
+            "label": "Cameras / IoT",
+            "query": f'site:{domain} inurl:"/view/view.shtml" OR inurl:"/cgi-bin" OR intitle:"webcam"',
+            "category": "iot",
+        },
     ]
 
 
 # ---------------------------------------------------------------------------
 # Module 11 — Robots.txt & Sitemap
 # ---------------------------------------------------------------------------
+
 
 async def _get_robots_sitemap(target: str) -> dict | None:
     result: dict = {"robots_txt": None, "disallowed": [], "sitemaps": []}
@@ -501,15 +601,34 @@ async def _get_robots_sitemap(target: str) -> dict | None:
 # Module 12 — Port Scan (top 25)
 # ---------------------------------------------------------------------------
 
+
 async def _scan_ports(host: str) -> list[dict]:
     ports = [
-        (21, "FTP"), (22, "SSH"), (23, "Telnet"), (25, "SMTP"),
-        (53, "DNS"), (80, "HTTP"), (110, "POP3"), (135, "MSRPC"),
-        (139, "NetBIOS"), (143, "IMAP"), (443, "HTTPS"), (445, "SMB"),
-        (993, "IMAPS"), (995, "POP3S"), (1433, "MSSQL"), (1521, "Oracle"),
-        (3306, "MySQL"), (3389, "RDP"), (5432, "PostgreSQL"),
-        (5900, "VNC"), (6379, "Redis"), (8080, "HTTP-Alt"),
-        (8443, "HTTPS-Alt"), (27017, "MongoDB"), (9200, "Elasticsearch"),
+        (21, "FTP"),
+        (22, "SSH"),
+        (23, "Telnet"),
+        (25, "SMTP"),
+        (53, "DNS"),
+        (80, "HTTP"),
+        (110, "POP3"),
+        (135, "MSRPC"),
+        (139, "NetBIOS"),
+        (143, "IMAP"),
+        (443, "HTTPS"),
+        (445, "SMB"),
+        (993, "IMAPS"),
+        (995, "POP3S"),
+        (1433, "MSSQL"),
+        (1521, "Oracle"),
+        (3306, "MySQL"),
+        (3389, "RDP"),
+        (5432, "PostgreSQL"),
+        (5900, "VNC"),
+        (6379, "Redis"),
+        (8080, "HTTP-Alt"),
+        (8443, "HTTPS-Alt"),
+        (27017, "MongoDB"),
+        (9200, "Elasticsearch"),
     ]
 
     async def probe(port: int, svc: str) -> dict | None:
@@ -529,11 +648,16 @@ async def _scan_ports(host: str) -> list[dict]:
 # Module 13 — Email Harvesting
 # ---------------------------------------------------------------------------
 
+
 async def _harvest_emails(target: str) -> list[str]:
     emails: set[str] = set()
-    email_re = re.compile(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}')
-    pages = [f"https://{target}", f"https://{target}/contact",
-             f"https://{target}/about", f"https://{target}/impressum"]
+    email_re = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
+    pages = [
+        f"https://{target}",
+        f"https://{target}/contact",
+        f"https://{target}/about",
+        f"https://{target}/impressum",
+    ]
 
     async def fetch(url: str) -> None:
         try:
@@ -553,6 +677,7 @@ async def _harvest_emails(target: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # Main endpoint — Tout en parallele
 # ---------------------------------------------------------------------------
+
 
 @router.get("/{target:path}", response_model=ReconResponse)
 async def recon_target(target: str, request: Request) -> dict:

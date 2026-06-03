@@ -91,4 +91,3 @@ def require_roles(*roles: str):
 def require_admin(request: Request) -> None:
     """Shortcut: only admin users (or service API key) allowed."""
     return require_roles("admin")(request)
-

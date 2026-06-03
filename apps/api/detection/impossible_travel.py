@@ -34,9 +34,9 @@ logger = logging.getLogger(__name__)
 
 RULE_ID = "impossible-travel.v2"
 LOOKBACK = timedelta(hours=24)
-SPEED_THRESHOLD_KMH = 900.0           # vitesse avion commercial
-SPEED_CRITICAL_KMH = 1500.0           # > avion supersonique → critical
-MIN_DISTANCE_KM = 50.0                # ignore les sauts < 50 km (même métropole)
+SPEED_THRESHOLD_KMH = 900.0  # vitesse avion commercial
+SPEED_CRITICAL_KMH = 1500.0  # > avion supersonique → critical
+MIN_DISTANCE_KM = 50.0  # ignore les sauts < 50 km (même métropole)
 
 
 def _compute_dedup_hash(username: str, end_ts: datetime) -> str:
@@ -62,10 +62,7 @@ def run_impossible_travel(db: Session, events: list[Event]) -> int:
     candidates = [
         e
         for e in events
-        if e.event_type == "auth.success"
-        and e.username
-        and e.src_ip
-        and e.ts >= cutoff
+        if e.event_type == "auth.success" and e.username and e.src_ip and e.ts >= cutoff
     ]
     if not candidates:
         return 0
@@ -109,7 +106,10 @@ def _detect_for_user(
             continue
 
         distance_km = geo.haversine_km(
-            geo1["lat"], geo1["lon"], geo2["lat"], geo2["lon"],
+            geo1["lat"],
+            geo1["lon"],
+            geo2["lat"],
+            geo2["lon"],
         )
         if distance_km < MIN_DISTANCE_KM:
             continue
@@ -174,30 +174,37 @@ def _detect_for_user(
             created_at=now.isoformat(),
         )
 
-        broadcaster.publish({
-            "type": "new_incident",
-            "payload": {
-                "id": incident_id,
-                "title": title,
-                "severity": severity,
-                "rule_id": RULE_ID,
-                "entity_key": f"user:{username}",
-                "status": "open",
-                "created_at": now.isoformat(),
-                "src_ip": ev1.src_ip,
-                "dst_ip": ev2.src_ip,
-                "src_country": geo1["country"],
-                "dst_country": geo2["country"],
-                "distance_km": round(distance_km, 1),
-                "time_delta_s": int(time_delta.total_seconds()),
-                "implied_kmh": None if implied_kmh == float("inf") else round(implied_kmh, 1),
-            },
-        })
+        broadcaster.publish(
+            {
+                "type": "new_incident",
+                "payload": {
+                    "id": incident_id,
+                    "title": title,
+                    "severity": severity,
+                    "rule_id": RULE_ID,
+                    "entity_key": f"user:{username}",
+                    "status": "open",
+                    "created_at": now.isoformat(),
+                    "src_ip": ev1.src_ip,
+                    "dst_ip": ev2.src_ip,
+                    "src_country": geo1["country"],
+                    "dst_country": geo2["country"],
+                    "distance_km": round(distance_km, 1),
+                    "time_delta_s": int(time_delta.total_seconds()),
+                    "implied_kmh": None if implied_kmh == float("inf") else round(implied_kmh, 1),
+                },
+            }
+        )
 
         logger.info(
             "Impossible travel for %s: %s->%s, %.0f km / %.0f s = %s km/h (%s)",
-            username, geo1["city"], geo2["city"], distance_km,
-            time_delta.total_seconds(), speed_str, severity,
+            username,
+            geo1["city"],
+            geo2["city"],
+            distance_km,
+            time_delta.total_seconds(),
+            speed_str,
+            severity,
         )
         created += 1
 

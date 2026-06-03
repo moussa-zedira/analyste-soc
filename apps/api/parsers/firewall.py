@@ -28,28 +28,34 @@ _ASA_RE = re.compile(
 )
 
 _ASA_LEVEL_MAP = {
-    "0": "critical", "1": "critical", "2": "critical", "3": "high",
-    "4": "medium", "5": "low", "6": "low", "7": "low",
+    "0": "critical",
+    "1": "critical",
+    "2": "critical",
+    "3": "high",
+    "4": "medium",
+    "5": "low",
+    "6": "low",
+    "7": "low",
 }
 
 # Common ASA message IDs
 _ASA_MSG_MAP = {
-    "106001": "network.allowed",     # Inbound TCP connection permitted
-    "106006": "network.blocked",     # Deny inbound UDP
-    "106007": "network.blocked",     # Deny inbound UDP (DNS)
-    "106014": "network.blocked",     # Deny inbound icmp
-    "106015": "network.blocked",     # Deny inbound TCP (no connection)
-    "106023": "network.blocked",     # Deny by access-group
-    "106100": "network.acl",         # ACL permitted/denied
+    "106001": "network.allowed",  # Inbound TCP connection permitted
+    "106006": "network.blocked",  # Deny inbound UDP
+    "106007": "network.blocked",  # Deny inbound UDP (DNS)
+    "106014": "network.blocked",  # Deny inbound icmp
+    "106015": "network.blocked",  # Deny inbound TCP (no connection)
+    "106023": "network.blocked",  # Deny by access-group
+    "106100": "network.acl",  # ACL permitted/denied
     "302013": "network.connection",  # Built inbound TCP connection
-    "302014": "network.teardown",    # Teardown TCP connection
+    "302014": "network.teardown",  # Teardown TCP connection
     "302015": "network.connection",  # Built inbound UDP connection
-    "302016": "network.teardown",    # Teardown UDP connection
-    "305011": "network.nat",         # NAT translation
-    "313001": "network.blocked",     # Denied ICMP
-    "710003": "auth.fail",           # AAA authentication failed
-    "113004": "auth.success",        # AAA authentication successful
-    "113005": "auth.fail",           # AAA authentication rejected
+    "302016": "network.teardown",  # Teardown UDP connection
+    "305011": "network.nat",  # NAT translation
+    "313001": "network.blocked",  # Denied ICMP
+    "710003": "auth.fail",  # AAA authentication failed
+    "113004": "auth.success",  # AAA authentication successful
+    "113005": "auth.fail",  # AAA authentication rejected
 }
 
 _ASA_IP_RE = re.compile(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?:/(\d+))?")
@@ -296,13 +302,29 @@ def _parse_generic_fw(raw: str) -> dict[str, Any] | None:
         fields[key] = val
 
     # Must have some network-related keys
-    network_keys = {"src", "dst", "srcip", "dstip", "action", "proto",
-                    "src_ip", "dst_ip", "srcaddr", "dstaddr", "sport", "dport"}
+    network_keys = {
+        "src",
+        "dst",
+        "srcip",
+        "dstip",
+        "action",
+        "proto",
+        "src_ip",
+        "dst_ip",
+        "srcaddr",
+        "dstaddr",
+        "sport",
+        "dport",
+    }
     if len({k.lower() for k in fields} & network_keys) < 2:
         return None
 
-    src_ip = fields.get("src") or fields.get("srcip") or fields.get("src_ip") or fields.get("srcaddr")
-    dst_ip = fields.get("dst") or fields.get("dstip") or fields.get("dst_ip") or fields.get("dstaddr")
+    src_ip = (
+        fields.get("src") or fields.get("srcip") or fields.get("src_ip") or fields.get("srcaddr")
+    )
+    dst_ip = (
+        fields.get("dst") or fields.get("dstip") or fields.get("dst_ip") or fields.get("dstaddr")
+    )
     action = (fields.get("action") or fields.get("act") or "").lower()
 
     if any(w in action for w in ("deny", "drop", "block", "reject")):
@@ -335,6 +357,7 @@ def _parse_generic_fw(raw: str) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 # Main parser — tries each sub-parser in order
 # ---------------------------------------------------------------------------
+
 
 class FirewallParser(BaseParser):
     name = "firewall"

@@ -136,9 +136,11 @@ def _issue_token_pair(user: User) -> dict:
 @limiter.limit("10/hour")
 def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
     """Inscrire un nouveau compte utilisateur."""
-    existing = db.query(User).filter(
-        (User.username == payload.username) | (User.email == payload.email)
-    ).first()
+    existing = (
+        db.query(User)
+        .filter((User.username == payload.username) | (User.email == payload.email))
+        .first()
+    )
     if existing:
         record_login("register", success=False)
         raise HTTPException(
@@ -376,10 +378,7 @@ def me_stats(
         or 0
     )
     scans_performed = (
-        db.query(func.count(ScanHistory.id))
-        .filter(ScanHistory.scanned_by == user.id)
-        .scalar()
-        or 0
+        db.query(func.count(ScanHistory.id)).filter(ScanHistory.scanned_by == user.id).scalar() or 0
     )
     last_login = (
         db.query(AuditLog.created_at)
@@ -542,9 +541,7 @@ def create_api_key(
     db: Session = Depends(get_db),
 ) -> ApiKeyCreated:
     if not payload.name.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="name is required"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="name is required")
     raw = f"cd_{stdsecrets.token_urlsafe(32)}"
     prefix = raw[:10]
     now = datetime.now(UTC)
@@ -598,9 +595,7 @@ def revoke_api_key(
 ) -> None:
     entry = db.get(UserApiKey, key_id)
     if entry is None or entry.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="API key not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found")
     entry.revoked = True
     db.commit()
     _write_audit(
@@ -654,9 +649,7 @@ def totp_setup(
     user.totp_secret = secret
     user.totp_enabled = False
     db.commit()
-    otpauth = pyotp.totp.TOTP(secret).provisioning_uri(
-        name=user.username, issuer_name="CyberDef"
-    )
+    otpauth = pyotp.totp.TOTP(secret).provisioning_uri(name=user.username, issuer_name="CyberDef")
     img = qrcode.make(otpauth)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -677,9 +670,7 @@ def totp_enable(
             detail="2FA setup not started",
         )
     if not pyotp.TOTP(user.totp_secret).verify(payload.code, valid_window=1):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid 2FA code"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid 2FA code")
     user.totp_enabled = True
     db.commit()
     _write_audit(
@@ -700,9 +691,7 @@ def totp_disable(
     db: Session = Depends(get_db),
 ) -> TotpStatus:
     if not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
     user.totp_secret = None
     user.totp_enabled = False
     db.commit()

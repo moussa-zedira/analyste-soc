@@ -175,6 +175,7 @@ def task_send_alert(incident_data: dict) -> dict:
 # Pipeline tasks
 # ---------------------------------------------------------------------------
 
+
 @celery.task(name="apps.api.tasks.task_process_event")
 def task_process_event(raw_event) -> dict:
     """Process a single event through the full pipeline."""
@@ -219,9 +220,7 @@ def task_process_batch(events: list) -> dict:
         finally:
             loop.close()
 
-        successes = sum(
-            1 for r in results if r.metadata.get("success", False)
-        )
+        successes = sum(1 for r in results if r.metadata.get("success", False))
         celery_tasks_total.labels(task_name="process_batch", status="success").inc()
         return {
             "total": len(results),
@@ -256,9 +255,7 @@ def task_pipeline_replay(
 
         loop = asyncio.new_event_loop()
         try:
-            result = loop.run_until_complete(
-                engine.replay(query=query, time_range=time_range)
-            )
+            result = loop.run_until_complete(engine.replay(query=query, time_range=time_range))
         finally:
             loop.close()
 

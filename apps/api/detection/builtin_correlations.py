@@ -58,7 +58,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "notify_soc"],
             tags=["brute-force", "account-compromise"],
         ),
-
         # ------------------------------------------------------------------
         # 2. Port scan -> exploit attempt -> reverse shell
         # ------------------------------------------------------------------
@@ -92,7 +91,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "block_ip", "notify_soc"],
             tags=["attack-chain", "exploitation", "reverse-shell"],
         ),
-
         # ------------------------------------------------------------------
         # 3. Distributed brute force (many IPs, same target user)
         # ------------------------------------------------------------------
@@ -115,7 +113,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "disable_account"],
             tags=["distributed-brute-force", "credential-attack"],
         ),
-
         # ------------------------------------------------------------------
         # 4. Impossible travel + sensitive data access
         # ------------------------------------------------------------------
@@ -146,7 +143,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "disable_account", "notify_soc"],
             tags=["insider-threat", "impossible-travel", "data-access"],
         ),
-
         # ------------------------------------------------------------------
         # 5. Privilege escalation -> lateral movement -> data exfiltration
         # ------------------------------------------------------------------
@@ -177,12 +173,13 @@ def _build_rules() -> list[CorrelationRule]:
             threshold=3,
             severity="critical",
             mitre_tactics=[
-                "privilege-escalation", "lateral-movement", "exfiltration",
+                "privilege-escalation",
+                "lateral-movement",
+                "exfiltration",
             ],
             actions=["create_incident", "block_ip", "notify_soc"],
             tags=["apt", "kill-chain", "advanced-threat"],
         ),
-
         # ------------------------------------------------------------------
         # 6. DNS tunneling detection
         # ------------------------------------------------------------------
@@ -210,7 +207,6 @@ def _build_rules() -> list[CorrelationRule]:
             baseline_window=3600,
             std_dev_threshold=3.0,
         ),
-
         # ------------------------------------------------------------------
         # 7. Beaconing detection (periodic callbacks)
         # ------------------------------------------------------------------
@@ -235,7 +231,6 @@ def _build_rules() -> list[CorrelationRule]:
             baseline_window=7200,
             std_dev_threshold=2.5,
         ),
-
         # ------------------------------------------------------------------
         # 8. Credential stuffing (many users, few passwords, same source)
         # ------------------------------------------------------------------
@@ -259,7 +254,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "block_ip"],
             tags=["credential-stuffing", "leaked-credentials"],
         ),
-
         # ------------------------------------------------------------------
         # 9. Ransomware indicators (mass file operations)
         # ------------------------------------------------------------------
@@ -287,7 +281,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "quarantine_host", "notify_soc"],
             tags=["ransomware", "encryption", "impact"],
         ),
-
         # ------------------------------------------------------------------
         # 10. C2 communication patterns
         # ------------------------------------------------------------------
@@ -321,7 +314,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "block_ip"],
             tags=["c2", "encoded-payload", "communication"],
         ),
-
         # ------------------------------------------------------------------
         # 11. Data staging before exfiltration
         # ------------------------------------------------------------------
@@ -351,7 +343,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "notify_soc"],
             tags=["data-staging", "exfiltration", "archive"],
         ),
-
         # ------------------------------------------------------------------
         # 12. Account enumeration -> password spray
         # ------------------------------------------------------------------
@@ -381,7 +372,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "block_ip"],
             tags=["enumeration", "password-spray"],
         ),
-
         # ------------------------------------------------------------------
         # 13. Web shell upload -> command execution
         # ------------------------------------------------------------------
@@ -417,7 +407,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "quarantine_host", "notify_soc"],
             tags=["webshell", "rce", "persistence"],
         ),
-
         # ------------------------------------------------------------------
         # 14. SQL injection -> data dump -> exfiltration
         # ------------------------------------------------------------------
@@ -457,7 +446,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "block_ip", "notify_soc"],
             tags=["sqli", "data-theft", "exfiltration"],
         ),
-
         # ------------------------------------------------------------------
         # 15. Phishing click -> malware download -> C2 callback
         # ------------------------------------------------------------------
@@ -491,12 +479,13 @@ def _build_rules() -> list[CorrelationRule]:
             threshold=3,
             severity="critical",
             mitre_tactics=[
-                "initial-access", "execution", "command-and-control",
+                "initial-access",
+                "execution",
+                "command-and-control",
             ],
             actions=["create_incident", "quarantine_host", "notify_soc"],
             tags=["phishing", "malware", "c2"],
         ),
-
         # ------------------------------------------------------------------
         # 16. Service account abuse (unusual hours/systems)
         # ------------------------------------------------------------------
@@ -531,7 +520,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "notify_soc"],
             tags=["service-account", "abuse", "unusual-access"],
         ),
-
         # ------------------------------------------------------------------
         # 17. Golden ticket / Pass-the-Hash detection
         # ------------------------------------------------------------------
@@ -548,7 +536,7 @@ def _build_rules() -> list[CorrelationRule]:
                     event_type="auth.kerberos",
                     regex_conditions={
                         "message": r"(ticket.lifetime.exceeded|forged|"
-                                   r"encryption.type.mismatch)",
+                        r"encryption.type.mismatch)",
                     },
                 ),
                 EventPattern(
@@ -563,12 +551,13 @@ def _build_rules() -> list[CorrelationRule]:
             threshold=1,
             severity="critical",
             mitre_tactics=[
-                "credential-access", "lateral-movement", "defense-evasion",
+                "credential-access",
+                "lateral-movement",
+                "defense-evasion",
             ],
             actions=["create_incident", "disable_account", "notify_soc"],
             tags=["golden-ticket", "pass-the-hash", "kerberos"],
         ),
-
         # ------------------------------------------------------------------
         # 18. DGA domain detection
         # ------------------------------------------------------------------
@@ -596,7 +585,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "block_ip"],
             tags=["dga", "malware", "c2"],
         ),
-
         # ------------------------------------------------------------------
         # 19. Suspicious PowerShell execution chains
         # ------------------------------------------------------------------
@@ -613,7 +601,7 @@ def _build_rules() -> list[CorrelationRule]:
                     event_type="process.exec",
                     regex_conditions={
                         "message": r"powershell.*(DownloadString|DownloadFile|"
-                                   r"IEX|Invoke-Expression|WebClient)",
+                        r"IEX|Invoke-Expression|WebClient)",
                     },
                     label="download_cradle",
                 ),
@@ -621,7 +609,7 @@ def _build_rules() -> list[CorrelationRule]:
                     event_type="process.exec",
                     regex_conditions={
                         "message": r"powershell.*(FromBase64|Decompress|"
-                                   r"-enc|-EncodedCommand|bypass)",
+                        r"-enc|-EncodedCommand|bypass)",
                     },
                     label="decode_execute",
                 ),
@@ -634,7 +622,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "quarantine_host", "notify_soc"],
             tags=["powershell", "fileless", "living-off-the-land"],
         ),
-
         # ------------------------------------------------------------------
         # 20. Cloud resource manipulation (IAM + data access)
         # ------------------------------------------------------------------
@@ -661,12 +648,13 @@ def _build_rules() -> list[CorrelationRule]:
             threshold=2,
             severity="high",
             mitre_tactics=[
-                "persistence", "privilege-escalation", "collection",
+                "persistence",
+                "privilege-escalation",
+                "collection",
             ],
             actions=["create_incident", "notify_soc"],
             tags=["cloud", "iam", "data-access"],
         ),
-
         # ------------------------------------------------------------------
         # 21. Lateral movement via RDP/SSH after initial compromise
         # ------------------------------------------------------------------
@@ -696,7 +684,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "notify_soc"],
             tags=["lateral-movement", "rdp", "ssh"],
         ),
-
         # ------------------------------------------------------------------
         # 22. Suspicious process injection chain
         # ------------------------------------------------------------------
@@ -727,7 +714,7 @@ def _build_rules() -> list[CorrelationRule]:
                     event_type="process.exec",
                     regex_conditions={
                         "message": r"(CreateRemoteThread|NtCreateThreadEx|"
-                                   r"RtlCreateUserThread)",
+                        r"RtlCreateUserThread)",
                     },
                     label="execute",
                 ),
@@ -740,7 +727,6 @@ def _build_rules() -> list[CorrelationRule]:
             actions=["create_incident", "quarantine_host", "notify_soc"],
             tags=["process-injection", "evasion"],
         ),
-
         # ------------------------------------------------------------------
         # 23. Email compromise -> forwarding rule -> data exfil
         # ------------------------------------------------------------------

@@ -13,9 +13,5 @@ class IncidentEvent(Base):
 
     __tablename__ = "incident_events"
 
-    incident_id: Mapped[str] = mapped_column(
-        Text, ForeignKey("incidents.id"), primary_key=True
-    )
-    event_id: Mapped[str] = mapped_column(
-        Text, ForeignKey("events.id"), primary_key=True
-    )
+    incident_id: Mapped[str] = mapped_column(Text, ForeignKey("incidents.id"), primary_key=True)
+    event_id: Mapped[str] = mapped_column(Text, ForeignKey("events.id"), primary_key=True)

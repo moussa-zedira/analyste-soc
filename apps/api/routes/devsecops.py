@@ -47,10 +47,12 @@ def generate_ci_config(platform: str, scans: list[str], quality_gate: dict | Non
         return generate_circleci(scans, quality_gate)
     raise ValueError(f"Unsupported CI platform: {platform}")
 
+
 router = APIRouter(prefix="/devsecops", dependencies=[Depends(require_api_key)])
 
 
 # ── Schemas ──
+
 
 class ProjectCreate(BaseModel):
     name: str
@@ -86,19 +88,29 @@ class CIConfigRequest(BaseModel):
 
 def _project_dict(p: ScanProject) -> dict:
     return {
-        "id": p.id, "name": p.name, "repo_url": p.repo_url, "branch": p.branch,
-        "language": p.language, "description": p.description,
+        "id": p.id,
+        "name": p.name,
+        "repo_url": p.repo_url,
+        "branch": p.branch,
+        "language": p.language,
+        "description": p.description,
         "last_scan_at": p.last_scan_at.isoformat() if p.last_scan_at else None,
     }
 
 
 def _run_dict(r: ScanRun) -> dict:
     return {
-        "id": r.id, "project_id": r.project_id, "scan_type": r.scan_type,
-        "status": r.status, "findings_count": r.findings_count,
-        "critical_count": r.critical_count, "high_count": r.high_count,
-        "medium_count": r.medium_count, "low_count": r.low_count,
-        "quality_gate_passed": r.quality_gate_passed, "trigger": r.trigger,
+        "id": r.id,
+        "project_id": r.project_id,
+        "scan_type": r.scan_type,
+        "status": r.status,
+        "findings_count": r.findings_count,
+        "critical_count": r.critical_count,
+        "high_count": r.high_count,
+        "medium_count": r.medium_count,
+        "low_count": r.low_count,
+        "quality_gate_passed": r.quality_gate_passed,
+        "trigger": r.trigger,
         "started_at": r.started_at.isoformat() if r.started_at else None,
         "finished_at": r.finished_at.isoformat() if r.finished_at else None,
     }
@@ -106,16 +118,25 @@ def _run_dict(r: ScanRun) -> dict:
 
 def _finding_dict(f: ScanFinding) -> dict:
     return {
-        "id": f.id, "run_id": f.run_id, "scan_type": f.scan_type,
-        "severity": f.severity, "cwe_id": f.cwe_id, "title": f.title,
-        "description": f.description, "file_path": f.file_path,
-        "line_number": f.line_number, "code_snippet": f.code_snippet,
-        "remediation": f.remediation, "false_positive": f.false_positive,
+        "id": f.id,
+        "run_id": f.run_id,
+        "scan_type": f.scan_type,
+        "severity": f.severity,
+        "cwe_id": f.cwe_id,
+        "title": f.title,
+        "description": f.description,
+        "file_path": f.file_path,
+        "line_number": f.line_number,
+        "code_snippet": f.code_snippet,
+        "remediation": f.remediation,
+        "false_positive": f.false_positive,
         "resolved": f.resolved,
     }
 
 
-def _persist_run(db: Session, scan_type: str, findings: list[dict], project_id: int | None = None) -> ScanRun:
+def _persist_run(
+    db: Session, scan_type: str, findings: list[dict], project_id: int | None = None
+) -> ScanRun:
     now = datetime.now(UTC)
     sev_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     for f in findings:
@@ -124,29 +145,43 @@ def _persist_run(db: Session, scan_type: str, findings: list[dict], project_id: 
             sev_counts[s] += 1
 
     run = ScanRun(
-        project_id=project_id, scan_type=scan_type, status="completed",
-        started_at=now, finished_at=now, findings_count=len(findings),
-        critical_count=sev_counts["critical"], high_count=sev_counts["high"],
-        medium_count=sev_counts["medium"], low_count=sev_counts["low"],
+        project_id=project_id,
+        scan_type=scan_type,
+        status="completed",
+        started_at=now,
+        finished_at=now,
+        findings_count=len(findings),
+        critical_count=sev_counts["critical"],
+        high_count=sev_counts["high"],
+        medium_count=sev_counts["medium"],
+        low_count=sev_counts["low"],
         trigger="manual",
     )
     db.add(run)
     db.flush()
 
     for f in findings:
-        db.add(ScanFinding(
-            run_id=run.id, scan_type=scan_type, severity=f.get("severity", "low"),
-            cwe_id=f.get("cwe_id"), title=f.get("title", ""),
-            description=f.get("description"), file_path=f.get("file"),
-            line_number=f.get("line"), code_snippet=f.get("code_snippet"),
-            remediation=f.get("remediation"),
-        ))
+        db.add(
+            ScanFinding(
+                run_id=run.id,
+                scan_type=scan_type,
+                severity=f.get("severity", "low"),
+                cwe_id=f.get("cwe_id"),
+                title=f.get("title", ""),
+                description=f.get("description"),
+                file_path=f.get("file"),
+                line_number=f.get("line"),
+                code_snippet=f.get("code_snippet"),
+                remediation=f.get("remediation"),
+            )
+        )
     db.commit()
     db.refresh(run)
     return run
 
 
 # ── Projects ──
+
 
 @router.post("/projects")
 def create_project(body: ProjectCreate, db: Session = Depends(get_db)):
@@ -172,6 +207,7 @@ def get_project(pid: int, db: Session = Depends(get_db)):
 
 
 # ── Scans ──
+
 
 @router.post("/scan/sast")
 async def scan_sast(body: ScanRequest, db: Session = Depends(get_db)):
@@ -219,11 +255,18 @@ async def scan_iac(body: ScanRequest, db: Session = Depends(get_db)):
 async def scan_full(body: ScanRequest, db: Session = Depends(get_db)):
     all_findings: list[dict] = []
     for scan_fn, stype in [
-        (run_sast_scan, "sast"), (run_sca_scan, "sca"), (run_secret_scan, "secrets"),
-        (run_container_scan, "container"), (run_iac_scan, "iac"),
+        (run_sast_scan, "sast"),
+        (run_sca_scan, "sca"),
+        (run_secret_scan, "secrets"),
+        (run_container_scan, "container"),
+        (run_iac_scan, "iac"),
     ]:
         try:
-            findings = await scan_fn(body.target, **({"language": body.language} if stype == "sast" else {}), options=body.options or {})
+            findings = await scan_fn(
+                body.target,
+                **({"language": body.language} if stype == "sast" else {}),
+                options=body.options or {},
+            )
             all_findings.extend(findings)
         except Exception:
             logger.debug("devsecops: ignored exception", exc_info=True)
@@ -232,6 +275,7 @@ async def scan_full(body: ScanRequest, db: Session = Depends(get_db)):
 
 
 # ── Runs ──
+
 
 @router.get("/runs")
 def list_runs(project_id: int | None = None, limit: int = 50, db: Session = Depends(get_db)):
@@ -260,6 +304,7 @@ def get_sarif(run_id: int, db: Session = Depends(get_db)):
 
 # ── Quality Gates ──
 
+
 @router.post("/quality-gates")
 def create_gate(body: QualityGateCreate, db: Session = Depends(get_db)):
     gate = QualityGate(**body.model_dump())
@@ -272,14 +317,23 @@ def create_gate(body: QualityGateCreate, db: Session = Depends(get_db)):
 @router.get("/quality-gates")
 def list_gates(db: Session = Depends(get_db)):
     gates = db.query(QualityGate).all()
-    return {"gates": [
-        {"id": g.id, "name": g.name, "max_critical": g.max_critical,
-         "max_high": g.max_high, "no_secrets": g.no_secrets, "is_active": g.is_active}
-        for g in gates
-    ]}
+    return {
+        "gates": [
+            {
+                "id": g.id,
+                "name": g.name,
+                "max_critical": g.max_critical,
+                "max_high": g.max_high,
+                "no_secrets": g.no_secrets,
+                "is_active": g.is_active,
+            }
+            for g in gates
+        ]
+    }
 
 
 # ── CI/CD Pipeline Generator ──
+
 
 @router.post("/ci/generate")
 def gen_ci(body: CIConfigRequest):
@@ -288,6 +342,7 @@ def gen_ci(body: CIConfigRequest):
 
 
 # ── Dashboard ──
+
 
 @router.get("/dashboard")
 def dashboard(db: Session = Depends(get_db)):
@@ -299,20 +354,25 @@ def dashboard(db: Session = Depends(get_db)):
     total, critical, high = db.query(
         func.count(ScanFinding.id),
         func.count(
-            case((
-                (ScanFinding.severity == "critical") & (ScanFinding.resolved.is_(False)),
-                1,
-            ))
+            case(
+                (
+                    (ScanFinding.severity == "critical") & (ScanFinding.resolved.is_(False)),
+                    1,
+                )
+            )
         ),
         func.count(
-            case((
-                (ScanFinding.severity == "high") & (ScanFinding.resolved.is_(False)),
-                1,
-            ))
+            case(
+                (
+                    (ScanFinding.severity == "high") & (ScanFinding.resolved.is_(False)),
+                    1,
+                )
+            )
         ),
     ).one()
     return {
-        "total_projects": total_projects, "total_runs": total_runs,
+        "total_projects": total_projects,
+        "total_runs": total_runs,
         "total_findings": total or 0,
         "open_critical": critical or 0,
         "open_high": high or 0,
@@ -320,6 +380,7 @@ def dashboard(db: Session = Depends(get_db)):
 
 
 # ── Webhook ──
+
 
 @router.post("/webhook")
 async def webhook(payload: dict, db: Session = Depends(get_db)):
