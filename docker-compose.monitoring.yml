@@ -4,7 +4,8 @@ version: "3.9"
 # Utilisation : docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 # Acces :
 #   - Prometheus  : http://localhost:9090
-#   - Grafana     : http://localhost:3001  (admin / cf. GRAFANA_ADMIN_PASSWORD)
+#   - Grafana     : http://localhost:3002  (admin / cf. GRAFANA_ADMIN_PASSWORD)
+#     NB: 3001 est déjà pris par le dashboard web → Grafana sur 3002 (override GRAFANA_PORT).
 
 services:
   prometheus:
@@ -34,7 +35,7 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "3001:3000"
+      - "${GRAFANA_PORT:-3002}:3000"
     depends_on:
       - prometheus
 

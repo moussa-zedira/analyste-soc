@@ -79,7 +79,7 @@ docker-logs:  ## Tail Docker stack logs
 	docker compose logs -f --tail=100
 
 # ── Observabilite (Prometheus + Grafana) ─────────────────────
-monitoring-up:  ## Start monitoring overlay (Prometheus :9090, Grafana :3001)
+monitoring-up:  ## Start monitoring overlay (Prometheus :9090, Grafana :3002)
 	docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d prometheus grafana postgres-exporter redis-exporter
 
 monitoring-down:  ## Stop monitoring overlay
