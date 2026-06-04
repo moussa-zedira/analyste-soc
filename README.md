@@ -71,7 +71,7 @@ apps/
 | `syslog`   | Ingestion syslog UDP/TCP                  |
 
 **Services externes** (host) :
-- **Ollama** sur `localhost:11434` — IA locale (`qwen2.5-coder:7b`)
+- **Ollama** sur `localhost:11434` — IA locale (`qwen2.5-coder:32b`, alléger via `OLLAMA_MODEL`)
 - **Sliver C2** sur `localhost:31337` — daemon opérateur
 - **GoPhish** sur `localhost:3333` — serveur phishing (lancé en standalone)
 
