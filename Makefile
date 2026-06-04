@@ -122,6 +122,10 @@ backup-list:  ## List existing backups
 restore:  ## Restore from a dump (use F=path/to/dump)
 	bash scripts/restore.sh "$(F)"
 
+# ── Seed (amorçage instance fraîche) ─────────────────────────
+seed:  ## Amorce RAG (rebuild index) + SigmaHQ (sync) après le 1er boot
+	bash scripts/seed.sh
+
 # ── Cleanup ──────────────────────────────────────────────────
 clean:  ## Remove caches and build artifacts
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
