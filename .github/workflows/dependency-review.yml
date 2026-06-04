@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Nécessite le Dependency graph activé sur le repo (fait via l'activation
+      # des vulnerability-alerts). S'il était désactivé, ce step échoue avec
+      # "Dependency review is not supported on this repository".
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
@@ -36,7 +39,9 @@ jobs:
         run: pip install pip-audit
 
       - name: Audit Python dependencies
-        run: pip-audit -r apps/api/requirements.txt --strict
+        # CVE-2025-69872 : diskcache 5.6.3 (transitive via sliver-py), aucun
+        # correctif publié en amont. Exclusion ciblée — échoue sur toute autre CVE.
+        run: pip-audit -r apps/api/requirements.txt --strict --ignore-vuln CVE-2025-69872
 
   npm-audit:
     name: NPM Dependency Audit
