@@ -33,13 +33,22 @@ def _postgres_url() -> Iterator[str]:
         from testcontainers.postgres import PostgresContainer
     except ImportError:
         pytest.skip("testcontainers manquant : pip install -r apps/api/requirements-dev.txt")
-    with PostgresContainer("postgres:16-alpine") as pg:
+    try:
+        pg_ctx = PostgresContainer("postgres:16-alpine")
+        pg = pg_ctx.start()
+    except Exception as exc:  # noqa: BLE001 — Docker absent/injoignable -> skip propre
+        pytest.skip(
+            f"Docker indisponible pour Postgres ({exc.__class__.__name__}) — tests DB ignores"
+        )
+    try:
         url = pg.get_connection_url()
         # SQLAlchemy attend ``postgresql+psycopg2://`` — testcontainers donne ``postgresql+psycopg2://``
         # par defaut depuis 4.x mais on sait jamais.
         if url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
         yield url
+    finally:
+        pg_ctx.stop()
 
 
 @pytest.fixture(scope="session")
@@ -57,19 +66,32 @@ def _redis_url() -> Iterator[str]:
         from testcontainers.redis import RedisContainer
     except ImportError:
         pytest.skip("testcontainers manquant : pip install -r apps/api/requirements-dev.txt")
-    with RedisContainer("redis:7-alpine") as r:
+    try:
+        r_ctx = RedisContainer("redis:7-alpine")
+        r = r_ctx.start()
+    except Exception as exc:  # noqa: BLE001 — Docker absent/injoignable -> skip propre
+        pytest.skip(
+            f"Docker indisponible pour Redis ({exc.__class__.__name__}) — tests Redis ignores"
+        )
+    try:
         host = r.get_container_host_ip()
         port = r.get_exposed_port(6379)
         yield f"redis://{host}:{port}/0"
+    finally:
+        r_ctx.stop()
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _configure_env(_postgres_url: str, _redis_url: str) -> Iterator[None]:
-    """Configure les variables d'environnement avant l'import de l'app."""
+def _configure_env() -> Iterator[None]:
+    """Configure les variables d'environnement avant l'import de l'app.
+
+    NE depend PAS des conteneurs Postgres/Redis : les tests purement unitaires
+    (qui ne demandent ni ``db_session`` ni ``redis_client``) tournent ainsi sans
+    Docker. Les URLs DB/Redis reelles sont injectees a la demande par les
+    fixtures ``_engine`` et ``redis_client``.
+    """
     overrides = {
         "ENV": "dev",
-        "DATABASE_URL": _postgres_url,
-        "REDIS_URL": _redis_url,
         "API_KEY": "test-api-key-" + secrets.token_hex(8),
         "JWT_SECRET_KEY": "test-jwt-" + secrets.token_hex(16),
         "JWT_EXPIRE_MINUTES": "5",
@@ -81,6 +103,7 @@ def _configure_env(_postgres_url: str, _redis_url: str) -> Iterator[None]:
 
     # Invalide le cache settings + recharge le moteur DB.
     from apps.api.config import get_settings
+
     get_settings.cache_clear()
 
     yield
@@ -94,24 +117,31 @@ def _configure_env(_postgres_url: str, _redis_url: str) -> Iterator[None]:
 
 
 @pytest.fixture(scope="session")
-def _engine(_configure_env):
+def _engine(_configure_env, _postgres_url: str):
     """Recree le moteur SQLAlchemy contre la DB testcontainer + applique le schema."""
     from sqlalchemy import create_engine
+
+    # Injecte l'URL du conteneur (le fixture _postgres_url declenche le spin Docker
+    # uniquement quand un test reclame une session DB) puis invalide le cache settings.
+    os.environ["DATABASE_URL"] = _postgres_url
 
     # Import obligatoire pour que tous les models soient enregistres dans Base.metadata
     import apps.api.models  # noqa: F401
     from apps.api.config import get_settings
     from apps.api.db.base import Base
 
+    get_settings.cache_clear()
     settings = get_settings()
     engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
     Base.metadata.create_all(bind=engine)
 
     # Trigger d'immutabilite sur pentest_audit_logs (cf migration 008).
     from sqlalchemy import text
+
     with engine.begin() as conn:
-        conn.execute(text(
-            """
+        conn.execute(
+            text(
+                """
             CREATE OR REPLACE FUNCTION pentest_audit_logs_no_modify()
             RETURNS trigger AS $$
             BEGIN
@@ -119,18 +149,22 @@ def _engine(_configure_env):
             END;
             $$ LANGUAGE plpgsql;
             """
-        ))
-        conn.execute(text(
-            """
+            )
+        )
+        conn.execute(
+            text(
+                """
             DROP TRIGGER IF EXISTS pentest_audit_logs_block_update ON pentest_audit_logs;
             CREATE TRIGGER pentest_audit_logs_block_update
             BEFORE UPDATE OR DELETE ON pentest_audit_logs
             FOR EACH ROW EXECUTE FUNCTION pentest_audit_logs_no_modify();
             """
-        ))
+            )
+        )
 
     # Repointe la SessionLocal globale du module sur ce moteur.
     from apps.api.db import session as db_session_mod
+
     db_session_mod.engine = engine
     db_session_mod.SessionLocal.configure(bind=engine)
     return engine
@@ -154,12 +188,15 @@ def db_session(_engine):
 
 
 @pytest.fixture()
-def redis_client(_configure_env):
+def redis_client(_configure_env, _redis_url: str):
     """Client Redis branche sur le container, FLUSHDB entre les tests."""
     import redis
 
+    os.environ["REDIS_URL"] = _redis_url
     from apps.api.config import get_settings
-    client = redis.Redis.from_url(get_settings().REDIS_URL, decode_responses=True)
+
+    get_settings.cache_clear()
+    client = redis.Redis.from_url(_redis_url, decode_responses=True)
     client.flushdb()
     yield client
     client.flushdb()
@@ -196,6 +233,7 @@ def api_client(_engine, db_session, redis_client):
 def auth_headers(api_client) -> dict[str, str]:
     """Cree un user analyst + retourne les headers Authorization Bearer."""
     import uuid
+
     username = f"alice-{uuid.uuid4().hex[:6]}"
     password = "TestPassw0rd!"
     api_client.post(
@@ -207,8 +245,6 @@ def auth_headers(api_client) -> dict[str, str]:
             "role": "analyst",
         },
     )
-    resp = api_client.post(
-        "/auth/login", json={"username": username, "password": password}
-    )
+    resp = api_client.post("/auth/login", json={"username": username, "password": password})
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

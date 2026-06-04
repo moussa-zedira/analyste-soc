@@ -299,7 +299,7 @@ def test_stop_campaign_noop_when_already_completed(api_client, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_sync_campaign_dedups_events_and_recomputes_counts(monkeypatch):
+def test_sync_campaign_dedups_events_and_recomputes_counts(_engine, monkeypatch):
     import asyncio
 
     from apps.api.db.session import SessionLocal
@@ -367,7 +367,7 @@ def test_sync_campaign_dedups_events_and_recomputes_counts(monkeypatch):
         db.close()
 
 
-def test_sync_all_enforces_kill_switch(monkeypatch):
+def test_sync_all_enforces_kill_switch(_engine, monkeypatch):
     import asyncio
 
     from apps.api.db.session import SessionLocal
