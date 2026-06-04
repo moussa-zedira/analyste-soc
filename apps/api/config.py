@@ -41,9 +41,7 @@ class Settings(BaseSettings):
     JWT_REFRESH_EXPIRE_DAYS: int = 7
 
     # CORS — liste d'origines autorisees, separees par des virgules
-    CORS_ALLOWED_ORIGINS: str = (
-        "http://localhost:3000,http://127.0.0.1:3000,http://web:3000"
-    )
+    CORS_ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://web:3000"
 
     @property
     def cors_allowed_origins(self) -> list[str]:
@@ -104,6 +102,13 @@ class Settings(BaseSettings):
     SSO_REDIRECT_BASE_URL: str = "http://localhost:8000"
     SSO_STATE_TTL_SECONDS: int = 300
 
+    # Red Team / Offensif — interrupteur global du module pentest.
+    # Quand False, aucun router offensif (apps.api.pentest.* + routes red team)
+    # n'est importé ni monté : démarrage plus léger, CI/surface réduite,
+    # instance "blue team / SOC pur". Réversible instantanément.
+    # Défaut True : la plateforme pentest reste le produit par défaut.
+    ENABLE_OFFENSIVE: bool = True
+
     # Red Team — Sliver C2 (V4.3a)
     SLIVER_OPERATOR_CFG: str = ""
     SLIVER_DEFAULT_C2_URL: str = ""
@@ -117,12 +122,21 @@ class Settings(BaseSettings):
     GOPHISH_API_KEY: str = ""
 
     # Sentinelles refusees en production (anciens defaults compromis)
-    _WEAK_API_KEYS = frozenset({
-        "elite-secret-key", "change-me", "dev-insecure-key", "",
-    })
-    _WEAK_JWT_SECRETS = frozenset({
-        "change-me-in-production", "dev-jwt-secret-change-me", "",
-    })
+    _WEAK_API_KEYS = frozenset(
+        {
+            "elite-secret-key",
+            "change-me",
+            "dev-insecure-key",
+            "",
+        }
+    )
+    _WEAK_JWT_SECRETS = frozenset(
+        {
+            "change-me-in-production",
+            "dev-jwt-secret-change-me",
+            "",
+        }
+    )
 
     @property
     def effective_api_key(self) -> str:

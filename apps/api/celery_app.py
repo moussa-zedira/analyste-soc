@@ -11,17 +11,23 @@ from apps.api.config import get_settings
 
 settings = get_settings()
 
+# Tâches toujours chargées (défensif / SOC).
+_task_modules = [
+    "apps.api.tasks",
+    "apps.api.soar.tasks",
+    "apps.api.uba.tasks",
+    "apps.api.integrations.tasks",
+]
+# Tâches offensives (red team / pentest) — seulement si le flag est actif,
+# pour que le worker reste cohérent avec l'API (voir config.ENABLE_OFFENSIVE).
+if settings.ENABLE_OFFENSIVE:
+    _task_modules.append("apps.api.pentest.phishing.tasks")
+
 celery = Celery(
     "siem",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=[
-        "apps.api.tasks",
-        "apps.api.soar.tasks",
-        "apps.api.uba.tasks",
-        "apps.api.integrations.tasks",
-        "apps.api.pentest.phishing.tasks",
-    ],
+    include=_task_modules,
 )
 
 celery.conf.update(
@@ -113,8 +119,11 @@ celery.conf.beat_schedule = {
         "task": "apps.api.integrations.tasks.sync_all_outbound_tickets_task",
         "schedule": 3600.0,
     },
-    "sync-phishing-every-5-minutes": {
+}
+
+# Beat offensif — programmé uniquement si le module red team est actif.
+if settings.ENABLE_OFFENSIVE:
+    celery.conf.beat_schedule["sync-phishing-every-5-minutes"] = {
         "task": "apps.api.pentest.phishing.tasks.sync_all_phishing_task",
         "schedule": 300.0,
-    },
-}
+    }

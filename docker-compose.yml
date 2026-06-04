@@ -49,6 +49,7 @@ services:
     environment:
       ENV: ${ENV:-dev}
       STEALTH_MODE: ${STEALTH_MODE:-false}
+      ENABLE_OFFENSIVE: ${ENABLE_OFFENSIVE:-true}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       API_KEY: ${API_KEY:?API_KEY required in .env}
@@ -136,6 +137,7 @@ services:
     environment:
       ENV: ${ENV:-dev}
       STEALTH_MODE: ${STEALTH_MODE:-false}
+      ENABLE_OFFENSIVE: ${ENABLE_OFFENSIVE:-true}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       API_KEY: ${API_KEY:?API_KEY required in .env}
@@ -199,6 +201,7 @@ services:
     environment:
       ENV: ${ENV:-dev}
       STEALTH_MODE: ${STEALTH_MODE:-false}
+      ENABLE_OFFENSIVE: ${ENABLE_OFFENSIVE:-true}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required in .env}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       API_KEY: ${API_KEY:?API_KEY required in .env}
