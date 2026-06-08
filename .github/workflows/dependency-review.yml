@@ -13,7 +13,7 @@ jobs:
     name: Dependency Review
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Nécessite le Dependency graph activé sur le repo (fait via l'activation
       # des vulnerability-alerts). S'il était désactivé, ce step échoue avec
@@ -29,7 +29,7 @@ jobs:
     name: Python Dependency Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v5
         with:
@@ -47,7 +47,7 @@ jobs:
     name: NPM Dependency Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
