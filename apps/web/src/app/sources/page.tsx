@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getLogSources } from "@/lib/apiClient";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
+import { HudHeading, HudCard, HudButton, HudStat } from "@/components/hud";
 import type { LogSourceStatus } from "@/lib/types";
 
 export default function SourcesPage() {
@@ -36,24 +37,16 @@ export default function SourcesPage() {
     <PageTransition className="space-y-4">
       <StaggerItem>
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
-              Log Sources
-            </h1>
-            <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-              COLLECTEURS // SOURCES DE DONNEES ACTIVES
-            </p>
-          </div>
+          <HudHeading level={1} subtitle="COLLECTEURS // SOURCES DE DONNEES ACTIVES">
+            Log Sources
+          </HudHeading>
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-gray-500 font-mono">
               {sources.length} sources / {totalEvents} events
             </span>
-            <button
-              onClick={load}
-              className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-3 py-1.5 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20 transition-colors"
-            >
+            <HudButton variant="primary" size="sm" onClick={load}>
               REFRESH
-            </button>
+            </HudButton>
           </div>
         </div>
       </StaggerItem>
@@ -63,26 +56,17 @@ export default function SourcesPage() {
       {/* KPI row */}
       <StaggerItem>
         <div className="grid grid-cols-3 gap-4">
-          <div className="glass-panel p-4 text-center">
-            <p className="text-2xl font-bold text-cyan-glow font-mono">{sources.length}</p>
-            <p className="text-[10px] tracking-widest text-gray-500 mt-1">SOURCES ACTIVES</p>
-          </div>
-          <div className="glass-panel p-4 text-center">
-            <p className="text-2xl font-bold text-cyan-glow font-mono">{totalEvents.toLocaleString()}</p>
-            <p className="text-[10px] tracking-widest text-gray-500 mt-1">EVENTS TOTAL</p>
-          </div>
-          <div className="glass-panel p-4 text-center">
-            <p className="text-2xl font-bold text-cyan-glow font-mono">{totalRate.toFixed(1)}</p>
-            <p className="text-[10px] tracking-widest text-gray-500 mt-1">EVENTS / MIN</p>
-          </div>
+          <HudStat label="SOURCES ACTIVES" value={sources.length} />
+          <HudStat label="EVENTS TOTAL" value={totalEvents.toLocaleString()} />
+          <HudStat label="EVENTS / MIN" value={totalRate.toFixed(1)} />
         </div>
       </StaggerItem>
 
       {error && (
         <StaggerItem>
-          <div className="glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400">
-            <span className="mr-2 text-red-500">&#x25B2;</span>{error}
-          </div>
+          <HudCard tone="alert" className="px-4 py-3 text-xs tracking-wide text-neon-pink">
+            <span className="mr-2 text-neon-pink">&#x25B2;</span>{error}
+          </HudCard>
         </StaggerItem>
       )}
 
@@ -100,17 +84,17 @@ export default function SourcesPage() {
         </StaggerItem>
       ) : sources.length === 0 ? (
         <StaggerItem>
-          <div className="glass-panel p-8 text-center">
+          <HudCard className="p-8 text-center">
             <p className="text-sm text-gray-400">Aucune source de logs detectee</p>
             <p className="text-[10px] text-gray-600 mt-2 max-w-md mx-auto">
               Configurez un collecteur (syslog, Windows Event Log ou file watcher)
               pour commencer a recevoir des evenements.
             </p>
-          </div>
+          </HudCard>
         </StaggerItem>
       ) : (
         <StaggerItem>
-          <div className="glass-panel overflow-hidden">
+          <HudCard className="overflow-hidden p-0">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-cyan-glow/10">
@@ -173,13 +157,13 @@ export default function SourcesPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </HudCard>
         </StaggerItem>
       )}
 
       {/* Setup instructions */}
       <StaggerItem>
-        <div className="glass-panel p-4 space-y-3">
+        <HudCard className="p-4 space-y-3">
           <h3 className="text-[10px] font-bold tracking-widest text-gray-500">CONFIGURATION DES COLLECTEURS</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="rounded-lg border border-cyan-glow/10 p-3">
@@ -204,7 +188,7 @@ export default function SourcesPage() {
               </p>
             </div>
           </div>
-        </div>
+        </HudCard>
       </StaggerItem>
     </PageTransition>
   );
