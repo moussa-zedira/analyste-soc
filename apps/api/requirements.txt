@@ -1,80 +1,80 @@
-fastapi>=0.115.6
-uvicorn[standard]>=0.34.0
-sqlalchemy>=2.0.36
-pydantic>=2.10.4
-pydantic-settings>=2.7.1
-python-dotenv>=1.0.1
-httpx>=0.27
-scikit-learn>=1.4.0
-numpy>=1.26.0
-joblib>=1.3.0
+fastapi>=0.137.0
+uvicorn[standard]>=0.49.0
+sqlalchemy>=2.0.50
+pydantic>=2.13.4
+pydantic-settings>=2.14.1
+python-dotenv>=1.2.2
+httpx>=0.28.1
+scikit-learn>=1.9.0
+numpy>=2.4.6
+joblib>=1.5.3
 
 # Phase 1: PostgreSQL + Auth + Rate Limiting
-psycopg2-binary>=2.9.9
-alembic>=1.13.0
-python-jose[cryptography]>=3.3
-passlib[bcrypt]>=1.7
-bcrypt==4.0.1
-slowapi>=0.1.9
+psycopg2-binary>=2.9.12
+alembic>=1.18.4
+python-jose[cryptography]>=3.5.0
+passlib[bcrypt]>=1.7.4
+bcrypt==5.0.0
+slowapi>=0.1.10
 
 # Phase 2: Redis + Celery + GeoIP
-redis>=5.0
-celery[redis]>=5.3
-geoip2>=4.8
+redis>=8.0.0
+celery[redis]>=5.6.3
+geoip2>=5.2.0
 
 # Phase 2b: Domain/URL Scanner
-dnspython>=2.4
+dnspython>=2.8.0
 
 # Phase 2c: PDF export
-reportlab>=4.0
+reportlab>=4.5.1
 
 # Phase 3: Logging + Metrics + Alerting
-structlog>=24.0
-prometheus-client>=0.20
-prometheus-fastapi-instrumentator>=7.0
+structlog>=26.1.0
+prometheus-client>=0.25.0
+prometheus-fastapi-instrumentator>=8.0.0
 
 # Phase 3b: OpenTelemetry distributed tracing (env-gated, OTEL_EXPORTER_OTLP_ENDPOINT)
-opentelemetry-api>=1.27
-opentelemetry-sdk>=1.27
-opentelemetry-exporter-otlp>=1.27
-opentelemetry-instrumentation-fastapi>=0.48b0
-opentelemetry-instrumentation-sqlalchemy>=0.48b0
-opentelemetry-instrumentation-celery>=0.48b0
-opentelemetry-instrumentation-redis>=0.48b0
-opentelemetry-instrumentation-httpx>=0.48b0
+opentelemetry-api>=1.42.1
+opentelemetry-sdk>=1.42.1
+opentelemetry-exporter-otlp>=1.42.1
+opentelemetry-instrumentation-fastapi>=0.63b1
+opentelemetry-instrumentation-sqlalchemy>=0.63b1
+opentelemetry-instrumentation-celery>=0.63b1
+opentelemetry-instrumentation-redis>=0.63b1
+opentelemetry-instrumentation-httpx>=0.63b1
 
 # Phase 4: Threat Intelligence + SIGMA
-pyyaml>=6.0
-pysigma>=0.11
-pysigma-backend-elasticsearch>=1.1
+pyyaml>=6.0.3
+pysigma>=1.3.3
+pysigma-backend-elasticsearch>=2.0.3
 
 # Phase 5: Pentest Lab
-curl_cffi>=0.7
-stem>=1.8
-asyncssh>=2.14
-pyjwt>=2.8
-websockets>=12.0
-python-multipart>=0.0.6
+curl_cffi>=0.15.0
+stem>=1.8.2
+asyncssh>=2.23.1
+pyjwt>=2.13.0
+websockets>=16.0
+python-multipart>=0.0.32
 
 # Phase 6: Real Execution Engine
-pywinrm>=0.4
-impacket>=0.11
-aioftp>=0.22
+pywinrm>=0.5.0
+impacket>=0.13.1
+aioftp>=0.27.2
 
 # Phase 7: Headless Browser Scanning
-playwright>=1.40
+playwright>=1.60.0
 
 # Phase 8: RAG vectoriel (FAISS + sentence-transformers + MITRE/CVE/Sigma KB)
-faiss-cpu>=1.7.4
-sentence-transformers>=2.7
+faiss-cpu>=1.14.3
+sentence-transformers>=5.5.1
 
 # Phase 9: SOAR Connectors reels (LDAP/AD + AWS IAM — autres via httpx)
-ldap3>=2.9
-boto3>=1.34
+ldap3>=2.9.1
+boto3>=1.43.29
 
 # Phase 10: Sliver C2 client wrapper
-sliver-py>=0.0.18
+sliver-py>=0.0.19
 
 # Phase 11: 2FA TOTP (user profile)
-pyotp>=2.9
-qrcode[pil]>=7.4
+pyotp>=2.10.0
+qrcode[pil]>=8.2
