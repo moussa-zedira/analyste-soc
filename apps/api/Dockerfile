@@ -13,7 +13,7 @@
 # =====================================================================
 
 # ── Stage 1 : builder (compile wheels only) ─────────────────────────
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -41,7 +41,7 @@ RUN pip wheel --wheel-dir /wheels \
 
 
 # ── Stage 2 : runtime (image finale, non-root) ──────────────────────
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
