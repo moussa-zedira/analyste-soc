@@ -7,6 +7,7 @@ import { CQLEditor } from "@/components/CQLEditor";
 import { SearchResults, type SearchResultData, type ViewMode } from "@/components/SearchResults";
 import { FieldExplorer, type FieldInfo } from "@/components/FieldExplorer";
 import { cqlSearch, getCqlFields, type CqlSearchResponse } from "@/lib/apiClient";
+import { HudHeading, HudCard, HudButton, HudField, HudInput, HudSelect } from "@/components/hud";
 
 /* ------------------------------------------------------------------ */
 /*  Time range presets                                                 */
@@ -181,55 +182,42 @@ function SaveQueryModal({
         </h3>
 
         <div className="space-y-3">
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">
-              Name
-            </label>
-            <input
+          <HudField label="Name">
+            <HudInput
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded border border-cyan-glow/15 bg-space-deep/50 px-3 py-2 text-sm text-gray-200 outline-none focus:border-cyan-glow/40 font-mono"
               placeholder="My detection query"
+              mono
             />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">
-              Description
-            </label>
-            <input
+          </HudField>
+          <HudField label="Description">
+            <HudInput
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded border border-cyan-glow/15 bg-space-deep/50 px-3 py-2 text-sm text-gray-200 outline-none focus:border-cyan-glow/40 font-mono"
               placeholder="Detect brute force attempts..."
+              mono
             />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">
-              Category
-            </label>
-            <select
+          </HudField>
+          <HudField label="Category">
+            <HudSelect
               value={category}
               onChange={(e) => setCategory(e.target.value as SavedQuery["category"])}
-              className="w-full rounded border border-cyan-glow/15 bg-space-deep/50 px-3 py-2 text-sm text-gray-200 outline-none focus:border-cyan-glow/40"
             >
               <option value="threat-hunting">Threat Hunting</option>
               <option value="incident-response">Incident Response</option>
               <option value="compliance">Compliance</option>
               <option value="monitoring">Monitoring</option>
               <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">
-              Tags (comma separated)
-            </label>
-            <input
+            </HudSelect>
+          </HudField>
+          <HudField label="Tags (comma separated)">
+            <HudInput
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              className="w-full rounded border border-cyan-glow/15 bg-space-deep/50 px-3 py-2 text-sm text-gray-200 outline-none focus:border-cyan-glow/40 font-mono"
               placeholder="auth, brute-force, T1110"
+              mono
             />
-          </div>
+          </HudField>
 
           <div className="rounded border border-cyan-glow/10 bg-space-deep/50 p-3">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-600 mb-1 block">
@@ -245,13 +233,13 @@ function SaveQueryModal({
         </div>
 
         <div className="flex justify-end gap-2 mt-5">
-          <button
-            onClick={onClose}
-            className="rounded border border-gray-700 px-4 py-2 text-[11px] font-bold tracking-wider text-gray-400 hover:bg-gray-800"
-          >
+          <HudButton variant="ghost" size="sm" onClick={onClose}>
             CANCEL
-          </button>
-          <button
+          </HudButton>
+          <HudButton
+            variant="primary"
+            size="sm"
+            disabled={!name.trim()}
             onClick={() => {
               onSave({
                 id: `user-${Date.now()}`,
@@ -266,11 +254,9 @@ function SaveQueryModal({
               });
               onClose();
             }}
-            disabled={!name.trim()}
-            className="rounded border border-cyan-glow/40 bg-cyan-glow/15 px-4 py-2 text-[11px] font-bold tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/25 hover:shadow-cyan-md disabled:opacity-30"
           >
             SAVE
-          </button>
+          </HudButton>
         </div>
       </motion.div>
     </motion.div>
@@ -530,17 +516,12 @@ function SearchContent() {
       <div className="sticky top-0 z-40 border-b border-cyan-glow/15 bg-space-deep/95 backdrop-blur-xl">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
-          <div>
-            <h1 className="hud-heading text-lg font-bold tracking-widest text-cyan-glow">
-              CQL SEARCH
-            </h1>
-            <p className="mt-0.5 text-[10px] tracking-widest text-cyan-glow/30">
-              CYBER QUERY LANGUAGE // ADVANCED SEARCH ENGINE
-            </p>
-          </div>
+          <HudHeading level={2} subtitle="CYBER QUERY LANGUAGE // ADVANCED SEARCH ENGINE">
+            CQL SEARCH
+          </HudHeading>
           <div className="flex items-center gap-2">
             {results && (
-              <div className="glass-panel flex items-center gap-2 px-3 py-1.5">
+              <HudCard className="flex items-center gap-2 px-3 py-1.5">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
@@ -550,7 +531,7 @@ function SearchContent() {
                   {" "}results in{" "}
                   <span className="text-cyan-glow">{results.queryTimeMs.toFixed(0)}ms</span>
                 </span>
-              </div>
+              </HudCard>
             )}
           </div>
         </div>
@@ -882,7 +863,7 @@ function SearchContent() {
       <div className="flex flex-1 overflow-hidden">
         {/* Results area */}
         <div className="flex-1 overflow-auto">
-          <div className="glass-panel mx-4 my-3 overflow-hidden">
+          <HudCard className="mx-4 my-3 overflow-hidden p-0">
             <SearchResults
               data={results}
               loading={loading}
@@ -894,7 +875,7 @@ function SearchContent() {
               onPageChange={setPage}
               onFieldClick={(field, value) => addToQuery(`${field}="${value}"`)}
             />
-          </div>
+          </HudCard>
         </div>
 
         {/* Field explorer side panel */}

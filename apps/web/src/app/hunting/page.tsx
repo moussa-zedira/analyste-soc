@@ -11,6 +11,16 @@ import {
   type IocApi,
   type IocStatsResponse,
 } from "@/lib/apiClient";
+import {
+  HudHeading,
+  HudCard,
+  HudButton,
+  HudStat,
+  HudTabs,
+  HudInput,
+  HudSelect,
+  type HudTabItem,
+} from "@/components/hud";
 
 interface ExtractedIoc { type: string; value: string }
 
@@ -151,7 +161,8 @@ export default function HuntingPage() {
     { id: 1, field: "event_type", operator: "~", value: "" },
   ]);
   const [timeRange, setTimeRange] = useState("24h");
-  const [activeTab, setActiveTab] = useState<"results" | "iocs" | "hypotheses">("results");
+  type HuntTab = "results" | "iocs" | "hypotheses";
+  const [activeTab, setActiveTab] = useState<HuntTab>("results");
   const [annotations, setAnnotations] = useState<Record<string, string>>({});
   const [fields, setFields] = useState<string[]>(DEFAULT_FIELDS);
 
@@ -254,55 +265,42 @@ export default function HuntingPage() {
     }
   }
 
+  const tabs: HudTabItem<HuntTab>[] = [
+    { id: "results", label: "Results" },
+    { id: "iocs", label: "IOCs" },
+    { id: "hypotheses", label: "Hypotheses" },
+  ];
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
-            Threat Hunting
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            CQL-DRIVEN HUNT // LIVE IOC ENRICHMENT
-          </p>
-        </div>
+        <HudHeading level={1} subtitle="CQL-DRIVEN HUNT // LIVE IOC ENRICHMENT">
+          Threat Hunting
+        </HudHeading>
         <div className="flex items-center gap-2">
-          <select
+          <HudSelect
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="rounded border border-cyan-glow/15 bg-black/40 px-2 py-2 text-[10px] text-gray-300 outline-none"
+            className="w-auto text-[10px]"
           >
             <option value="1h">Last 1h</option>
             <option value="4h">Last 4h</option>
             <option value="24h">Last 24h</option>
             <option value="7d">Last 7d</option>
-          </select>
-          {(["results", "iocs", "hypotheses"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-md border px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
-                activeTab === tab
-                  ? "border-cyan-glow/30 bg-cyan-glow/15 text-cyan-glow"
-                  : "border-gray-700/50 bg-gray-900/50 text-gray-500 hover:border-cyan-glow/20 hover:text-cyan-dim"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+          </HudSelect>
+          <HudTabs items={tabs} value={activeTab} onChange={setActiveTab} />
         </div>
       </div>
 
       <div className="cyan-line" />
 
       {error && (
-        <div className="rounded border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-400">
-          {error}
-        </div>
+        <HudCard tone="alert" className="p-3 text-xs text-neon-pink">{error}</HudCard>
       )}
 
       {/* Query Builder */}
-      <div className="glass-panel border border-cyan-glow/20 p-4">
+      <HudCard className="p-4">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>Query Builder</h3>
           <code className="truncate rounded border border-cyan-glow/10 bg-black/40 px-2 py-1 text-[10px] text-cyan-glow/70" title={cqlQuery}>
@@ -312,67 +310,63 @@ export default function HuntingPage() {
         <div className="space-y-2">
           {conditions.map((cond) => (
             <div key={cond.id} className="flex items-center gap-2">
-              <select
+              <HudSelect
                 value={cond.field}
                 onChange={(e) => updateCondition(cond.id, "field", e.target.value)}
-                className="rounded border border-cyan-glow/15 bg-black/40 px-3 py-2 text-[10px] text-gray-300 outline-none"
+                className="w-auto text-[10px]"
               >
                 {fields.map((f) => <option key={f} value={f}>{f}</option>)}
-              </select>
-              <select
+              </HudSelect>
+              <HudSelect
                 value={cond.operator}
                 onChange={(e) => updateCondition(cond.id, "operator", e.target.value as QueryCondition["operator"])}
-                className="rounded border border-cyan-glow/15 bg-black/40 px-3 py-2 text-[10px] text-gray-300 outline-none"
+                className="w-auto text-[10px]"
               >
                 {OPERATORS.map((op) => <option key={op} value={op}>{op}</option>)}
-              </select>
-              <input
+              </HudSelect>
+              <HudInput
                 value={cond.value}
                 onChange={(e) => updateCondition(cond.id, "value", e.target.value)}
                 placeholder="Valeur..."
-                className="flex-1 rounded border border-cyan-glow/15 bg-black/40 px-3 py-2 text-[10px] font-mono text-gray-200 outline-none focus:border-cyan-glow/40"
+                className="flex-1 text-[10px]"
+                mono
               />
-              <button
+              <HudButton
+                size="sm"
+                variant="ghost"
                 onClick={() => removeCondition(cond.id)}
-                className="rounded border border-gray-700 px-2 py-2 text-[10px] text-gray-600 hover:border-red-500/30 hover:text-red-400"
               >
                 X
-              </button>
+              </HudButton>
             </div>
           ))}
         </div>
         <div className="mt-3 flex items-center gap-2">
-          <button
-            onClick={addCondition}
-            className="rounded border border-dashed border-cyan-glow/20 px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-cyan-glow/50 hover:border-cyan-glow/40 hover:text-cyan-glow"
-          >
+          <HudButton size="sm" variant="ghost" onClick={addCondition}>
             + ADD CONDITION
-          </button>
-          <button
-            onClick={runHunt}
-            disabled={running}
-            className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-cyan-glow hover:bg-cyan-glow/20 disabled:opacity-50"
-          >
+          </HudButton>
+          <HudButton size="sm" variant="primary" loading={running} onClick={runHunt}>
             {running ? "RUNNING..." : "RUN HUNT"}
-          </button>
-          <button
-            onClick={extractIocs}
+          </HudButton>
+          <HudButton
+            size="sm"
+            variant="secondary"
             disabled={results.length === 0 || iocBusy}
-            className="rounded border border-yellow-500/20 bg-yellow-500/5 px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-yellow-400 hover:bg-yellow-500/15 disabled:opacity-50"
+            onClick={extractIocs}
           >
             {iocBusy ? "..." : "EXTRACT IOCs"}
-          </button>
+          </HudButton>
           <span className="ml-auto text-[10px] text-gray-500">
             {cqlResponse
               ? `${results.length}/${cqlResponse.metadata.total} events · ${cqlResponse.metadata.execution_time_ms.toFixed(0)}ms`
               : "Pas encore exécuté"}
           </span>
         </div>
-      </div>
+      </HudCard>
 
       {activeTab === "results" && (
         <>
-          <div className="glass-panel border border-cyan-glow/10 p-4">
+          <HudCard className="p-4">
             <h3 className="mb-3 text-xs font-bold text-cyan-glow/80" style={{ fontFamily: "Orbitron, sans-serif" }}>Event Timeline (24h UTC)</h3>
             <div className="flex h-32 items-end gap-1">
               {histogram.map((d) => (
@@ -388,9 +382,9 @@ export default function HuntingPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </HudCard>
 
-          <div className="glass-panel overflow-hidden">
+          <HudCard className="overflow-hidden p-0">
             {results.length === 0 && !running ? (
               <div className="p-8 text-center text-xs text-gray-500">
                 Aucun événement pour cette requête. Lance un <span className="text-cyan-glow">RUN HUNT</span> ou essaie une hypothèse.
@@ -435,7 +429,7 @@ export default function HuntingPage() {
                 </tbody>
               </table>
             )}
-          </div>
+          </HudCard>
         </>
       )}
 
@@ -443,13 +437,13 @@ export default function HuntingPage() {
         <div className="space-y-4">
           {iocStats && (
             <div className="grid grid-cols-4 gap-3">
-              <Stat label="TOTAL" value={iocStats.total} />
-              <Stat label="ACTIVE" value={iocStats.by_state.active ?? 0} />
-              <Stat label="AVG CONFIDENCE" value={`${iocStats.avg_confidence.toFixed(1)}%`} />
-              <Stat label="SIGHTINGS" value={iocStats.total_sightings} />
+              <HudStat label="TOTAL" value={iocStats.total} />
+              <HudStat label="ACTIVE" value={iocStats.by_state.active ?? 0} tone="matrix" />
+              <HudStat label="AVG CONFIDENCE" value={`${iocStats.avg_confidence.toFixed(1)}%`} />
+              <HudStat label="SIGHTINGS" value={iocStats.total_sightings} tone="purple" />
             </div>
           )}
-          <div className="glass-panel overflow-hidden">
+          <HudCard className="overflow-hidden p-0">
             {iocs.length === 0 ? (
               <div className="p-8 text-center text-xs text-gray-500">
                 Pas d'IOCs. Utilise <span className="text-yellow-400">EXTRACT IOCs</span> après un hunt.
@@ -486,14 +480,14 @@ export default function HuntingPage() {
                 </tbody>
               </table>
             )}
-          </div>
+          </HudCard>
         </div>
       )}
 
       {activeTab === "hypotheses" && (
         <div className="grid grid-cols-3 gap-4">
           {HYPOTHESES.map((h) => (
-            <div key={h.id} className="glass-panel border border-cyan-glow/10 p-4 transition-all hover:border-cyan-glow/30">
+            <HudCard key={h.id} className="p-4 transition-all hover:border-cyan-glow/30">
               <div className="mb-2 flex items-center gap-2">
                 <Badge text={h.technique} cls="bg-purple-500/15 text-purple-400 border-purple-500/30" />
                 <Badge text={h.category} cls="bg-cyan-glow/10 text-cyan-glow/70 border-cyan-glow/20" />
@@ -503,14 +497,17 @@ export default function HuntingPage() {
               <code className="mt-2 block truncate rounded border border-cyan-glow/10 bg-black/40 px-2 py-1 text-[9px] text-cyan-glow/60" title={h.query}>
                 {h.query}
               </code>
-              <button
-                onClick={() => runHypothesis(h)}
+              <HudButton
+                block
+                size="sm"
+                variant="secondary"
+                className="mt-3"
                 disabled={running}
-                className="mt-3 w-full rounded border border-cyan-glow/20 bg-cyan-glow/5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-cyan-glow hover:bg-cyan-glow/15 disabled:opacity-50"
+                onClick={() => runHypothesis(h)}
               >
                 {running ? "..." : "START HUNT"}
-              </button>
-            </div>
+              </HudButton>
+            </HudCard>
           ))}
         </div>
       )}
@@ -523,14 +520,5 @@ function Th({ children }: { children: React.ReactNode }) {
     <th className="px-4 py-3 text-left text-[9px] font-bold uppercase tracking-wider text-gray-500">
       {children}
     </th>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="glass-panel border border-cyan-glow/10 p-3">
-      <div className="text-[9px] uppercase tracking-wider text-gray-500">{label}</div>
-      <div className="mt-1 text-xl font-bold text-cyan-glow">{value}</div>
-    </div>
   );
 }
