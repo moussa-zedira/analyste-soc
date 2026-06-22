@@ -12,6 +12,7 @@ import { DataTable, type Column } from "@/components/DataTable";
 import { FilterBar, FilterSelect } from "@/components/FilterBar";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
 import { Pagination } from "@/components/Pagination";
+import { HudHeading, HudCard, HudButton } from "@/components/hud";
 
 const columns: Column<Incident>[] = [
   {
@@ -92,16 +93,11 @@ function IncidentsContent() {
       {/* Header */}
       <StaggerItem>
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
-              Incidents
-            </h1>
-            <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-              SECURITY INCIDENTS // THREAT MANAGEMENT
-            </p>
-          </div>
+          <HudHeading level={1} subtitle="SECURITY INCIDENTS // THREAT MANAGEMENT">
+            Incidents
+          </HudHeading>
           <div className="flex items-center gap-3">
-            <div className="glass-panel flex items-center gap-2 px-3 py-1.5">
+            <HudCard className="flex items-center gap-2 px-3 py-1.5">
               <span className="relative flex h-2 w-2">
                 <span
                   className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
@@ -117,13 +113,10 @@ function IncidentsContent() {
               <span className="text-[10px] tracking-wider text-gray-500">
                 {connected ? "LIVE" : "OFFLINE"}
               </span>
-            </div>
-            <button
-              onClick={() => setRefreshKey((k) => k + 1)}
-              className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/20 hover:shadow-cyan-md active:scale-95"
-            >
+            </HudCard>
+            <HudButton variant="primary" size="sm" onClick={() => setRefreshKey((k) => k + 1)}>
               REFRESH
-            </button>
+            </HudButton>
           </div>
         </div>
       </StaggerItem>
@@ -149,15 +142,15 @@ function IncidentsContent() {
 
       {error && (
         <StaggerItem>
-          <div className="animate-slide-up glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400">
-            <span className="mr-2 text-red-500">&#x25B2;</span>
+          <HudCard tone="alert" className="animate-slide-up px-4 py-3 text-xs tracking-wide text-neon-pink">
+            <span className="mr-2 text-neon-pink">&#x25B2;</span>
             {error}
-          </div>
+          </HudCard>
         </StaggerItem>
       )}
 
       <StaggerItem>
-        <div className="glass-panel glass-panel-animated overflow-hidden">
+        <HudCard className="glass-panel-animated overflow-hidden p-0">
           <DataTable
             columns={columns}
             data={data}
@@ -175,7 +168,7 @@ function IncidentsContent() {
               />
             </div>
           )}
-        </div>
+        </HudCard>
       </StaggerItem>
     </PageTransition>
   );

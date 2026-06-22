@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { runRecon } from "@/lib/apiClient";
 import type { ReconResult } from "@/lib/types";
+import { HudHeading, HudCard, HudButton, HudInput } from "@/components/hud";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -182,58 +183,50 @@ export default function ReconPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="hud-heading text-lg tracking-widest text-cyan-glow">OSINT RECON</h1>
-        <p className="text-xs text-gray-500 mt-1">Reconnaissance offensive — Collecte d'informations sur une cible</p>
-      </div>
+      <HudHeading level={1} subtitle="RECONNAISSANCE OFFENSIVE // COLLECTE D'INFORMATIONS SUR UNE CIBLE">
+        OSINT RECON
+      </HudHeading>
 
       {/* Input */}
-      <div className="glass-panel p-4">
+      <HudCard className="p-4">
         <form
           onSubmit={(e) => { e.preventDefault(); handleScan(); }}
           className="flex gap-3"
         >
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-glow/40 font-mono text-xs">$&gt;</span>
-            <input
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-cyan-glow/40 font-mono text-xs">$&gt;</span>
+            <HudInput
               type="text"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               placeholder="domaine.com ou 192.168.1.1"
-              className="w-full rounded border border-cyan-glow/20 bg-space-dark/80 py-2.5 pl-9 pr-4 text-sm font-mono text-gray-200 placeholder-gray-600 outline-none focus:border-cyan-glow/50 focus:shadow-cyan-sm transition-all"
+              className="py-2.5 pl-9"
+              mono
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading || !target.trim()}
-            className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-6 py-2.5 text-[10px] font-bold tracking-[0.2em] text-cyan-glow transition-all hover:bg-cyan-glow/20 hover:shadow-cyan-sm disabled:opacity-30"
-          >
+          <HudButton type="submit" variant="primary" size="lg" disabled={loading || !target.trim()}>
             {loading ? "SCANNING..." : "LANCER RECON"}
-          </button>
+          </HudButton>
         </form>
 
         {/* Quick targets */}
         {!result && !loading && (
-          <div className="flex gap-2 mt-3">
-            <span className="text-[9px] text-gray-600 pt-1">Exemples :</span>
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-[9px] text-gray-600">Exemples :</span>
             {["google.com", "github.com", "example.com"].map((d) => (
-              <button
-                key={d}
-                onClick={() => handleScan(d)}
-                className="text-[10px] font-mono text-cyan-glow/50 hover:text-cyan-glow border border-cyan-glow/10 rounded px-2 py-0.5 hover:bg-cyan-glow/5 transition-all"
-              >
+              <HudButton key={d} size="sm" variant="ghost" onClick={() => handleScan(d)}>
                 {d}
-              </button>
+              </HudButton>
             ))}
           </div>
         )}
-      </div>
+      </HudCard>
 
       {/* Error */}
       {error && (
-        <div className="glass-panel border-red-500/30 p-4 text-xs text-red-400 font-mono">
+        <HudCard tone="alert" className="p-4 text-xs text-neon-pink font-mono">
           [ERROR] {error}
-        </div>
+        </HudCard>
       )}
 
       {/* Loading */}
@@ -247,7 +240,7 @@ export default function ReconPage() {
           className="space-y-3"
         >
           {/* Target summary */}
-          <div className="glass-panel p-4 flex items-center justify-between">
+          <HudCard className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-lg border border-cyan-glow/20 bg-cyan-glow/5 flex items-center justify-center">
                 <svg className="h-5 w-5 text-cyan-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -266,7 +259,7 @@ export default function ReconPage() {
               <p className="text-[9px] text-gray-500 tracking-wider">DUREE DU SCAN</p>
               <p className="text-sm font-mono text-cyan-glow">{(result.scan_duration_ms / 1000).toFixed(1)}s</p>
             </div>
-          </div>
+          </HudCard>
 
           {/* Modules grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

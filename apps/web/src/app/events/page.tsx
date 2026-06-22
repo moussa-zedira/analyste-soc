@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useRef, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { listEvents } from "@/lib/apiClient";
 import { eventColumns } from "@/lib/columns";
@@ -11,6 +11,7 @@ import { DataTable } from "@/components/DataTable";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/FilterBar";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
 import { Pagination } from "@/components/Pagination";
+import { HudHeading, HudCard, HudButton } from "@/components/hud";
 import type { Event } from "@/lib/types";
 
 function EventsContent() {
@@ -94,17 +95,12 @@ function EventsContent() {
       {/* Header */}
       <StaggerItem>
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
-              Event Journal
-            </h1>
-            <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-              SECURITY EVENTS // REAL-TIME MONITORING
-            </p>
-          </div>
+          <HudHeading level={1} subtitle="SECURITY EVENTS // REAL-TIME MONITORING">
+            Event Journal
+          </HudHeading>
           <div className="flex items-center gap-3">
             {/* Connection status */}
-            <div className="glass-panel flex items-center gap-2 px-3 py-1.5">
+            <HudCard className="flex items-center gap-2 px-3 py-1.5">
               <span className="relative flex h-2 w-2">
                 <span
                   className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
@@ -120,23 +116,17 @@ function EventsContent() {
               <span className="text-[10px] tracking-wider text-gray-500">
                 {connected ? "LIVE" : "OFFLINE"}
               </span>
-            </div>
+            </HudCard>
 
             {liveEvents.length > 0 && (
-              <button
-                onClick={clearLive}
-                className="animate-slide-up rounded-md border border-cyan-glow/30 bg-cyan-glow/15 px-3 py-1.5 text-[10px] font-bold tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/25"
-              >
+              <HudButton variant="primary" size="sm" className="animate-slide-up" onClick={clearLive}>
                 {liveEvents.length} NEW &mdash; SYNC
-              </button>
+              </HudButton>
             )}
 
-            <button
-              onClick={() => setRefreshKey((k) => k + 1)}
-              className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/20 hover:shadow-cyan-md active:scale-95"
-            >
+            <HudButton variant="primary" size="sm" onClick={() => setRefreshKey((k) => k + 1)}>
               REFRESH
-            </button>
+            </HudButton>
           </div>
         </div>
       </StaggerItem>
@@ -183,16 +173,16 @@ function EventsContent() {
 
       {error && (
         <StaggerItem>
-          <div className="animate-slide-up glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400">
-            <span className="mr-2 text-red-500">&#x25B2;</span>
+          <HudCard tone="alert" className="animate-slide-up px-4 py-3 text-xs tracking-wide text-neon-pink">
+            <span className="mr-2 text-neon-pink">&#x25B2;</span>
             {error}
-          </div>
+          </HudCard>
         </StaggerItem>
       )}
 
       {/* Table */}
       <StaggerItem>
-        <div className="glass-panel glass-panel-animated overflow-hidden">
+        <HudCard className="glass-panel-animated overflow-hidden p-0">
           <DataTable
             columns={eventColumns}
             data={mergedData}
@@ -212,7 +202,7 @@ function EventsContent() {
               />
             </div>
           )}
-        </div>
+        </HudCard>
       </StaggerItem>
     </PageTransition>
   );

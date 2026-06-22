@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { fetchUsers, updateUser, deleteUser, fetchAuditLog } from "@/lib/apiClient";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
+import { HudHeading, HudCard, HudButton, HudSelect, HudTabs, type HudTabItem } from "@/components/hud";
 import type { AdminUser, AuditLogEntry } from "@/lib/types";
 
 /* ---------- Tab selector ---------- */
@@ -95,14 +96,9 @@ export default function AdminPage() {
     <PageTransition className="space-y-6">
       {/* Header */}
       <StaggerItem>
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
-            Administration
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            USER MANAGEMENT // AUDIT LOG
-          </p>
-        </div>
+        <HudHeading level={1} subtitle="USER MANAGEMENT // AUDIT LOG">
+          Administration
+        </HudHeading>
       </StaggerItem>
 
       <StaggerItem>
@@ -111,29 +107,22 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <StaggerItem>
-        <div className="flex gap-2">
-          {(["users", "audit"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-md border px-4 py-2 text-[11px] font-bold tracking-widest transition-all ${
-                tab === t
-                  ? "border-cyan-glow/50 bg-cyan-glow/10 text-cyan-glow"
-                  : "border-gray-700 bg-transparent text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              {t === "users" ? "UTILISATEURS" : "JOURNAL D'AUDIT"}
-            </button>
-          ))}
-        </div>
+        <HudTabs
+          items={([
+            { id: "users", label: "Utilisateurs" },
+            { id: "audit", label: "Journal d'audit" },
+          ] as HudTabItem<Tab>[])}
+          value={tab}
+          onChange={setTab}
+        />
       </StaggerItem>
 
       {/* Error */}
       {error && (
-        <div className="glass-panel border-red-500/30 px-4 py-3 text-xs tracking-wide text-red-400">
-          <span className="mr-2 text-red-500">&#x25B2;</span>
+        <HudCard tone="alert" className="px-4 py-3 text-xs tracking-wide text-neon-pink">
+          <span className="mr-2 text-neon-pink">&#x25B2;</span>
           {error}
-        </div>
+        </HudCard>
       )}
 
       {/* Loading */}
@@ -146,7 +135,7 @@ export default function AdminPage() {
       {/* Users tab */}
       {!loading && tab === "users" && (
         <StaggerItem>
-          <div className="glass-panel overflow-hidden">
+          <HudCard className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
@@ -170,38 +159,32 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-[11px] font-mono text-gray-200">{user.username}</td>
                       <td className="px-4 py-3 text-[11px] font-mono text-gray-400">{user.email}</td>
                       <td className="px-4 py-3">
-                        <select
+                        <HudSelect
                           value={user.role}
                           onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          className={`rounded border px-2 py-1 text-[10px] font-bold tracking-wider bg-transparent ${roleColor(user.role)}`}
+                          className={`w-auto text-[10px] font-bold tracking-wider ${roleColor(user.role)}`}
                         >
                           <option value="analyst" className="bg-gray-900">analyst</option>
                           <option value="lead" className="bg-gray-900">lead</option>
                           <option value="admin" className="bg-gray-900">admin</option>
-                        </select>
+                        </HudSelect>
                       </td>
                       <td className="px-4 py-3">
-                        <button
+                        <HudButton
+                          size="sm"
+                          variant={user.is_active ? "matrix" : "danger"}
                           onClick={() => handleToggleActive(user.id, user.is_active)}
-                          className={`rounded-full px-3 py-1 text-[9px] font-bold tracking-widest border ${
-                            user.is_active
-                              ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30"
-                              : "text-red-400 bg-red-400/10 border-red-400/30"
-                          }`}
                         >
                           {user.is_active ? "ACTIF" : "INACTIF"}
-                        </button>
+                        </HudButton>
                       </td>
                       <td className="px-4 py-3 text-[10px] text-gray-500 font-mono">
                         {user.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleDelete(user.id, user.username)}
-                          className="rounded border border-red-500/30 bg-red-500/10 px-3 py-1 text-[9px] font-bold tracking-wider text-red-400 hover:bg-red-500/20 transition-colors"
-                        >
+                        <HudButton size="sm" variant="danger" onClick={() => handleDelete(user.id, user.username)}>
                           SUPPRIMER
-                        </button>
+                        </HudButton>
                       </td>
                     </motion.tr>
                   ))}
@@ -215,14 +198,14 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </HudCard>
         </StaggerItem>
       )}
 
       {/* Audit log tab */}
       {!loading && tab === "audit" && (
         <StaggerItem>
-          <div className="glass-panel overflow-hidden">
+          <HudCard className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
@@ -271,7 +254,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </HudCard>
         </StaggerItem>
       )}
     </PageTransition>

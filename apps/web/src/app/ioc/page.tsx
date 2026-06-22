@@ -10,6 +10,18 @@ import {
   getIocGraph,
   type IocApi,
 } from "@/lib/apiClient";
+import {
+  HudHeading,
+  HudCard,
+  HudButton,
+  HudStat,
+  HudTabs,
+  HudField,
+  HudInput,
+  HudSelect,
+  HudTextarea,
+  type HudTabItem,
+} from "@/components/hud";
 
 // ---------------------------------------------------------------------------
 // Types (UI-side — with hyphens to match existing design tokens)
@@ -17,6 +29,7 @@ import {
 type IocType = "ip" | "domain" | "url" | "hash-md5" | "hash-sha1" | "hash-sha256" | "email" | "cidr";
 type IocState = "active" | "revoked" | "false-positive" | "expired";
 type TLP = "white" | "green" | "amber" | "red";
+type Tab = "dashboard" | "add" | "import" | "graph";
 
 interface IOC {
   id: number;
@@ -187,7 +200,7 @@ export default function IOCManagementPage() {
   const [iocs, setIocs] = useState<IOC[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "add" | "import" | "graph">("dashboard");
+  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<IocType | "all">("all");
   const [filterState, setFilterState] = useState<IocState | "all">("all");
@@ -328,107 +341,82 @@ export default function IOCManagementPage() {
     setShowDetail(false);
   }, [reload]);
 
+  const tabs: HudTabItem<Tab>[] = [
+    { id: "dashboard", label: "IOC Table" },
+    { id: "add", label: "Add IOC" },
+    { id: "import", label: "Bulk Import" },
+    { id: "graph", label: "Graph" },
+  ];
+
   return (
     <div className="flex h-full flex-col gap-4 p-6 overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
-            IOC Management
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            INDICATORS OF COMPROMISE // STIX/TAXII // ENRICHMENT
-          </p>
-        </div>
+        <HudHeading level={1} subtitle="INDICATORS OF COMPROMISE // STIX/TAXII // ENRICHMENT">
+          IOC Management
+        </HudHeading>
         <div className="flex gap-2">
-          <button onClick={reload} className="glass-panel px-3 py-2 text-[10px] font-bold tracking-wider text-gray-400 hover:text-cyan-glow">REFRESH</button>
-          <button onClick={() => handleExport("stix")} className="glass-panel px-3 py-2 text-[10px] font-bold tracking-wider text-cyan-glow hover:bg-cyan-glow/10">STIX</button>
-          <button onClick={() => handleExport("csv")} className="glass-panel px-3 py-2 text-[10px] font-bold tracking-wider text-gray-400 hover:text-cyan-glow">CSV</button>
-          <button onClick={() => handleExport("openioc")} className="glass-panel px-3 py-2 text-[10px] font-bold tracking-wider text-gray-400 hover:text-cyan-glow">OpenIOC</button>
+          <HudButton variant="secondary" size="sm" onClick={reload}>REFRESH</HudButton>
+          <HudButton variant="primary" size="sm" onClick={() => handleExport("stix")}>STIX</HudButton>
+          <HudButton variant="secondary" size="sm" onClick={() => handleExport("csv")}>CSV</HudButton>
+          <HudButton variant="secondary" size="sm" onClick={() => handleExport("openioc")}>OpenIOC</HudButton>
         </div>
       </div>
 
       <div className="cyan-line" />
 
       {error && (
-        <div className="glass-panel border-red-500/30 bg-red-500/5 px-4 py-2 text-[11px] text-red-300">
-          {error}
-        </div>
+        <HudCard tone="alert" className="px-4 py-2 text-[11px] text-neon-pink">{error}</HudCard>
       )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        <div className="glass-panel p-3 text-center">
-          <p className="text-2xl font-bold text-cyan-glow font-mono">{stats.total}</p>
-          <p className="text-[10px] tracking-widest text-gray-500 mt-1">TOTAL IOCs</p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-2xl font-bold text-green-400 font-mono">{stats.active}</p>
-          <p className="text-[10px] tracking-widest text-gray-500 mt-1">ACTIVE</p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-2xl font-bold text-cyan-glow font-mono">{stats.highConf}</p>
-          <p className="text-[10px] tracking-widest text-gray-500 mt-1">HIGH CONF</p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-2xl font-bold text-yellow-400 font-mono">{stats.medConf}</p>
-          <p className="text-[10px] tracking-widest text-gray-500 mt-1">MEDIUM CONF</p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-2xl font-bold text-red-400 font-mono">{stats.lowConf}</p>
-          <p className="text-[10px] tracking-widest text-gray-500 mt-1">LOW CONF</p>
-        </div>
-        <div className="glass-panel p-3 text-center">
-          <p className="text-2xl font-bold text-purple-400 font-mono">{Object.keys(stats.byType).length}</p>
-          <p className="text-[10px] tracking-widest text-gray-500 mt-1">IOC TYPES</p>
-        </div>
+        <HudStat label="TOTAL IOCs" value={stats.total} />
+        <HudStat label="ACTIVE" value={stats.active} tone="matrix" />
+        <HudStat label="HIGH CONF" value={stats.highConf} />
+        <HudStat label="MEDIUM CONF" value={stats.medConf} tone="warn" />
+        <HudStat label="LOW CONF" value={stats.lowConf} tone="alert" />
+        <HudStat label="IOC TYPES" value={Object.keys(stats.byType).length} tone="purple" />
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        {(["dashboard", "add", "import", "graph"] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`rounded-md border px-4 py-2 text-[10px] font-bold tracking-widest transition-all ${activeTab === tab ? "border-cyan-glow/40 bg-cyan-glow/15 text-cyan-glow" : "border-gray-700 text-gray-500 hover:border-gray-600"}`}>
-            {tab === "dashboard" ? "IOC TABLE" : tab === "add" ? "ADD IOC" : tab === "import" ? "BULK IMPORT" : "GRAPH"}
-          </button>
-        ))}
-      </div>
+      <HudTabs items={tabs} value={activeTab} onChange={setActiveTab} />
 
       {/* Dashboard Tab */}
       {activeTab === "dashboard" && (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="glass-panel flex flex-wrap items-center gap-3 px-4 py-3">
+          <HudCard className="flex flex-wrap items-center gap-3 px-4 py-3">
             <span className="text-[10px] font-bold tracking-widest text-gray-500">FILTERS</span>
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search IOCs..." className="rounded border border-cyan-glow/15 bg-space-deep px-3 py-1.5 text-xs text-gray-300 placeholder-gray-600 w-48 focus:border-cyan-glow/30 focus:outline-none font-mono" />
-            <select value={filterType} onChange={e => setFilterType(e.target.value as IocType | "all")} className="rounded border border-cyan-glow/15 bg-space-deep px-2 py-1.5 text-xs text-gray-300">
+            <HudInput type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search IOCs..." className="w-48 text-xs" mono />
+            <HudSelect value={filterType} onChange={e => setFilterType(e.target.value as IocType | "all")} className="w-auto text-xs">
               <option value="all">All Types</option>
               {(Object.keys(IOC_TYPE_ICONS) as IocType[]).map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-            </select>
-            <select value={filterState} onChange={e => setFilterState(e.target.value as IocState | "all")} className="rounded border border-cyan-glow/15 bg-space-deep px-2 py-1.5 text-xs text-gray-300">
+            </HudSelect>
+            <HudSelect value={filterState} onChange={e => setFilterState(e.target.value as IocState | "all")} className="w-auto text-xs">
               <option value="all">All States</option>
               <option value="active">Active</option>
               <option value="revoked">Revoked</option>
               <option value="false-positive">False Positive</option>
               <option value="expired">Expired</option>
-            </select>
-            <select value={filterTlp} onChange={e => setFilterTlp(e.target.value as TLP | "all")} className="rounded border border-cyan-glow/15 bg-space-deep px-2 py-1.5 text-xs text-gray-300">
+            </HudSelect>
+            <HudSelect value={filterTlp} onChange={e => setFilterTlp(e.target.value as TLP | "all")} className="w-auto text-xs">
               <option value="all">All TLP</option>
               <option value="white">TLP:WHITE</option>
               <option value="green">TLP:GREEN</option>
               <option value="amber">TLP:AMBER</option>
               <option value="red">TLP:RED</option>
-            </select>
+            </HudSelect>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-gray-500">Conf &ge;</span>
               <input type="range" min={0} max={100} value={confidenceMin} onChange={e => setConfidenceMin(Number(e.target.value))} className="w-20 accent-cyan-400" />
               <span className="text-[10px] text-cyan-glow font-mono">{confidenceMin}%</span>
             </div>
             <span className="ml-auto text-xs text-gray-500 font-mono">{filtered.length} / {iocs.length} results</span>
-          </div>
+          </HudCard>
 
           {/* IOC Table */}
-          <div className="glass-panel overflow-hidden">
+          <HudCard className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -498,53 +486,46 @@ export default function IOCManagementPage() {
                 <p className="text-sm text-gray-500">{iocs.length === 0 ? "No IOCs yet — add one or bulk import" : "No IOCs match your filters"}</p>
               </div>
             )}
-          </div>
+          </HudCard>
         </div>
       )}
 
       {/* Add IOC Tab */}
       {activeTab === "add" && (
-        <div className="glass-panel p-6 space-y-4 max-w-2xl">
+        <HudCard className="p-6 space-y-4 max-w-2xl">
           <h3 className="text-[10px] font-bold tracking-widest text-gray-500">ADD NEW IOC</h3>
           {formError && <p className="text-xs text-red-400">{formError}</p>}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">TYPE</label>
-              <select value={addType} onChange={e => setAddType(e.target.value as IocType)} className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 focus:border-cyan-glow/40 focus:outline-none">
+            <HudField label="Type">
+              <HudSelect value={addType} onChange={e => setAddType(e.target.value as IocType)}>
                 {(Object.keys(IOC_TYPE_ICONS) as IocType[]).map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">TLP</label>
-              <select value={addTlp} onChange={e => setAddTlp(e.target.value as TLP)} className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 focus:border-cyan-glow/40 focus:outline-none">
+              </HudSelect>
+            </HudField>
+            <HudField label="TLP">
+              <HudSelect value={addTlp} onChange={e => setAddTlp(e.target.value as TLP)}>
                 <option value="white">TLP:WHITE</option>
                 <option value="green">TLP:GREEN</option>
                 <option value="amber">TLP:AMBER</option>
                 <option value="red">TLP:RED</option>
-              </select>
-            </div>
+              </HudSelect>
+            </HudField>
           </div>
-          <div>
-            <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">VALUE</label>
-            <input type="text" value={addValue} onChange={e => setAddValue(e.target.value)} placeholder="e.g. 185.220.101.34" className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-sm text-gray-200 font-mono placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">CONFIDENCE: {addConfidence}%</label>
+          <HudField label="Value">
+            <HudInput type="text" value={addValue} onChange={e => setAddValue(e.target.value)} placeholder="e.g. 185.220.101.34" mono />
+          </HudField>
+          <HudField label={`Confidence: ${addConfidence}%`}>
             <input type="range" min={0} max={100} value={addConfidence} onChange={e => setAddConfidence(Number(e.target.value))} className="w-full accent-cyan-400" />
-          </div>
+          </HudField>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">TAGS (comma-separated)</label>
-              <input type="text" value={addTags} onChange={e => setAddTags(e.target.value)} placeholder="e.g. botnet, c2" className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">MITRE TECHNIQUE</label>
-              <input type="text" value={addMitre} onChange={e => setAddMitre(e.target.value)} placeholder="e.g. T1071.001" className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
-            </div>
+            <HudField label="Tags (comma-separated)">
+              <HudInput type="text" value={addTags} onChange={e => setAddTags(e.target.value)} placeholder="e.g. botnet, c2" mono />
+            </HudField>
+            <HudField label="MITRE Technique">
+              <HudInput type="text" value={addMitre} onChange={e => setAddMitre(e.target.value)} placeholder="e.g. T1071.001" mono />
+            </HudField>
           </div>
-          <div>
-            <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">KILL CHAIN PHASE</label>
-            <select value={addKillChain} onChange={e => setAddKillChain(e.target.value)} className="w-full rounded border border-gray-700 bg-gray-900/80 px-3 py-2 text-xs text-gray-200 focus:border-cyan-glow/40 focus:outline-none">
+          <HudField label="Kill Chain Phase">
+            <HudSelect value={addKillChain} onChange={e => setAddKillChain(e.target.value)}>
               <option value="">None</option>
               <option value="Reconnaissance">Reconnaissance</option>
               <option value="Weaponization">Weaponization</option>
@@ -553,52 +534,51 @@ export default function IOCManagementPage() {
               <option value="Installation">Installation</option>
               <option value="C2">C2</option>
               <option value="Actions">Actions on Objectives</option>
-            </select>
-          </div>
-          <button onClick={handleAddIOC} disabled={!addValue.trim()} className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-6 py-2.5 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20 transition-colors disabled:opacity-50">
+            </HudSelect>
+          </HudField>
+          <HudButton variant="primary" disabled={!addValue.trim()} onClick={handleAddIOC}>
             ADD IOC
-          </button>
-        </div>
+          </HudButton>
+        </HudCard>
       )}
 
       {/* Bulk Import Tab */}
       {activeTab === "import" && (
-        <div className="glass-panel p-6 space-y-4 max-w-2xl">
+        <HudCard className="p-6 space-y-4 max-w-2xl">
           <h3 className="text-[10px] font-bold tracking-widest text-gray-500">BULK IMPORT IOCs</h3>
           {importResult && <p className="text-xs text-cyan-glow">{importResult}</p>}
           <div>
             <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">FORMAT</label>
             <div className="flex gap-2">
               {(["text", "csv", "stix"] as const).map(f => (
-                <button key={f} onClick={() => setImportFormat(f)} className={`rounded border px-4 py-1.5 text-[10px] font-bold tracking-widest transition-all ${importFormat === f ? "border-cyan-glow/40 bg-cyan-glow/15 text-cyan-glow" : "border-gray-700 text-gray-500"}`}>
+                <HudButton key={f} size="sm" variant={importFormat === f ? "primary" : "secondary"} onClick={() => setImportFormat(f)}>
                   {f.toUpperCase()}
-                </button>
+                </HudButton>
               ))}
             </div>
           </div>
-          <div>
-            <label className="text-[10px] font-bold tracking-widest text-gray-500 block mb-1">DATA</label>
-            <textarea value={importData} onChange={e => setImportData(e.target.value)} rows={12} placeholder={importFormat === "text" ? "One IOC per line:\n185.220.101.34\nevil.com\n..." : importFormat === "csv" ? "value,type,confidence\n185.220.101.34,ip,90\n..." : '{"type": "bundle", "objects": [...]}'} className="w-full rounded border border-gray-700 bg-gray-900/80 p-3 text-xs text-gray-200 font-mono placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
-          </div>
-          <button onClick={handleBulkImport} disabled={!importData.trim()} className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-6 py-2.5 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20 transition-colors disabled:opacity-50">
+          <HudField label="Data">
+            <HudTextarea value={importData} onChange={e => setImportData(e.target.value)} rows={12} placeholder={importFormat === "text" ? "One IOC per line:\n185.220.101.34\nevil.com\n..." : importFormat === "csv" ? "value,type,confidence\n185.220.101.34,ip,90\n..." : '{"type": "bundle", "objects": [...]}'} />
+          </HudField>
+          <HudButton variant="primary" disabled={!importData.trim()} onClick={handleBulkImport}>
             IMPORT
-          </button>
-        </div>
+          </HudButton>
+        </HudCard>
       )}
 
       {/* Graph Tab */}
       {activeTab === "graph" && (
-        <div className="glass-panel p-4">
+        <HudCard className="p-4">
           <h3 className="text-[10px] font-bold tracking-widest text-gray-500 mb-3">IOC RELATIONSHIP GRAPH</h3>
           <RelationshipGraph data={graphData} selectedId={selectedIoc?.id || null} />
           <p className="text-[10px] text-gray-500 mt-2 text-center">Click an IOC in the table to focus the graph on its relationships</p>
-        </div>
+        </HudCard>
       )}
 
       {/* Detail Modal */}
       {showDetail && selectedIoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-space-deep/60 backdrop-blur-sm" onClick={() => setShowDetail(false)}>
-          <div className="glass-panel w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 space-y-4 m-4" onClick={e => e.stopPropagation()}>
+          <HudCard className="w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 space-y-4 m-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="hud-heading text-lg text-cyan-glow">IOC Detail</h2>
               <button onClick={() => setShowDetail(false)} className="text-gray-500 hover:text-gray-300">&times;</button>
@@ -669,10 +649,10 @@ export default function IOCManagementPage() {
               </div>
             )}
             <div className="flex gap-2 pt-2 border-t border-gray-800">
-              <button onClick={() => handleRevokeIOC(selectedIoc.id)} disabled={selectedIoc.state === "revoked"} className="rounded border border-red-500/20 bg-red-500/10 px-4 py-2 text-[10px] font-bold tracking-widest text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-30">REVOKE</button>
-              <button onClick={() => handleMarkFP(selectedIoc.id)} disabled={selectedIoc.state === "false-positive"} className="rounded border border-yellow-500/20 bg-yellow-500/10 px-4 py-2 text-[10px] font-bold tracking-widest text-yellow-400 hover:bg-yellow-500/20 transition-colors disabled:opacity-30">MARK FALSE POSITIVE</button>
+              <HudButton variant="danger" disabled={selectedIoc.state === "revoked"} onClick={() => handleRevokeIOC(selectedIoc.id)}>REVOKE</HudButton>
+              <HudButton variant="secondary" disabled={selectedIoc.state === "false-positive"} onClick={() => handleMarkFP(selectedIoc.id)}>MARK FALSE POSITIVE</HudButton>
             </div>
-          </div>
+          </HudCard>
         </div>
       )}
     </div>

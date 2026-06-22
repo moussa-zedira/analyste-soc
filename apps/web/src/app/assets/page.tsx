@@ -10,22 +10,27 @@ import {
   type NetmapTopologyApi,
   type NetmapDiscoverRequest,
 } from "@/lib/apiClient";
+import {
+  HudHeading,
+  HudCard,
+  HudButton,
+  HudBadge,
+  HudStat,
+  HudTabs,
+  HudField,
+  HudInput,
+  HudSelect,
+  type HudTabItem,
+} from "@/components/hud";
 
 type Tab = "list" | "matrix" | "topology";
-
-function Badge({ text, cls }: { text: string; cls: string }) {
-  return (
-    <span className={`inline-block rounded border px-2 py-0.5 text-[9px] font-mono uppercase ${cls}`}>
-      {text}
-    </span>
-  );
-}
+type Risk = "critical" | "high" | "medium" | "low";
 
 function serviceKey(s: NetmapServiceApi): string {
   return `${s.host}:${s.port}/${s.protocol ?? "tcp"}`;
 }
 
-function riskForService(s: NetmapServiceApi): "critical" | "high" | "medium" | "low" {
+function riskForService(s: NetmapServiceApi): Risk {
   const svc = (s.service ?? "").toLowerCase();
   const port = s.port;
   if (["telnet", "ftp", "rlogin", "rsh", "vnc"].includes(svc)) return "critical";
@@ -34,13 +39,6 @@ function riskForService(s: NetmapServiceApi): "critical" | "high" | "medium" | "
   if (port === 443 || port === 8443 || svc === "https") return "low";
   return "medium";
 }
-
-const CRIT_COLORS: Record<string, string> = {
-  critical: "bg-red-500/15 text-red-400 border-red-500/30",
-  high: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  medium: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
-  low: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-};
 
 export default function AssetsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("list");
@@ -85,7 +83,7 @@ export default function AssetsPage() {
     load();
   }, [load]);
 
-  const services = inventory?.services ?? [];
+  const services = useMemo(() => inventory?.services ?? [], [inventory]);
   const filteredServices = useMemo(() => {
     return services.filter((s) => {
       if (filterHost && !s.host.includes(filterHost)) return false;
@@ -118,100 +116,71 @@ export default function AssetsPage() {
     }
   }
 
+  const tabs: HudTabItem<Tab>[] = [
+    { id: "list", label: "List" },
+    { id: "matrix", label: "Matrix" },
+    { id: "topology", label: "Topology" },
+  ];
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
-            Asset Inventory
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            NETWORK MAPPER // LIVE INFRASTRUCTURE DISCOVERY
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {(["list", "matrix", "topology"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-md border px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
-                activeTab === tab
-                  ? "border-cyan-glow/30 bg-cyan-glow/15 text-cyan-glow"
-                  : "border-gray-700/50 bg-gray-900/50 text-gray-500 hover:border-cyan-glow/20 hover:text-cyan-dim"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-          <button
-            onClick={() => load()}
-            className="rounded-md border border-gray-700/50 bg-gray-900/50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-cyan-glow"
-          >
+        <HudHeading level={1} subtitle="NETWORK MAPPER // LIVE INFRASTRUCTURE DISCOVERY">
+          Asset Inventory
+        </HudHeading>
+        <div className="flex items-center gap-2">
+          <HudTabs items={tabs} value={activeTab} onChange={setActiveTab} />
+          <HudButton variant="secondary" size="sm" onClick={() => load()}>
             {loading ? "..." : "REFRESH"}
-          </button>
-          <button
-            onClick={() => setShowDiscoverForm(!showDiscoverForm)}
-            className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/20"
-          >
+          </HudButton>
+          <HudButton variant="primary" size="sm" onClick={() => setShowDiscoverForm(!showDiscoverForm)}>
             + DISCOVER
-          </button>
+          </HudButton>
         </div>
       </div>
 
       <div className="cyan-line" />
 
       {error && (
-        <div className="rounded border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-400">
-          {error}
-        </div>
+        <HudCard tone="alert" className="p-3 text-xs text-neon-pink">{error}</HudCard>
       )}
 
       {/* Discover Form */}
       {showDiscoverForm && (
-        <div className="glass-panel border border-cyan-glow/20 p-4">
+        <HudCard className="p-4">
           <h3 className="mb-3 text-xs font-bold text-cyan-glow">Lancer une découverte réseau</h3>
           <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <label className="text-[9px] uppercase tracking-wider text-gray-500">Target (CIDR ou IP)</label>
-              <input
+            <HudField className="col-span-2" label="Target (CIDR ou IP)">
+              <HudInput
                 value={form.target}
                 onChange={(e) => setForm({ ...form, target: e.target.value })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs font-mono text-gray-200 outline-none focus:border-cyan-glow/50"
                 placeholder="10.0.0.0/24"
+                mono
               />
-            </div>
-            <div>
-              <label className="text-[9px] uppercase tracking-wider text-gray-500">Ports</label>
-              <select
-                value={form.ports}
-                onChange={(e) => setForm({ ...form, ports: e.target.value })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-300 outline-none"
-              >
+            </HudField>
+            <HudField label="Ports">
+              <HudSelect value={form.ports} onChange={(e) => setForm({ ...form, ports: e.target.value })}>
                 <option value="top100">Top 100</option>
                 <option value="top1000">Top 1000</option>
                 <option value="all">All (1-65535)</option>
                 <option value="1-1024">1-1024</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[9px] uppercase tracking-wider text-gray-500">Max hosts</label>
-              <input
+              </HudSelect>
+            </HudField>
+            <HudField label="Max hosts">
+              <HudInput
                 type="number"
                 value={form.max_hosts ?? 256}
                 onChange={(e) => setForm({ ...form, max_hosts: Number(e.target.value) })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-200 outline-none focus:border-cyan-glow/50"
               />
-            </div>
-            <div>
-              <label className="text-[9px] uppercase tracking-wider text-gray-500">Timeout (ms)</label>
-              <input
+            </HudField>
+            <HudField label="Timeout (ms)">
+              <HudInput
                 type="number"
                 value={form.timeout_ms ?? 2000}
                 onChange={(e) => setForm({ ...form, timeout_ms: Number(e.target.value) })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-200 outline-none focus:border-cyan-glow/50"
               />
-            </div>
+            </HudField>
             <div className="flex items-end gap-3 text-[10px] text-gray-400">
               <label className="inline-flex items-center gap-1">
                 <input
@@ -248,78 +217,76 @@ export default function AssetsPage() {
             </div>
           </div>
           {discoverError && (
-            <div className="mt-3 rounded border border-red-500/30 bg-red-500/5 p-2 text-[10px] text-red-400">
+            <HudCard tone="alert" className="mt-3 p-2 text-[10px] text-neon-pink">
               {discoverError}
-            </div>
+            </HudCard>
           )}
           <div className="mt-4 flex gap-2">
-            <button
-              onClick={onDiscover}
-              disabled={discovering}
-              className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-cyan-glow hover:bg-cyan-glow/20 disabled:opacity-50"
-            >
+            <HudButton variant="primary" size="sm" loading={discovering} onClick={onDiscover}>
               {discovering ? "SCANNING..." : "LANCER SCAN"}
-            </button>
-            <button
-              onClick={() => setShowDiscoverForm(false)}
-              className="rounded border border-gray-700 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300"
-            >
+            </HudButton>
+            <HudButton variant="ghost" size="sm" onClick={() => setShowDiscoverForm(false)}>
               CANCEL
-            </button>
+            </HudButton>
           </div>
-        </div>
+        </HudCard>
       )}
 
       {/* Stats row */}
       <div className="grid grid-cols-5 gap-3">
-        <StatCell label="HOSTS" value={inventory?.total_hosts ?? 0} />
-        <StatCell label="SERVICES" value={inventory?.total_services ?? 0} />
-        <StatCell label="SUBNETS" value={inventory?.subnets?.length ?? 0} />
-        <StatCell label="OS TYPES" value={Object.keys(inventory?.os_summary ?? {}).length} />
-        <StatCell
+        <HudStat label="HOSTS" value={inventory?.total_hosts ?? 0} />
+        <HudStat label="SERVICES" value={inventory?.total_services ?? 0} />
+        <HudStat label="SUBNETS" value={inventory?.subnets?.length ?? 0} />
+        <HudStat label="OS TYPES" value={Object.keys(inventory?.os_summary ?? {}).length} />
+        <HudStat
           label="LAST SCAN"
-          value={topology?.last_scan ? new Date(topology.last_scan).toLocaleString() : "—"}
-          isText
+          value={
+            <span className="text-[11px] text-gray-300">
+              {topology?.last_scan ? new Date(topology.last_scan).toLocaleString() : "—"}
+            </span>
+          }
         />
       </div>
 
       {/* Filters */}
-      <div className="glass-panel flex items-center gap-4 p-3">
-        <input
+      <HudCard className="flex items-center gap-4 p-3">
+        <HudInput
           value={filterHost}
           onChange={(e) => setFilterHost(e.target.value)}
           placeholder="Filter host/IP..."
-          className="w-64 rounded border border-cyan-glow/15 bg-black/40 px-3 py-1.5 text-[10px] font-mono text-gray-200 outline-none focus:border-cyan-glow/40"
+          className="w-64 text-[10px]"
+          mono
           list="asset-hosts"
         />
         <datalist id="asset-hosts">
           {uniqueHosts.map((h) => <option key={h} value={h} />)}
         </datalist>
-        <input
+        <HudInput
           value={filterPort}
           onChange={(e) => setFilterPort(e.target.value)}
           placeholder="Port"
-          className="w-24 rounded border border-cyan-glow/15 bg-black/40 px-3 py-1.5 text-[10px] font-mono text-gray-200 outline-none focus:border-cyan-glow/40"
+          className="w-24 text-[10px]"
+          mono
         />
-        <select
+        <HudSelect
           value={filterRisk}
           onChange={(e) => setFilterRisk(e.target.value)}
-          className="rounded border border-cyan-glow/15 bg-black/40 px-3 py-1.5 text-[10px] text-gray-300 outline-none"
+          className="w-auto text-[10px]"
         >
           <option value="all">All risk</option>
           <option value="critical">Critical</option>
           <option value="high">High</option>
           <option value="medium">Medium</option>
           <option value="low">Low</option>
-        </select>
+        </HudSelect>
         <span className="ml-auto text-[10px] text-gray-500">
           {filteredServices.length} / {services.length} services
         </span>
-      </div>
+      </HudCard>
 
       {/* List tab */}
       {activeTab === "list" && (
-        <div className="glass-panel overflow-hidden">
+        <HudCard className="overflow-hidden p-0">
           {services.length === 0 && !loading ? (
             <div className="p-8 text-center text-xs text-gray-500">
               Aucun service découvert. Lance un <span className="text-cyan-glow">+ DISCOVER</span> pour scanner un réseau.
@@ -353,7 +320,7 @@ export default function AssetsPage() {
                       </td>
                       <td className="px-4 py-2 text-[10px] text-gray-400">{s.state ?? "open"}</td>
                       <td className="px-4 py-2">
-                        <Badge text={risk} cls={CRIT_COLORS[risk]} />
+                        <HudBadge tone={risk} mono>{risk}</HudBadge>
                       </td>
                     </tr>
                   );
@@ -361,13 +328,13 @@ export default function AssetsPage() {
               </tbody>
             </table>
           )}
-        </div>
+        </HudCard>
       )}
 
       {/* Matrix tab (OS × device_summary) */}
       {activeTab === "matrix" && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="glass-panel border border-cyan-glow/10 p-4">
+          <HudCard className="p-4">
             <h3 className="mb-3 text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
               OS Distribution
             </h3>
@@ -392,8 +359,8 @@ export default function AssetsPage() {
                 })}
               </div>
             )}
-          </div>
-          <div className="glass-panel border border-cyan-glow/10 p-4">
+          </HudCard>
+          <HudCard className="p-4">
             <h3 className="mb-3 text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
               Device Types
             </h3>
@@ -418,8 +385,8 @@ export default function AssetsPage() {
                 })}
               </div>
             )}
-          </div>
-          <div className="col-span-2 glass-panel border border-cyan-glow/10 p-4">
+          </HudCard>
+          <HudCard className="col-span-2 p-4">
             <h3 className="mb-3 text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
               Subnets
             </h3>
@@ -445,13 +412,13 @@ export default function AssetsPage() {
                 </tbody>
               </table>
             )}
-          </div>
+          </HudCard>
         </div>
       )}
 
       {/* Topology tab */}
       {activeTab === "topology" && (
-        <div className="glass-panel border border-cyan-glow/10 p-6">
+        <HudCard className="p-6">
           <h3 className="mb-4 text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
             Network Topology ({topology?.total_hosts ?? 0} hosts · {topology?.total_edges ?? 0} edges · {topology?.total_segments ?? 0} segments)
           </h3>
@@ -462,19 +429,8 @@ export default function AssetsPage() {
           ) : (
             <TopologySvg topology={topology} />
           )}
-        </div>
+        </HudCard>
       )}
-    </div>
-  );
-}
-
-function StatCell({ label, value, isText }: { label: string; value: number | string; isText?: boolean }) {
-  return (
-    <div className="glass-panel border border-cyan-glow/10 p-3">
-      <div className="text-[9px] uppercase tracking-wider text-gray-500">{label}</div>
-      <div className={`mt-1 ${isText ? "text-[11px] text-gray-300" : "text-xl font-bold text-cyan-glow"}`}>
-        {value}
-      </div>
     </div>
   );
 }

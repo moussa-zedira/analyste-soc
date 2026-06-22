@@ -10,10 +10,23 @@ import {
   deleteSigmaRule,
 } from "@/lib/apiClient";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
+import {
+  HudHeading,
+  HudCard,
+  HudButton,
+  HudBadge,
+  HudStat,
+  HudTabs,
+  HudInput,
+  HudTextarea,
+  type HudTabItem,
+} from "@/components/hud";
 import type { TILookupResult, TIStatsResponse, SigmaRuleInfo } from "@/lib/types";
 
+type Tab = "lookup" | "sigma" | "stats";
+
 export default function ThreatIntelPage() {
-  const [activeTab, setActiveTab] = useState<"lookup" | "sigma" | "stats">("lookup");
+  const [activeTab, setActiveTab] = useState<Tab>("lookup");
 
   // Lookup state
   const [lookupIp, setLookupIp] = useState("");
@@ -93,66 +106,50 @@ export default function ThreatIntelPage() {
     await loadSigma();
   };
 
+  const tabs: HudTabItem<Tab>[] = [
+    { id: "lookup", label: "IP Lookup" },
+    { id: "sigma", label: "Sigma Rules" },
+    { id: "stats", label: "Statistiques" },
+  ];
+
   return (
     <PageTransition className="space-y-4">
       <StaggerItem>
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">
-            Threat Intelligence
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            LOOKUP IP // SIGMA RULES // ENRICHISSEMENT
-          </p>
-        </div>
+        <HudHeading level={1} subtitle="LOOKUP IP // SIGMA RULES // ENRICHISSEMENT">
+          Threat Intelligence
+        </HudHeading>
       </StaggerItem>
 
       <StaggerItem><div className="cyan-line" /></StaggerItem>
 
       {/* Tabs */}
       <StaggerItem>
-        <div className="flex gap-2">
-          {(["lookup", "sigma", "stats"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-md border px-4 py-2 text-[10px] font-bold tracking-widest transition-all ${
-                activeTab === tab
-                  ? "border-cyan-glow/40 bg-cyan-glow/15 text-cyan-glow"
-                  : "border-gray-700 text-gray-500 hover:border-gray-600"
-              }`}
-            >
-              {tab === "lookup" ? "IP LOOKUP" : tab === "sigma" ? "SIGMA RULES" : "STATISTIQUES"}
-            </button>
-          ))}
-        </div>
+        <HudTabs items={tabs} value={activeTab} onChange={setActiveTab} />
       </StaggerItem>
 
       {/* IP Lookup Tab */}
       {activeTab === "lookup" && (
         <StaggerItem>
-          <div className="glass-panel p-6 space-y-4">
+          <HudCard className="p-6 space-y-4">
             <div className="flex gap-3">
-              <input
+              <HudInput
                 type="text"
                 value={lookupIp}
                 onChange={(e) => setLookupIp(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLookup()}
                 placeholder="Entrer une adresse IP (ex: 185.220.101.1)"
-                className="flex-1 rounded-md border border-gray-700 bg-gray-900/80 px-4 py-2.5 text-sm text-gray-200 font-mono placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none"
+                className="flex-1"
+                mono
               />
-              <button
-                onClick={handleLookup}
-                disabled={lookupLoading}
-                className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-6 py-2.5 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20 transition-colors disabled:opacity-50"
-              >
+              <HudButton variant="primary" loading={lookupLoading} onClick={handleLookup}>
                 {lookupLoading ? "ANALYSE..." : "LOOKUP"}
-              </button>
+              </HudButton>
             </div>
 
             {lookupError && (
-              <div className="rounded border border-red-500/30 bg-red-500/5 px-4 py-2 text-xs text-red-400">
+              <HudCard tone="alert" className="px-4 py-2 text-xs text-neon-pink">
                 {lookupError}
-              </div>
+              </HudCard>
             )}
 
             {lookupResult && (
@@ -209,7 +206,7 @@ export default function ThreatIntelPage() {
                 ))}
               </div>
             )}
-          </div>
+          </HudCard>
         </StaggerItem>
       )}
 
@@ -218,29 +215,30 @@ export default function ThreatIntelPage() {
         <StaggerItem>
           <div className="space-y-4">
             {/* Import form */}
-            <div className="glass-panel p-4 space-y-3">
+            <HudCard className="p-4 space-y-3">
               <h3 className="text-[10px] font-bold tracking-widest text-gray-500">IMPORTER UNE REGLE SIGMA</h3>
-              <textarea
+              <HudTextarea
                 value={sigmaYaml}
                 onChange={(e) => setSigmaYaml(e.target.value)}
                 placeholder={"title: Detect Brute Force\nlogsource:\n  category: authentication\ndetection:\n  selection:\n    EventType: auth.fail\n  condition: selection\nlevel: medium"}
-                className="w-full rounded-md border border-gray-700 bg-gray-900/80 p-3 text-xs text-gray-200 font-mono placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none"
                 rows={8}
               />
               {sigmaError && (
                 <div className="text-xs text-red-400">{sigmaError}</div>
               )}
-              <button
+              <HudButton
+                variant="primary"
+                size="sm"
+                loading={sigmaImporting}
+                disabled={!sigmaYaml.trim()}
                 onClick={handleImportSigma}
-                disabled={sigmaImporting || !sigmaYaml.trim()}
-                className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20 transition-colors disabled:opacity-50"
               >
                 {sigmaImporting ? "IMPORT..." : "IMPORTER"}
-              </button>
-            </div>
+              </HudButton>
+            </HudCard>
 
             {/* Rules list */}
-            <div className="glass-panel overflow-hidden">
+            <HudCard className="overflow-hidden p-0">
               {sigmaRules.length === 0 ? (
                 <div className="p-8 text-center">
                   <p className="text-sm text-gray-400">Aucune regle SIGMA importee</p>
@@ -268,44 +266,30 @@ export default function ThreatIntelPage() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <span
-                            className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                              rule.level === "high"
-                                ? "bg-red-500/15 text-red-400"
-                                : rule.level === "medium"
-                                  ? "bg-yellow-500/15 text-yellow-400"
-                                  : "bg-green-500/15 text-green-400"
-                            }`}
-                          >
+                          <HudBadge tone={rule.level === "high" ? "high" : rule.level === "medium" ? "medium" : "low"}>
                             {rule.level.toUpperCase()}
-                          </span>
+                          </HudBadge>
                         </td>
                         <td className="px-4 py-3">
-                          <button
+                          <HudButton
+                            size="sm"
+                            variant={rule.enabled ? "matrix" : "ghost"}
                             onClick={() => handleToggle(rule.id, !rule.enabled)}
-                            className={`rounded px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                              rule.enabled
-                                ? "bg-green-500/15 text-green-400 hover:bg-green-500/25"
-                                : "bg-gray-700/50 text-gray-500 hover:bg-gray-700"
-                            }`}
                           >
                             {rule.enabled ? "ACTIF" : "INACTIF"}
-                          </button>
+                          </HudButton>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => handleDelete(rule.id)}
-                            className="text-[10px] text-red-400/50 hover:text-red-400 transition-colors"
-                          >
+                          <HudButton size="sm" variant="danger" onClick={() => handleDelete(rule.id)}>
                             SUPPRIMER
-                          </button>
+                          </HudButton>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
-            </div>
+            </HudCard>
           </div>
         </StaggerItem>
       )}
@@ -317,29 +301,13 @@ export default function ThreatIntelPage() {
             {stats ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="glass-panel p-4 text-center">
-                    <p className="text-2xl font-bold text-cyan-glow font-mono">{stats.cache_entries}</p>
-                    <p className="text-[10px] tracking-widest text-gray-500 mt-1">CACHE TI</p>
-                  </div>
-                  <div className="glass-panel p-4 text-center">
-                    <p className="text-2xl font-bold text-cyan-glow font-mono">{stats.providers_configured.length}</p>
-                    <p className="text-[10px] tracking-widest text-gray-500 mt-1">PROVIDERS</p>
-                  </div>
-                  <div className="glass-panel p-4 text-center">
-                    <p className="text-2xl font-bold text-cyan-glow font-mono">
-                      {stats.abuseipdb_daily_used}/{stats.abuseipdb_daily_limit}
-                    </p>
-                    <p className="text-[10px] tracking-widest text-gray-500 mt-1">ABUSEIPDB</p>
-                  </div>
-                  <div className="glass-panel p-4 text-center">
-                    <p className="text-2xl font-bold text-cyan-glow font-mono">
-                      {stats.otx_hourly_used}/{stats.otx_hourly_limit}
-                    </p>
-                    <p className="text-[10px] tracking-widest text-gray-500 mt-1">OTX</p>
-                  </div>
+                  <HudStat label="CACHE TI" value={stats.cache_entries} />
+                  <HudStat label="PROVIDERS" value={stats.providers_configured.length} />
+                  <HudStat label="ABUSEIPDB" value={`${stats.abuseipdb_daily_used}/${stats.abuseipdb_daily_limit}`} />
+                  <HudStat label="OTX" value={`${stats.otx_hourly_used}/${stats.otx_hourly_limit}`} />
                 </div>
 
-                <div className="glass-panel p-4 space-y-3">
+                <HudCard className="p-4 space-y-3">
                   <h3 className="text-[10px] font-bold tracking-widest text-gray-500">PROVIDERS CONFIGURES</h3>
                   {stats.providers_configured.length === 0 ? (
                     <div className="space-y-2">
@@ -355,21 +323,16 @@ export default function ThreatIntelPage() {
                   ) : (
                     <div className="flex gap-2">
                       {stats.providers_configured.map((p) => (
-                        <span
-                          key={p}
-                          className="rounded border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-[10px] font-bold text-green-400 uppercase"
-                        >
-                          {p}
-                        </span>
+                        <HudBadge key={p} tone="matrix">{p}</HudBadge>
                       ))}
                     </div>
                   )}
-                </div>
+                </HudCard>
               </>
             ) : (
-              <div className="glass-panel p-8 text-center">
+              <HudCard className="p-8 text-center">
                 <p className="hud-label animate-pulse">LOADING STATS...</p>
-              </div>
+              </HudCard>
             )}
           </div>
         </StaggerItem>

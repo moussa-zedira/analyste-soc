@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
 import { useAuthStore } from "@/stores/authStore";
+import {
+  HudCard as HudPanel,
+  HudButton,
+  HudField,
+  HudInput,
+  HudSelect,
+  HudBadge,
+} from "@/components/hud";
 
 type UserStats = {
   total_logins: number;
@@ -82,10 +90,10 @@ function AnimatedCounter({ target, duration = 1200 }: { target: number; duration
 
 function HudCard({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`glass-panel hud-corners p-5 ${className}`}>
+    <HudPanel corners className={`p-5 ${className}`}>
       <h3 className="hud-heading text-xs font-semibold tracking-widest text-cyan-glow/70 mb-4">{title}</h3>
       {children}
-    </div>
+    </HudPanel>
   );
 }
 
@@ -391,20 +399,12 @@ export default function ProfilePage() {
             )}
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={onRefresh}
-              disabled={refreshing}
-              className="rounded-md border border-gray-700/50 bg-gray-900/50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-cyan-glow disabled:opacity-50"
-            >
+            <HudButton variant="secondary" size="sm" disabled={refreshing} onClick={onRefresh}>
               {refreshing ? "..." : "REFRESH"}
-            </button>
-            <button
-              onClick={onLogout}
-              disabled={loggingOut}
-              className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-            >
+            </HudButton>
+            <HudButton variant="danger" size="sm" disabled={loggingOut} onClick={onLogout}>
               {loggingOut ? "..." : "LOGOUT"}
-            </button>
+            </HudButton>
           </div>
         </div>
         <div className="cyan-line w-full" />
@@ -420,9 +420,7 @@ export default function ProfilePage() {
             <InitialsAvatar name={username} />
             <div className="mt-4 space-y-1">
               <p className="hud-heading text-base font-bold text-cyan-glow tracking-wider">{username}</p>
-              <span className="inline-block rounded-full border border-cyan-glow/20 bg-cyan-glow/10 px-3 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-cyan-glow">
-                {role}
-              </span>
+              <div><HudBadge tone="cyan">{role}</HudBadge></div>
               <p className="text-xs text-gray-500 mt-2">{email}</p>
               <p className="text-[10px] text-gray-600">Member since {memberSince}</p>
               <p className="mt-1 font-mono text-[9px] text-gray-700 break-all">{userId}</p>
@@ -437,12 +435,12 @@ export default function ProfilePage() {
           <HudCard title="Statistics" className="lg:col-span-2">
             <div className="grid grid-cols-2 gap-4">
               {statItems.map((s) => (
-                <div key={s.label} className="glass-panel p-4 text-center">
+                <HudPanel key={s.label} className="p-4 text-center">
                   <p className={`text-2xl font-bold ${s.color}`}>
                     <AnimatedCounter target={s.value} />
                   </p>
                   <p className="hud-label mt-1 text-[10px]">{s.label}</p>
-                </div>
+                </HudPanel>
               ))}
             </div>
             <p className="mt-4 text-[10px] text-gray-600 uppercase tracking-wider">
@@ -463,27 +461,21 @@ export default function ProfilePage() {
                 { label: "New Password", val: newPw, set: setNewPw },
                 { label: "Confirm New Password", val: confirmPw, set: setConfirmPw },
               ].map((f) => (
-                <div key={f.label}>
-                  <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">{f.label}</label>
-                  <input
+                <HudField key={f.label} label={f.label}>
+                  <HudInput
                     type="password"
                     value={f.val}
                     onChange={(e) => f.set(e.target.value)}
-                    className="w-full rounded-md border border-cyan-glow/15 bg-space-deep/60 px-3 py-2 text-xs text-gray-300 placeholder-gray-600 outline-none focus:border-cyan-glow/40 focus:shadow-cyan-sm transition-all"
                     placeholder="••••••••"
                   />
-                </div>
+                </HudField>
               ))}
               {pwMsg && (
                 <p className={`text-[11px] ${pwMsg.type === "ok" ? "text-emerald-400" : "text-red-400"}`}>{pwMsg.text}</p>
               )}
-              <button
-                type="submit"
-                disabled={pwSaving}
-                className="mt-1 w-full rounded-md border border-cyan-glow/20 bg-cyan-glow/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-cyan-glow transition-all hover:bg-cyan-glow/20 hover:shadow-cyan-sm disabled:opacity-50"
-              >
+              <HudButton type="submit" block variant="primary" size="sm" className="mt-1" loading={pwSaving}>
                 {pwSaving ? "..." : "Update Password"}
-              </button>
+              </HudButton>
             </form>
           </HudCard>
 
@@ -495,15 +487,9 @@ export default function ProfilePage() {
                   <p className="text-xs text-gray-300 font-medium">TOTP Authenticator</p>
                   <p className="text-[10px] text-gray-600 mt-0.5">Google Authenticator, Authy, 1Password...</p>
                 </div>
-                <span
-                  className={`rounded-full border px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                    totpEnabled
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                      : "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                  }`}
-                >
+                <HudBadge tone={totpEnabled ? "matrix" : "warn"}>
                   {totpEnabled ? "Enabled" : "Disabled"}
-                </span>
+                </HudBadge>
               </div>
 
               {totpMsg && (
@@ -511,13 +497,9 @@ export default function ProfilePage() {
               )}
 
               {!totpEnabled && !totpSetup && (
-                <button
-                  onClick={onSetup2FA}
-                  disabled={totpBusy}
-                  className="w-full rounded-md border border-cyan-glow/15 bg-space-mid/50 px-4 py-2 text-xs text-cyan-dim hover:bg-cyan-glow/10 transition-all uppercase tracking-wider font-medium disabled:opacity-50"
-                >
+                <HudButton block variant="secondary" size="sm" disabled={totpBusy} onClick={onSetup2FA}>
                   {totpBusy ? "..." : "Enable 2FA"}
-                </button>
+                </HudButton>
               )}
 
               {!totpEnabled && totpSetup && (
@@ -538,7 +520,7 @@ export default function ProfilePage() {
                   <code className="block rounded-md border border-cyan-glow/10 bg-space-deep/80 px-3 py-2 text-[11px] text-cyan-dim font-mono break-all text-center">
                     {totpSetup.secret}
                   </code>
-                  <input
+                  <HudInput
                     type="text"
                     inputMode="numeric"
                     pattern="\d{6}"
@@ -546,23 +528,16 @@ export default function ProfilePage() {
                     placeholder="6-digit code"
                     value={totpCode}
                     onChange={(e) => setTotpCode(e.target.value)}
-                    className="w-full rounded-md border border-cyan-glow/15 bg-space-deep/60 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-glow/40 text-center tracking-widest font-mono"
+                    className="text-center tracking-widest"
+                    mono
                   />
                   <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => { setTotpSetup(null); setTotpCode(""); }}
-                      className="flex-1 rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-[10px] uppercase tracking-wider text-gray-400"
-                    >
+                    <HudButton type="button" block variant="ghost" size="sm" onClick={() => { setTotpSetup(null); setTotpCode(""); }}>
                       Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={totpBusy || totpCode.length !== 6}
-                      className="flex-1 rounded-md border border-cyan-glow/20 bg-cyan-glow/10 px-3 py-2 text-[10px] uppercase tracking-wider text-cyan-glow disabled:opacity-50"
-                    >
+                    </HudButton>
+                    <HudButton type="submit" block variant="primary" size="sm" disabled={totpBusy || totpCode.length !== 6}>
                       {totpBusy ? "..." : "Verify & Enable"}
-                    </button>
+                    </HudButton>
                   </div>
                 </form>
               )}
@@ -572,19 +547,14 @@ export default function ProfilePage() {
                   <label className="block text-[10px] text-gray-500 uppercase tracking-wider">
                     Password (to disable 2FA)
                   </label>
-                  <input
+                  <HudInput
                     type="password"
                     value={disablePw}
                     onChange={(e) => setDisablePw(e.target.value)}
-                    className="w-full rounded-md border border-cyan-glow/15 bg-space-deep/60 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-glow/40"
                   />
-                  <button
-                    type="submit"
-                    disabled={totpBusy || !disablePw}
-                    className="w-full rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] uppercase tracking-wider text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-                  >
+                  <HudButton type="submit" block variant="danger" size="sm" disabled={totpBusy || !disablePw}>
                     {totpBusy ? "..." : "Disable 2FA"}
-                  </button>
+                  </HudButton>
                 </form>
               )}
             </div>
@@ -596,38 +566,30 @@ export default function ProfilePage() {
       <StaggerItem>
         <HudCard title="API Keys">
           <form onSubmit={onCreateKey} className="grid gap-3 sm:grid-cols-4 mb-4">
-            <input
+            <HudInput
               type="text"
               placeholder="Key name"
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
-              className="rounded-md border border-cyan-glow/15 bg-space-deep/60 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-glow/40 sm:col-span-2"
+              className="sm:col-span-2"
             />
-            <select
-              value={newKeyScopes}
-              onChange={(e) => setNewKeyScopes(e.target.value)}
-              className="rounded-md border border-cyan-glow/15 bg-space-deep/60 px-3 py-2 text-xs text-gray-300 outline-none"
-            >
+            <HudSelect value={newKeyScopes} onChange={(e) => setNewKeyScopes(e.target.value)}>
               <option value="read" className="bg-space-deep">read</option>
               <option value="read,write" className="bg-space-deep">read+write</option>
               <option value="admin" className="bg-space-deep">admin</option>
-            </select>
+            </HudSelect>
             <div className="flex gap-2">
-              <input
+              <HudInput
                 type="number"
                 min={1}
                 placeholder="Expires (days)"
                 value={newKeyExpiry}
                 onChange={(e) => setNewKeyExpiry(e.target.value)}
-                className="flex-1 rounded-md border border-cyan-glow/15 bg-space-deep/60 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-glow/40"
+                className="flex-1"
               />
-              <button
-                type="submit"
-                disabled={keyBusy || !newKeyName.trim()}
-                className="rounded-md border border-cyan-glow/20 bg-cyan-glow/10 px-3 py-2 text-[10px] uppercase tracking-wider text-cyan-glow disabled:opacity-50"
-              >
+              <HudButton type="submit" variant="primary" size="sm" disabled={keyBusy || !newKeyName.trim()}>
                 {keyBusy ? "..." : "Create"}
-              </button>
+              </HudButton>
             </div>
           </form>
 
@@ -640,18 +602,12 @@ export default function ProfilePage() {
                 <code className="flex-1 rounded-md border border-cyan-glow/10 bg-space-deep/80 px-3 py-2 text-[11px] text-cyan-dim font-mono break-all">
                   {createdKey.key}
                 </code>
-                <button
-                  onClick={() => navigator.clipboard.writeText(createdKey.key)}
-                  className="rounded-md border border-cyan-glow/15 bg-space-mid/50 px-3 py-2 text-[10px] uppercase tracking-wider text-cyan-dim hover:bg-cyan-glow/10"
-                >
+                <HudButton variant="secondary" size="sm" onClick={() => navigator.clipboard.writeText(createdKey.key)}>
                   Copy
-                </button>
-                <button
-                  onClick={() => setCreatedKey(null)}
-                  className="rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-[10px] uppercase tracking-wider text-gray-400"
-                >
+                </HudButton>
+                <HudButton variant="ghost" size="sm" onClick={() => setCreatedKey(null)}>
                   Dismiss
-                </button>
+                </HudButton>
               </div>
             </div>
           )}
@@ -690,12 +646,9 @@ export default function ProfilePage() {
                     </p>
                   </div>
                   {!k.revoked && (
-                    <button
-                      onClick={() => onRevokeKey(k.id)}
-                      className="ml-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1 text-[10px] uppercase tracking-wider text-red-400 hover:bg-red-500/20"
-                    >
+                    <HudButton variant="danger" size="sm" className="ml-3" onClick={() => onRevokeKey(k.id)}>
                       Revoke
-                    </button>
+                    </HudButton>
                   )}
                 </div>
               ))}
@@ -738,32 +691,29 @@ export default function ProfilePage() {
                   <p className="text-xs text-gray-300 font-medium mb-2">Default Layout</p>
                   <div className="flex gap-2">
                     {(["grid", "list"] as const).map((l) => (
-                      <button
+                      <HudButton
                         key={l}
+                        block
+                        size="sm"
+                        variant={prefs.default_layout === l ? "primary" : "ghost"}
                         onClick={() => updatePref("default_layout", l)}
-                        className={`flex-1 rounded-md border px-3 py-2 text-[11px] uppercase tracking-wider font-medium transition-all ${
-                          prefs.default_layout === l
-                            ? "border-cyan-glow/30 bg-cyan-glow/10 text-cyan-glow"
-                            : "border-gray-700 bg-space-mid/40 text-gray-500 hover:border-cyan-glow/15 hover:text-gray-400"
-                        }`}
                       >
                         {l}
-                      </button>
+                      </HudButton>
                     ))}
                   </div>
                 </div>
 
                 <div>
                   <p className="text-xs text-gray-300 font-medium mb-2">Timezone</p>
-                  <select
+                  <HudSelect
                     value={prefs.timezone}
                     onChange={(e) => updatePref("timezone", e.target.value)}
-                    className="w-full rounded-md border border-cyan-glow/15 bg-space-deep/60 px-3 py-2 text-xs text-gray-300 outline-none focus:border-cyan-glow/40 focus:shadow-cyan-sm transition-all"
                   >
                     {["UTC", "Europe/Paris", "Europe/London", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Asia/Shanghai", "Australia/Sydney"].map((tz) => (
                       <option key={tz} value={tz} className="bg-space-deep text-gray-300">{tz}</option>
                     ))}
-                  </select>
+                  </HudSelect>
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-end gap-3">
