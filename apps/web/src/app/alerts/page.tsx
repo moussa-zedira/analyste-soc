@@ -2,6 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
+import {
+  HudHeading,
+  HudCard,
+  HudButton,
+  HudTabs,
+  HudField,
+  HudInput,
+  HudSelect,
+  HudTextarea,
+  type HudTabItem,
+} from "@/components/hud";
 
 import {
   createAlertChannel,
@@ -19,6 +30,7 @@ import {
 } from "@/lib/apiClient";
 
 type ChannelType = "slack" | "discord" | "email" | "pagerduty" | "teams" | "telegram" | "webhook";
+type Tab = "channels" | "rules" | "history";
 
 const CHANNEL_TYPES: { value: ChannelType; label: string; icon: string }[] = [
   { value: "slack", label: "Slack", icon: "#" },
@@ -62,16 +74,8 @@ function parseConfig(s: string): Record<string, string> {
   catch { return {}; }
 }
 
-function sevColor(s: string) {
-  if (s === "critical") return "bg-red-500/15 text-red-400";
-  if (s === "high") return "bg-orange-500/15 text-orange-400";
-  if (s === "medium") return "bg-yellow-500/15 text-yellow-400";
-  if (s === "low") return "bg-blue-500/15 text-blue-400";
-  return "bg-gray-500/15 text-gray-400";
-}
-
 export default function AlertChannelsPage() {
-  const [activeTab, setActiveTab] = useState<"channels" | "rules" | "history">("channels");
+  const [activeTab, setActiveTab] = useState<Tab>("channels");
   const [channels, setChannels] = useState<AlertChannelApi[]>([]);
   const [rules, setRules] = useState<AlertRuleApi[]>([]);
   const [dedup, setDedup] = useState<{ fingerprint: string; count: number; first_seen: string; last_seen: string }[]>([]);
@@ -222,40 +226,39 @@ export default function AlertChannelsPage() {
     }
   };
 
+  const tabs: HudTabItem<Tab>[] = [
+    { id: "channels", label: "Channels", count: channels.length },
+    { id: "rules", label: "Routing Rules", count: rules.length },
+    { id: "history", label: "Dedup", count: dedup.length },
+  ];
+
   return (
     <PageTransition className="space-y-4">
       <StaggerItem>
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow">Alert Channels</h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            NOTIFICATION CHANNELS // ROUTING RULES // DEDUP STATUS
-          </p>
-        </div>
+        <HudHeading level={1} subtitle="NOTIFICATION CHANNELS // ROUTING RULES // DEDUP STATUS">
+          Alert Channels
+        </HudHeading>
       </StaggerItem>
 
       <StaggerItem><div className="cyan-line" /></StaggerItem>
 
-      {error && <StaggerItem><div className="glass-panel border border-red-500/30 p-3 text-[11px] text-red-300">{error}</div></StaggerItem>}
-      {actionMsg && <StaggerItem><div className="glass-panel border border-cyan-glow/30 p-3 text-[11px] text-cyan-200">{actionMsg}</div></StaggerItem>}
+      {error && (
+        <StaggerItem>
+          <HudCard tone="alert" className="p-3 text-[11px] text-neon-pink">{error}</HudCard>
+        </StaggerItem>
+      )}
+      {actionMsg && (
+        <StaggerItem>
+          <HudCard className="p-3 text-[11px] text-cyan-200">{actionMsg}</HudCard>
+        </StaggerItem>
+      )}
 
       <StaggerItem>
-        <div className="flex gap-2">
-          {(["channels", "rules", "history"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-md border px-4 py-2 text-[10px] font-bold tracking-widest transition-all ${
-                activeTab === tab
-                  ? "border-cyan-glow/40 bg-cyan-glow/15 text-cyan-glow"
-                  : "border-gray-700 text-gray-500 hover:border-gray-600"
-              }`}
-            >
-              {tab === "channels" ? `CHANNELS (${channels.length})` : tab === "rules" ? `ROUTING RULES (${rules.length})` : `DEDUP (${dedup.length})`}
-            </button>
-          ))}
-          <button onClick={() => void reload()} className="ml-auto rounded-md border border-gray-700/50 bg-gray-900/50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:border-cyan-glow/20 hover:text-cyan-dim">
+        <div className="flex items-center gap-2">
+          <HudTabs items={tabs} value={activeTab} onChange={setActiveTab} />
+          <HudButton variant="secondary" size="sm" className="ml-auto" onClick={() => void reload()}>
             {loading ? "…" : "REFRESH"}
-          </button>
+          </HudButton>
         </div>
       </StaggerItem>
 
@@ -263,66 +266,57 @@ export default function AlertChannelsPage() {
         <StaggerItem>
           <div className="space-y-4">
             <div className="flex justify-end">
-              <button
-                onClick={() => { resetForm(); setShowForm(true); }}
-                className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20"
-              >
+              <HudButton variant="primary" size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
                 + ADD CHANNEL
-              </button>
+              </HudButton>
             </div>
 
             {showForm && (
-              <div className="glass-panel space-y-4 p-6">
+              <HudCard className="space-y-4 p-6">
                 <h3 className="text-[10px] font-bold tracking-widest text-gray-500">{editingId ? "EDIT CHANNEL" : "NEW CHANNEL"}</h3>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div>
-                    <label className="mb-1 block text-[10px] tracking-widest text-gray-500">NAME</label>
-                    <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Channel name"
-                      className="w-full rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] tracking-widest text-gray-500">TYPE</label>
-                    <select value={formType} onChange={(e) => { setFormType(e.target.value as ChannelType); setFormConfig({}); }}
-                      className="w-full rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-sm text-gray-200 focus:border-cyan-glow/40 focus:outline-none">
+                  <HudField label="Name">
+                    <HudInput value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Channel name" />
+                  </HudField>
+                  <HudField label="Type">
+                    <HudSelect value={formType} onChange={(e) => { setFormType(e.target.value as ChannelType); setFormConfig({}); }}>
                       {CHANNEL_TYPES.map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] tracking-widest text-gray-500">MIN SEVERITY</label>
-                    <select value={formMinSev} onChange={(e) => setFormMinSev(e.target.value)}
-                      className="w-full rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-sm text-gray-200 focus:border-cyan-glow/40 focus:outline-none">
+                    </HudSelect>
+                  </HudField>
+                  <HudField label="Min Severity">
+                    <HudSelect value={formMinSev} onChange={(e) => setFormMinSev(e.target.value)}>
                       {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
+                    </HudSelect>
+                  </HudField>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {(CHANNEL_FIELDS[formType] || []).map((field) => (
-                    <div key={field.key}>
-                      <label className="mb-1 block text-[10px] tracking-widest text-gray-500">{field.label.toUpperCase()}</label>
-                      <input value={formConfig[field.key] || ""} onChange={(e) => setFormConfig((p) => ({ ...p, [field.key]: e.target.value }))}
+                    <HudField key={field.key} label={field.label}>
+                      <HudInput
+                        value={formConfig[field.key] || ""}
+                        onChange={(e) => setFormConfig((p) => ({ ...p, [field.key]: e.target.value }))}
                         placeholder={field.placeholder}
-                        className="w-full rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
-                    </div>
+                        mono
+                      />
+                    </HudField>
                   ))}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => void handleSave()} className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-6 py-2 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20">
+                  <HudButton variant="primary" onClick={() => void handleSave()}>
                     {editingId ? "UPDATE" : "CREATE"}
-                  </button>
-                  <button onClick={resetForm} className="rounded-md border border-gray-700 px-6 py-2 text-[10px] font-bold tracking-widest text-gray-500 hover:border-gray-600">
-                    CANCEL
-                  </button>
+                  </HudButton>
+                  <HudButton variant="ghost" onClick={resetForm}>CANCEL</HudButton>
                 </div>
-              </div>
+              </HudCard>
             )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {!loading && channels.length === 0 && <div className="glass-panel p-4 text-[11px] text-gray-500">Aucun channel.</div>}
+              {!loading && channels.length === 0 && <HudCard className="p-4 text-[11px] text-gray-500">Aucun channel.</HudCard>}
               {channels.map((ch) => {
                 const cfg = parseConfig(ch.config_json);
                 const cfgPreview = Object.entries(cfg).slice(0, 2).map(([k, v]) => `${k}=${String(v).slice(0, 30)}`).join(", ");
                 return (
-                  <div key={ch.id} className="glass-panel space-y-3 p-4">
+                  <HudCard key={ch.id} className="space-y-3 p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-md border border-cyan-glow/20 bg-cyan-glow/5 text-xs font-bold text-cyan-glow">
@@ -336,15 +330,18 @@ export default function AlertChannelsPage() {
                     </div>
                     {cfgPreview && <p className="truncate font-mono text-[10px] text-gray-600">{cfgPreview}</p>}
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => void handleToggleChannel(ch)}
-                        className={`rounded px-2 py-1 text-[10px] font-bold ${ch.enabled ? "bg-green-500/15 text-green-400 hover:bg-green-500/25" : "bg-gray-700/50 text-gray-500 hover:bg-gray-700"}`}>
+                      <HudButton
+                        size="sm"
+                        variant={ch.enabled ? "matrix" : "ghost"}
+                        onClick={() => void handleToggleChannel(ch)}
+                      >
                         {ch.enabled ? "ENABLED" : "DISABLED"}
-                      </button>
-                      <button onClick={() => void handleTest(ch)} className="rounded border border-cyan-glow/20 px-2 py-1 text-[10px] font-bold text-cyan-glow hover:bg-cyan-glow/10">TEST</button>
-                      <button onClick={() => openEdit(ch)} className="rounded border border-gray-700 px-2 py-1 text-[10px] font-bold text-gray-400 hover:border-gray-600">EDIT</button>
-                      <button onClick={() => void handleDelete(ch.id, ch.name)} className="rounded px-2 py-1 text-[10px] font-bold text-red-400/50 hover:text-red-400">DELETE</button>
+                      </HudButton>
+                      <HudButton size="sm" variant="secondary" onClick={() => void handleTest(ch)}>TEST</HudButton>
+                      <HudButton size="sm" variant="ghost" onClick={() => openEdit(ch)}>EDIT</HudButton>
+                      <HudButton size="sm" variant="danger" onClick={() => void handleDelete(ch.id, ch.name)}>DELETE</HudButton>
                     </div>
-                  </div>
+                  </HudCard>
                 );
               })}
             </div>
@@ -356,37 +353,31 @@ export default function AlertChannelsPage() {
         <StaggerItem>
           <div className="space-y-4">
             <div className="flex justify-end">
-              <button onClick={() => setShowRuleForm((v) => !v)} className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20">
+              <HudButton variant="primary" size="sm" onClick={() => setShowRuleForm((v) => !v)}>
                 + ADD RULE
-              </button>
+              </HudButton>
             </div>
             {showRuleForm && (
-              <div className="glass-panel space-y-3 p-6">
+              <HudCard className="space-y-3 p-6">
                 <h3 className="text-[10px] font-bold tracking-widest text-gray-500">NEW ROUTING RULE</h3>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <input value={ruleName} onChange={(e) => setRuleName(e.target.value)} placeholder="Rule name"
-                    className="rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
-                  <select value={ruleChannel} onChange={(e) => setRuleChannel(e.target.value)}
-                    className="rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-sm text-gray-200 focus:border-cyan-glow/40 focus:outline-none">
+                  <HudInput value={ruleName} onChange={(e) => setRuleName(e.target.value)} placeholder="Rule name" mono />
+                  <HudSelect value={ruleChannel} onChange={(e) => setRuleChannel(e.target.value)}>
                     <option value="">Select channel…</option>
                     {channels.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.channel_type})</option>)}
-                  </select>
-                  <input value={ruleDesc} onChange={(e) => setRuleDesc(e.target.value)} placeholder="Description"
-                    className="rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
-                  <input type="number" value={rulePriority} onChange={(e) => setRulePriority(parseInt(e.target.value) || 0)} placeholder="Priority"
-                    className="rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-sm text-gray-200 focus:border-cyan-glow/40 focus:outline-none" />
+                  </HudSelect>
+                  <HudInput value={ruleDesc} onChange={(e) => setRuleDesc(e.target.value)} placeholder="Description" mono />
+                  <HudInput type="number" value={rulePriority} onChange={(e) => setRulePriority(parseInt(e.target.value) || 0)} placeholder="Priority" mono />
                 </div>
-                <textarea value={ruleConditions} onChange={(e) => setRuleConditions(e.target.value)} rows={3}
-                  placeholder='{"severity": "high"}'
-                  className="w-full rounded-md border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-gray-200 placeholder-gray-600 focus:border-cyan-glow/40 focus:outline-none" />
+                <HudTextarea value={ruleConditions} onChange={(e) => setRuleConditions(e.target.value)} rows={3} placeholder='{"severity": "high"}' />
                 <div className="flex gap-3">
-                  <button onClick={() => void handleCreateRule()} className="rounded-md border border-cyan-glow/30 bg-cyan-glow/10 px-6 py-2 text-[10px] font-bold tracking-widest text-cyan-glow hover:bg-cyan-glow/20">CREATE</button>
-                  <button onClick={() => setShowRuleForm(false)} className="rounded-md border border-gray-700 px-6 py-2 text-[10px] font-bold tracking-widest text-gray-500 hover:border-gray-600">CANCEL</button>
+                  <HudButton variant="primary" onClick={() => void handleCreateRule()}>CREATE</HudButton>
+                  <HudButton variant="ghost" onClick={() => setShowRuleForm(false)}>CANCEL</HudButton>
                 </div>
-              </div>
+              </HudCard>
             )}
 
-            <div className="glass-panel overflow-hidden">
+            <HudCard className="overflow-hidden p-0">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-cyan-glow/10">
@@ -416,27 +407,30 @@ export default function AlertChannelsPage() {
                         <td className="px-4 py-3 text-[11px] text-gray-300">{ch ? `${ch.name} (${ch.channel_type})` : <span className="text-red-400">orphan</span>}</td>
                         <td className="px-4 py-3 text-[10px] font-mono text-gray-400">{rule.priority}</td>
                         <td className="px-4 py-3">
-                          <button onClick={() => void handleToggleRule(rule)}
-                            className={`rounded px-2 py-0.5 text-[10px] font-bold ${rule.enabled ? "bg-green-500/15 text-green-400 hover:bg-green-500/25" : "bg-gray-700/50 text-gray-500 hover:bg-gray-700"}`}>
+                          <HudButton
+                            size="sm"
+                            variant={rule.enabled ? "matrix" : "ghost"}
+                            onClick={() => void handleToggleRule(rule)}
+                          >
                             {rule.enabled ? "ACTIVE" : "INACTIVE"}
-                          </button>
+                          </HudButton>
                         </td>
                         <td className="px-4 py-3">
-                          <button onClick={() => void handleDeleteRule(rule.id, rule.name)} className="rounded px-2 py-1 text-[10px] font-bold text-red-400/50 hover:text-red-400">DELETE</button>
+                          <HudButton size="sm" variant="danger" onClick={() => void handleDeleteRule(rule.id, rule.name)}>DELETE</HudButton>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            </div>
+            </HudCard>
           </div>
         </StaggerItem>
       )}
 
       {activeTab === "history" && (
         <StaggerItem>
-          <div className="glass-panel overflow-hidden">
+          <HudCard className="overflow-hidden p-0">
             <p className="border-b border-gray-800 px-4 py-2 text-[10px] text-gray-500">
               Empreintes de dédoublonnage : alerts identiques regroupées par fingerprint pour limiter le bruit.
             </p>
@@ -463,7 +457,7 @@ export default function AlertChannelsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </HudCard>
         </StaggerItem>
       )}
     </PageTransition>
