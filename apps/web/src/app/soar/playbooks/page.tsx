@@ -15,6 +15,7 @@ import {
   type PlaybookSummaryApi,
   type SoarMetricsApi,
 } from "@/lib/apiClient";
+import { HudHeading, HudCard, HudButton, HudSelect, HudTextarea } from "@/components/hud";
 
 // ---------------------------------------------------------------------------
 // Helpers / colour maps
@@ -153,28 +154,18 @@ export default function PlaybooksPage() {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
-            Playbook Management
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            SOAR // PLAYBOOK CONFIGURATION & MONITORING
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => void reload()}
-            className="rounded-md border border-gray-700/50 bg-gray-900/50 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:border-cyan-glow/20 hover:text-cyan-dim"
-          >
-            {loading ? "…" : "REFRESH"}
-          </button>
-        </div>
+        <HudHeading level={1} subtitle="SOAR // PLAYBOOK CONFIGURATION & MONITORING">
+          Playbook Management
+        </HudHeading>
+        <HudButton variant="secondary" size="sm" onClick={() => void reload()}>
+          {loading ? "…" : "REFRESH"}
+        </HudButton>
       </div>
 
       <div className="cyan-line" />
 
-      {error && <div className="glass-panel border border-red-500/30 p-3 text-[11px] text-red-300">{error}</div>}
-      {actionMsg && <div className="glass-panel border border-cyan-glow/30 p-3 text-[11px] text-cyan-200">{actionMsg}</div>}
+      {error && <HudCard tone="alert" className="p-3 text-[11px] text-neon-pink">{error}</HudCard>}
+      {actionMsg && <HudCard className="p-3 text-[11px] text-cyan-200">{actionMsg}</HudCard>}
 
       {/* Metrics row */}
       {metrics && (
@@ -188,37 +179,38 @@ export default function PlaybooksPage() {
       )}
 
       {/* Filters */}
-      <div className="glass-panel flex items-center gap-4 p-3">
+      <HudCard className="flex items-center gap-4 p-3">
         <span className="text-[9px] uppercase tracking-wider text-gray-500">Filters:</span>
-        <select value={filterTrigger} onChange={(e) => setFilterTrigger(e.target.value)} className="rounded border border-cyan-glow/15 bg-black/40 px-3 py-1.5 text-[10px] text-gray-300 outline-none">
+        <HudSelect value={filterTrigger} onChange={(e) => setFilterTrigger(e.target.value)} className="w-auto text-[10px]">
           <option value="all">All Triggers</option>
           {triggers.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded border border-cyan-glow/15 bg-black/40 px-3 py-1.5 text-[10px] text-gray-300 outline-none">
+        </HudSelect>
+        <HudSelect value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto text-[10px]">
           <option value="all">All Status</option>
           <option value="enabled">Enabled</option>
           <option value="disabled">Disabled</option>
-        </select>
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="rounded border border-cyan-glow/15 bg-black/40 px-3 py-1.5 text-[10px] text-gray-300 outline-none">
+        </HudSelect>
+        <HudSelect value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-auto text-[10px]">
           <option value="all">All Categories</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        </HudSelect>
         <span className="ml-auto text-[10px] text-gray-500">{filtered.length} playbooks</span>
-      </div>
+      </HudCard>
 
       <div className="grid grid-cols-3 gap-6">
         {/* List */}
         <div className="col-span-1 space-y-2">
-          {loading && playbooks.length === 0 && <div className="glass-panel p-4 text-[11px] text-gray-500">Chargement…</div>}
-          {!loading && filtered.length === 0 && <div className="glass-panel p-4 text-[11px] text-gray-500">Aucun playbook.</div>}
+          {loading && playbooks.length === 0 && <HudCard className="p-4 text-[11px] text-gray-500">Chargement…</HudCard>}
+          {!loading && filtered.length === 0 && <HudCard className="p-4 text-[11px] text-gray-500">Aucun playbook.</HudCard>}
           {filtered.map((pb) => (
-            <button
+            <HudCard
+              as="button"
               key={pb.id}
               onClick={() => setSelectedId(pb.id)}
-              className={`glass-panel w-full border p-4 text-left transition-all ${
+              className={`w-full p-4 text-left transition-all ${
                 selectedId === pb.id
                   ? "border-cyan-glow/30 shadow-cyan-sm"
-                  : "border-cyan-glow/10 hover:border-cyan-glow/20"
+                  : "hover:border-cyan-glow/20"
               }`}
             >
               <div className="mb-2 flex items-center justify-between">
@@ -231,17 +223,17 @@ export default function PlaybooksPage() {
                 <span>{pb.category}</span>
                 <span>v{pb.version}{pb.builtin ? " · builtin" : ""}</span>
               </div>
-            </button>
+            </HudCard>
           ))}
         </div>
 
         {/* Detail */}
         <div className="col-span-2">
-          {detailLoading && <div className="glass-panel border border-cyan-glow/10 p-5 text-[11px] text-gray-500">Chargement détail…</div>}
+          {detailLoading && <HudCard className="p-5 text-[11px] text-gray-500">Chargement détail…</HudCard>}
           {!detailLoading && selected && (
             <div className="space-y-4">
               {/* Info */}
-              <div className="glass-panel border border-cyan-glow/20 p-5">
+              <HudCard className="p-5">
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-sm font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>{selected.name}</h2>
@@ -265,38 +257,31 @@ export default function PlaybooksPage() {
                   <Stat label="Version" value={selected.version} />
                   <Stat label="Steps" value={selected.definition.steps?.length ?? 0} color="text-cyan-glow" />
                 </div>
-              </div>
+              </HudCard>
 
               {/* Run panel */}
-              <div className="glass-panel border border-cyan-glow/20 p-5">
+              <HudCard className="p-5">
                 <h3 className="mb-3 text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>Run</h3>
                 <label className="text-[9px] uppercase tracking-wider text-gray-500">input_data (JSON)</label>
-                <textarea
+                <HudTextarea
                   value={executeInput}
                   onChange={(e) => setExecuteInput(e.target.value)}
                   rows={3}
-                  className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 font-mono text-[11px] text-gray-200 outline-none focus:border-cyan-glow/50"
+                  className="mt-1 text-[11px]"
                   placeholder='{"username": "alice", "src_ip": "1.2.3.4"}'
                 />
                 <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => void handleExecute(false)}
-                    disabled={!selected.enabled}
-                    className="rounded border border-green-500/30 bg-green-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-green-400 hover:bg-green-500/20 disabled:opacity-40"
-                  >
+                  <HudButton variant="matrix" size="sm" disabled={!selected.enabled} onClick={() => void handleExecute(false)}>
                     EXECUTE
-                  </button>
-                  <button
-                    onClick={() => void handleExecute(true)}
-                    className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-cyan-glow hover:bg-cyan-glow/20"
-                  >
+                  </HudButton>
+                  <HudButton variant="primary" size="sm" onClick={() => void handleExecute(true)}>
                     SIMULATE (DRY-RUN)
-                  </button>
+                  </HudButton>
                 </div>
-              </div>
+              </HudCard>
 
               {/* Steps */}
-              <div className="glass-panel border border-cyan-glow/20 p-5">
+              <HudCard className="p-5">
                 <h3 className="mb-4 text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
                   Step Flowchart ({selected.definition.steps?.length ?? 0})
                 </h3>
@@ -324,10 +309,10 @@ export default function PlaybooksPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </HudCard>
 
               {/* History */}
-              <div className="glass-panel border border-cyan-glow/20 p-5">
+              <HudCard className="p-5">
                 <h3 className="mb-4 text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>Execution History</h3>
                 {history.length === 0 ? (
                   <p className="text-[11px] text-gray-500">Aucune exécution pour ce playbook.</p>
@@ -354,12 +339,9 @@ export default function PlaybooksPage() {
                           <td className="px-3 py-2 text-[10px] font-mono text-gray-400">{fmtDuration(ex.duration_ms)}</td>
                           <td className="px-3 py-2">
                             {(ex.status === "running" || ex.status === "pending") && (
-                              <button
-                                onClick={() => void handleCancel(ex.id)}
-                                className="rounded border border-red-500/30 px-2 py-0.5 text-[9px] font-bold uppercase text-red-400 hover:bg-red-500/10"
-                              >
+                              <HudButton size="sm" variant="danger" onClick={() => void handleCancel(ex.id)}>
                                 CANCEL
-                              </button>
+                              </HudButton>
                             )}
                           </td>
                         </tr>
@@ -367,18 +349,18 @@ export default function PlaybooksPage() {
                     </tbody>
                   </table>
                 )}
-              </div>
+              </HudCard>
             </div>
           )}
           {!detailLoading && !selected && (
-            <div className="glass-panel flex h-96 items-center justify-center border border-cyan-glow/10">
+            <HudCard className="flex h-96 items-center justify-center">
               <div className="text-center">
                 <svg className="mx-auto h-12 w-12 text-cyan-glow/20" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
                 </svg>
                 <p className="mt-3 text-[10px] uppercase tracking-wider text-gray-600">Sélectionne un playbook pour voir le détail</p>
               </div>
-            </div>
+            </HudCard>
           )}
         </div>
       </div>
@@ -388,9 +370,9 @@ export default function PlaybooksPage() {
 
 function Stat({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
-    <div className="rounded border border-gray-800 bg-black/30 p-3">
+    <HudCard className="p-3">
       <p className="text-[9px] uppercase tracking-wider text-gray-500">{label}</p>
       <p className={`mt-1 text-xs font-bold ${color || "text-gray-200"}`}>{value}</p>
-    </div>
+    </HudCard>
   );
 }

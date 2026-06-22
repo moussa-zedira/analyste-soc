@@ -8,6 +8,7 @@ import {
   listExecutions,
   type ExecutionReadApi,
 } from "@/lib/apiClient";
+import { HudHeading, HudCard, HudButton, HudSelect } from "@/components/hud";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-gray-500/15 text-gray-400 border-gray-500/30",
@@ -132,51 +133,46 @@ export default function ExecutionsPage() {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
-            Execution History
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            SOAR // ALL PLAYBOOK EXECUTIONS
-          </p>
-        </div>
+        <HudHeading level={1} subtitle="SOAR // ALL PLAYBOOK EXECUTIONS">
+          Execution History
+        </HudHeading>
         <div className="flex items-center gap-2">
-          <button onClick={() => void reload()} className="rounded-md border border-gray-700/50 bg-gray-900/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:border-cyan-glow/20 hover:text-cyan-dim">
+          <HudButton variant="secondary" size="sm" onClick={() => void reload()}>
             {loading ? "…" : "REFRESH"}
-          </button>
-          <div className="glass-panel flex items-center gap-2 px-3 py-1.5">
+          </HudButton>
+          <HudCard className="flex items-center gap-2 px-3 py-1.5">
             <span className="relative flex h-2 w-2">
               {runningCount > 0 && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-glow opacity-75" />}
               <span className={`relative inline-flex h-2 w-2 rounded-full ${runningCount > 0 ? "bg-cyan-glow" : "bg-gray-600"}`} />
             </span>
             <span className="text-[10px] tracking-wider text-gray-500">{runningCount} RUNNING</span>
-          </div>
+          </HudCard>
         </div>
       </div>
 
       <div className="cyan-line" />
 
-      {error && <div className="glass-panel border border-red-500/30 p-3 text-[11px] text-red-300">{error}</div>}
-      {actionMsg && <div className="glass-panel border border-cyan-glow/30 p-3 text-[11px] text-cyan-200">{actionMsg}</div>}
+      {error && <HudCard tone="alert" className="p-3 text-[11px] text-neon-pink">{error}</HudCard>}
+      {actionMsg && <HudCard className="p-3 text-[11px] text-cyan-200">{actionMsg}</HudCard>}
 
-      <div className="glass-panel flex flex-wrap items-center gap-4 p-3">
+      <HudCard className="flex flex-wrap items-center gap-4 p-3">
         <span className="text-[9px] uppercase tracking-wider text-gray-500">Filters:</span>
-        <select value={filterPlaybook} onChange={(e) => setFilterPlaybook(e.target.value)} className="rounded border border-cyan-glow/15 bg-black/40 px-3 py-1.5 text-[10px] text-gray-300 outline-none">
+        <HudSelect value={filterPlaybook} onChange={(e) => setFilterPlaybook(e.target.value)} className="w-auto text-[10px]">
           <option value="all">All Playbooks</option>
           {playbookNames.map((name) => <option key={name} value={name}>{name}</option>)}
-        </select>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded border border-cyan-glow/15 bg-black/40 px-3 py-1.5 text-[10px] text-gray-300 outline-none">
+        </HudSelect>
+        <HudSelect value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto text-[10px]">
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
           <option value="running">Running</option>
           <option value="completed">Completed</option>
           <option value="failed">Failed</option>
           <option value="cancelled">Cancelled</option>
-        </select>
+        </HudSelect>
         <span className="ml-auto text-[10px] text-gray-500">{filtered.length} executions</span>
-      </div>
+      </HudCard>
 
-      <div className="glass-panel overflow-hidden">
+      <HudCard className="overflow-hidden p-0">
         <table className="w-full">
           <thead>
             <tr className="border-b border-cyan-glow/10">
@@ -210,12 +206,13 @@ export default function ExecutionsPage() {
                   <td className="px-4 py-3 text-[10px] text-gray-500">{ex.trigger}</td>
                   <td className="px-4 py-3">
                     {(ex.status === "running" || ex.status === "pending") && (
-                      <button
+                      <HudButton
+                        size="sm"
+                        variant="danger"
                         onClick={(e) => { e.stopPropagation(); void handleCancel(ex.id); }}
-                        className="rounded border border-red-500/20 bg-red-500/5 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/15"
                       >
                         CANCEL
-                      </button>
+                      </HudButton>
                     )}
                   </td>
                 </tr>
@@ -268,7 +265,7 @@ export default function ExecutionsPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </HudCard>
     </div>
   );
 }
