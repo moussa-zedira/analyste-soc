@@ -11,6 +11,7 @@ import { SuggestedSeverityBadge } from "@/components/SuggestedSeverityBadge";
 import { DataTable } from "@/components/DataTable";
 import { IncidentTimeline } from "@/components/IncidentTimeline";
 import { PageTransition, StaggerItem } from "@/components/PageTransition";
+import { HudHeading, HudCard, HudButton } from "@/components/hud";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -34,22 +35,14 @@ function ActionButton({
   icon: string;
   children: React.ReactNode;
 }) {
-  const colors = {
-    yellow: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20",
-    green: "border-cyan-glow/30 bg-cyan-glow/10 text-cyan-glow hover:bg-cyan-glow/20",
-    gray: "border-gray-600 bg-space-mid/50 text-gray-400 hover:bg-space-mid hover:text-gray-200",
-  };
+  const hudVariant = variant === "yellow" ? "secondary" : variant === "green" ? "primary" : "ghost";
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center gap-1.5 rounded-md border px-3.5 py-2 text-[10px] font-bold tracking-wider transition-all duration-150 active:scale-95 disabled:opacity-50 ${colors[variant]}`}
-    >
+    <HudButton onClick={onClick} disabled={disabled} variant={hudVariant} size="sm">
       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
       </svg>
       {children}
-    </button>
+    </HudButton>
   );
 }
 
@@ -113,10 +106,10 @@ export default function IncidentDetailPage() {
   if (error) {
     return (
       <div className="animate-fade-in space-y-4">
-        <div className="glass-panel border-red-500/30 px-4 py-3 text-sm text-red-400">
+        <HudCard tone="alert" className="px-4 py-3 text-sm text-neon-pink">
           <span className="mr-2">&#x25B2;</span>
           {error}
-        </div>
+        </HudCard>
         <button
           onClick={() => router.push("/incidents")}
           className="text-sm text-cyan-glow underline"
@@ -134,17 +127,12 @@ export default function IncidentDetailPage() {
       {/* Header */}
       <StaggerItem>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/incidents")}
-            className="rounded-md border border-cyan-glow/20 bg-space-mid/50 px-2.5 py-1.5 text-gray-400 transition-all hover:border-cyan-glow/40 hover:bg-cyan-glow/10 hover:text-cyan-glow active:scale-95"
-          >
+          <HudButton variant="secondary" size="sm" className="px-2.5" onClick={() => router.push("/incidents")}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
-          </button>
-          <h1 className="hud-heading text-lg font-bold tracking-wider text-cyan-glow">
-            {incident.title}
-          </h1>
+          </HudButton>
+          <HudHeading level={2}>{incident.title}</HudHeading>
           <div className="ml-auto flex gap-2">
             {incident.status === "open" && (
               <>
@@ -179,7 +167,7 @@ export default function IncidentDetailPage() {
 
       {/* Detail card */}
       <StaggerItem>
-        <div className="glass-panel glass-panel-animated p-6">
+        <HudCard className="glass-panel-animated p-6">
           <dl className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
             <Field label="Status">
               <StatusBadge value={incident.status} />
@@ -232,7 +220,7 @@ export default function IncidentDetailPage() {
               </p>
             </div>
           )}
-        </div>
+        </HudCard>
       </StaggerItem>
 
       {/* Events */}
@@ -245,43 +233,37 @@ export default function IncidentDetailPage() {
                 {incident.events?.length ?? 0}
               </span>
             </h2>
-            <div className="flex overflow-hidden rounded-md border border-cyan-glow/20 text-[10px] font-bold tracking-wider">
-              <button
+            <div className="flex gap-2">
+              <HudButton
+                size="sm"
+                variant={eventsView === "timeline" ? "primary" : "ghost"}
                 onClick={() => setEventsView("timeline")}
-                className={`px-3.5 py-1.5 transition-all duration-150 ${
-                  eventsView === "timeline"
-                    ? "bg-cyan-glow/15 text-cyan-glow"
-                    : "bg-space-mid/50 text-gray-500 hover:text-gray-300"
-                }`}
               >
                 TIMELINE
-              </button>
-              <button
+              </HudButton>
+              <HudButton
+                size="sm"
+                variant={eventsView === "table" ? "primary" : "ghost"}
                 onClick={() => setEventsView("table")}
-                className={`px-3.5 py-1.5 transition-all duration-150 ${
-                  eventsView === "table"
-                    ? "bg-cyan-glow/15 text-cyan-glow"
-                    : "bg-space-mid/50 text-gray-500 hover:text-gray-300"
-                }`}
               >
                 TABLE
-              </button>
+              </HudButton>
             </div>
           </div>
 
           {eventsView === "timeline" ? (
-            <div className="glass-panel p-5">
+            <HudCard className="p-5">
               <IncidentTimeline events={incident.events ?? []} />
-            </div>
+            </HudCard>
           ) : (
-            <div className="glass-panel overflow-hidden">
+            <HudCard className="overflow-hidden p-0">
               <DataTable
                 columns={eventColumns}
                 data={incident.events ?? []}
                 loading={false}
                 error={null}
               />
-            </div>
+            </HudCard>
           )}
         </div>
       </StaggerItem>
