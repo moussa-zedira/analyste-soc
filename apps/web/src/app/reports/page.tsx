@@ -13,6 +13,17 @@ import {
   type PentestReportRequestBody,
 } from "@/lib/apiClient";
 import type { ComplianceFrameworkInfo, ComplianceGlobalReport } from "@/lib/types";
+import {
+  HudHeading,
+  HudCard,
+  HudButton,
+  HudStat,
+  HudTabs,
+  HudField,
+  HudInput,
+  HudSelect,
+  type HudTabItem,
+} from "@/components/hud";
 
 type Tab = "templates" | "compliance" | "history" | "generate";
 
@@ -130,45 +141,32 @@ export default function ReportsPage() {
     return sum / globalReport.summary.length;
   }, [globalReport]);
 
+  const tabs: HudTabItem<Tab>[] = [
+    { id: "templates", label: "Templates" },
+    { id: "compliance", label: "Compliance" },
+    { id: "history", label: "History" },
+    { id: "generate", label: "Generate" },
+  ];
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
-            Report Center
-          </h1>
-          <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-            COMPLIANCE FRAMEWORKS // PENTEST REPORTS
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {(["templates", "compliance", "history", "generate"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-md border px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${
-                activeTab === tab
-                  ? "border-cyan-glow/30 bg-cyan-glow/15 text-cyan-glow"
-                  : "border-gray-700/50 bg-gray-900/50 text-gray-500 hover:border-cyan-glow/20 hover:text-cyan-dim"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-          <button
-            onClick={load}
-            className="rounded-md border border-gray-700/50 bg-gray-900/50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-cyan-glow"
-          >
+        <HudHeading level={1} subtitle="COMPLIANCE FRAMEWORKS // PENTEST REPORTS">
+          Report Center
+        </HudHeading>
+        <div className="flex items-center gap-2">
+          <HudTabs items={tabs} value={activeTab} onChange={setActiveTab} />
+          <HudButton variant="secondary" size="sm" onClick={load}>
             {loading ? "..." : "REFRESH"}
-          </button>
+          </HudButton>
         </div>
       </div>
 
       <div className="cyan-line" />
 
       {error && (
-        <div className="rounded border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-400">{error}</div>
+        <HudCard tone="alert" className="p-3 text-xs text-neon-pink">{error}</HudCard>
       )}
 
       {/* Templates */}
@@ -176,12 +174,12 @@ export default function ReportsPage() {
         <>
           <div className="grid grid-cols-3 gap-4">
             {templates.map((t) => (
-              <div
+              <HudCard
                 key={t.id}
-                className={`glass-panel cursor-pointer border p-5 transition-all ${
+                className={`cursor-pointer p-5 transition-all ${
                   selectedTemplate === t.id
                     ? "border-cyan-glow/30 shadow-cyan-sm"
-                    : "border-cyan-glow/10 hover:border-cyan-glow/20"
+                    : "hover:border-cyan-glow/20"
                 }`}
                 onClick={() => {
                   setSelectedTemplate(t.id);
@@ -200,11 +198,11 @@ export default function ReportsPage() {
                     <span key={s} className="rounded bg-cyan-glow/5 px-2 py-0.5 text-[8px] text-cyan-glow/50">{s}</span>
                   ))}
                 </div>
-              </div>
+              </HudCard>
             ))}
           </div>
           {selectedTemplate && (
-            <div className="glass-panel border border-cyan-glow/20 p-4">
+            <HudCard className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-gray-500">Template sélectionné</div>
@@ -212,14 +210,11 @@ export default function ReportsPage() {
                     {templates.find((t) => t.id === selectedTemplate)?.name}
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab("generate")}
-                  className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-cyan-glow hover:bg-cyan-glow/20"
-                >
+                <HudButton variant="primary" size="sm" onClick={() => setActiveTab("generate")}>
                   UTILISER CE TEMPLATE
-                </button>
+                </HudButton>
               </div>
-            </div>
+            </HudCard>
           )}
         </>
       )}
@@ -228,23 +223,15 @@ export default function ReportsPage() {
       {activeTab === "compliance" && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
-            <div className="glass-panel border border-cyan-glow/10 p-4">
-              <div className="text-[9px] uppercase tracking-wider text-gray-500">FRAMEWORKS</div>
-              <div className="mt-1 text-2xl font-bold text-cyan-glow">{frameworks.length}</div>
-            </div>
-            <div className="glass-panel border border-cyan-glow/10 p-4">
-              <div className="text-[9px] uppercase tracking-wider text-gray-500">COUVERTURE MOYENNE</div>
-              <div className="mt-1 text-2xl font-bold text-emerald-400">{totalCoverage.toFixed(1)}%</div>
-            </div>
-            <div className="glass-panel border border-cyan-glow/10 p-4">
-              <div className="text-[9px] uppercase tracking-wider text-gray-500">CONTRÔLES TOTAL</div>
-              <div className="mt-1 text-2xl font-bold text-cyan-glow">
-                {(globalReport?.summary ?? []).reduce((a: number, s) => a + s.controls_total, 0)}
-              </div>
-            </div>
+            <HudStat label="FRAMEWORKS" value={frameworks.length} />
+            <HudStat label="COUVERTURE MOYENNE" value={`${totalCoverage.toFixed(1)}%`} tone="matrix" />
+            <HudStat
+              label="CONTRÔLES TOTAL"
+              value={(globalReport?.summary ?? []).reduce((a: number, s) => a + s.controls_total, 0)}
+            />
           </div>
 
-          <div className="glass-panel overflow-hidden">
+          <HudCard className="overflow-hidden p-0">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-cyan-glow/10">
@@ -288,13 +275,14 @@ export default function ReportsPage() {
                         ) : <span className="text-[9px] text-gray-600">—</span>}
                       </td>
                       <td className="px-4 py-2">
-                        <button
-                          onClick={() => runFramework(fw.id)}
+                        <HudButton
+                          size="sm"
+                          variant="secondary"
                           disabled={frameworkBusy === fw.id}
-                          className="rounded border border-cyan-glow/20 bg-cyan-glow/5 px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-cyan-glow hover:bg-cyan-glow/15 disabled:opacity-50"
+                          onClick={() => runFramework(fw.id)}
                         >
                           {frameworkBusy === fw.id ? "..." : "RUN"}
-                        </button>
+                        </HudButton>
                       </td>
                     </tr>
                   );
@@ -304,13 +292,13 @@ export default function ReportsPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </HudCard>
         </div>
       )}
 
       {/* History */}
       {activeTab === "history" && (
-        <div className="glass-panel overflow-hidden">
+        <HudCard className="overflow-hidden p-0">
           <table className="w-full">
             <thead>
               <tr className="border-b border-cyan-glow/10">
@@ -339,94 +327,88 @@ export default function ReportsPage() {
               ))}
               {history.length === 0 && !loading && (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-gray-500">
-                  Aucun rapport. Génère-en un via l'onglet <span className="text-cyan-glow">generate</span>.
+                  Aucun rapport. Génère-en un via l&apos;onglet <span className="text-cyan-glow">generate</span>.
                 </td></tr>
               )}
             </tbody>
           </table>
-        </div>
+        </HudCard>
       )}
 
       {/* Generate */}
       {activeTab === "generate" && (
-        <div className="glass-panel border border-cyan-glow/20 p-5 space-y-4">
+        <HudCard className="p-5 space-y-4">
           <h3 className="text-xs font-bold text-cyan-glow" style={{ fontFamily: "Orbitron, sans-serif" }}>
             Générer un rapport de pentest
           </h3>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Titre">
-              <input
+            <HudField label="Titre">
+              <HudInput
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-200 outline-none focus:border-cyan-glow/50"
               />
-            </Field>
-            <Field label="Client">
-              <input
+            </HudField>
+            <HudField label="Client">
+              <HudInput
                 value={form.client}
                 onChange={(e) => setForm({ ...form, client: e.target.value })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-200 outline-none focus:border-cyan-glow/50"
               />
-            </Field>
-            <Field label="Testeur">
-              <input
+            </HudField>
+            <HudField label="Testeur">
+              <HudInput
                 value={form.tester}
                 onChange={(e) => setForm({ ...form, tester: e.target.value })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-200 outline-none focus:border-cyan-glow/50"
               />
-            </Field>
-            <Field label="Classification">
-              <select
+            </HudField>
+            <HudField label="Classification">
+              <HudSelect
                 value={form.classification}
                 onChange={(e) => setForm({ ...form, classification: e.target.value })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-300 outline-none"
               >
                 <option value="PUBLIC">PUBLIC</option>
                 <option value="INTERNAL">INTERNAL</option>
                 <option value="CONFIDENTIAL">CONFIDENTIAL</option>
                 <option value="RESTRICTED">RESTRICTED</option>
-              </select>
-            </Field>
-            <Field label="Scope (CSV)">
-              <input
+              </HudSelect>
+            </HudField>
+            <HudField label="Scope (CSV)">
+              <HudInput
                 value={(form.scope ?? []).join(",")}
                 onChange={(e) => setForm({ ...form, scope: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
                 placeholder="example.com, 10.0.0.0/24"
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs font-mono text-gray-200 outline-none focus:border-cyan-glow/50"
+                mono
               />
-            </Field>
-            <Field label="Scan IDs (CSV)">
-              <input
+            </HudField>
+            <HudField label="Scan IDs (CSV)">
+              <HudInput
                 value={(form.scan_ids ?? []).join(",")}
                 onChange={(e) => setForm({ ...form, scan_ids: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
                 placeholder="scan-123, scan-456"
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs font-mono text-gray-200 outline-none focus:border-cyan-glow/50"
+                mono
               />
-            </Field>
-            <Field label="Langue">
-              <select
+            </HudField>
+            <HudField label="Langue">
+              <HudSelect
                 value={form.language}
                 onChange={(e) => setForm({ ...form, language: e.target.value })}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-300 outline-none"
               >
                 <option value="fr">Français</option>
                 <option value="en">English</option>
-              </select>
-            </Field>
-            <Field label="Template">
-              <select
+              </HudSelect>
+            </HudField>
+            <HudField label="Template">
+              <HudSelect
                 value={selectedTemplate || form.template}
                 onChange={(e) => {
                   setSelectedTemplate(e.target.value);
                   setForm({ ...form, template: e.target.value });
                 }}
-                className="mt-1 w-full rounded border border-cyan-glow/20 bg-black/40 px-3 py-2 text-xs text-gray-300 outline-none"
               >
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
-              </select>
-            </Field>
+              </HudSelect>
+            </HudField>
           </div>
           <div className="flex gap-4 text-[10px] text-gray-300">
             <label className="inline-flex items-center gap-2">
@@ -447,28 +429,15 @@ export default function ReportsPage() {
             </label>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={onGenerate}
-              disabled={generating}
-              className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-cyan-glow hover:bg-cyan-glow/20 disabled:opacity-50"
-            >
+            <HudButton variant="primary" loading={generating} onClick={onGenerate}>
               {generating ? "GENERATING..." : "GÉNÉRER RAPPORT"}
-            </button>
+            </HudButton>
             {generatedInfo && (
               <span className="text-[11px] text-emerald-400">{generatedInfo}</span>
             )}
           </div>
-        </div>
+        </HudCard>
       )}
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="text-[9px] uppercase tracking-wider text-gray-500">{label}</label>
-      {children}
     </div>
   );
 }
