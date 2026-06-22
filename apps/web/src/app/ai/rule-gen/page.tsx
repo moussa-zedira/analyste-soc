@@ -4,20 +4,16 @@ import { useState } from "react";
 
 import { aiRulesGenerate } from "@/lib/apiClient";
 import type { RuleGenerateResponse } from "@/lib/types";
-
-function copy(text: string) {
-  navigator.clipboard.writeText(text);
-}
-
-function downloadText(filename: string, content: string, mime = "text/plain") {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+import {
+  HudHeading,
+  HudCard,
+  HudButton,
+  HudField,
+  HudInput,
+  HudSelect,
+  HudTextarea,
+  HudPre,
+} from "@/components/hud";
 
 export default function AiRuleGenPage() {
   const [title, setTitle] = useState("Suspicious PowerShell EncodedCommand execution");
@@ -37,6 +33,15 @@ export default function AiRuleGenPage() {
   const [result, setResult] = useState<RuleGenerateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const seedFields: [string, string, (v: string) => void][] = [
+    ["Title", title, setTitle],
+    ["Severity", severity, setSeverity],
+    ["Event Type", eventType, setEventType],
+    ["Src IP", srcIp, setSrcIp],
+    ["Username", username, setUsername],
+    ["MITRE (CSV)", mitre, setMitre],
+  ];
 
   const generate = async () => {
     setLoading(true);
@@ -58,8 +63,8 @@ export default function AiRuleGenPage() {
         prefer: prefer || undefined,
       });
       setResult(r);
-    } catch (e: any) {
-      setError(e?.message ?? "generate error");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "generate error");
     } finally {
       setLoading(false);
     }
@@ -67,42 +72,25 @@ export default function AiRuleGenPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="hud-heading text-xl font-bold tracking-widest text-cyan-glow"
-            style={{ fontFamily: "Orbitron, sans-serif" }}>
-          Auto Rule Generator — Sigma + Yara from Events
-        </h1>
-        <p className="mt-1 text-[10px] tracking-widest text-cyan-glow/30">
-          TEMPLATE-BASED // OPTIONAL LLM ENRICHMENT // EXPORT-READY
-        </p>
-      </div>
+      <HudHeading level={1} subtitle="TEMPLATE-BASED // OPTIONAL LLM ENRICHMENT // EXPORT-READY">
+        Auto Rule Generator — Sigma + Yara from Events
+      </HudHeading>
 
       {error && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-300">{error}</div>
+        <HudCard tone="alert" className="p-3 text-xs text-neon-pink">{error}</HudCard>
       )}
 
       <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-5 glass-panel border border-cyan-glow/20 p-4 space-y-3">
+        <HudCard className="col-span-5 p-4 space-y-3">
           <h2 className="text-[11px] uppercase tracking-widest text-cyan-glow/70">Event Seed</h2>
-          {[
-            ["Title", title, setTitle],
-            ["Severity", severity, setSeverity],
-            ["Event Type", eventType, setEventType],
-            ["Src IP", srcIp, setSrcIp],
-            ["Username", username, setUsername],
-            ["MITRE (CSV)", mitre, setMitre],
-          ].map(([label, val, set]: any) => (
-            <label key={label} className="flex flex-col gap-1 text-[10px]">
-              <span className="uppercase tracking-widest text-cyan-glow/60">{label}</span>
-              <input value={val} onChange={(e) => set(e.target.value)}
-                     className="rounded border border-cyan-glow/30 bg-black/40 px-2 py-1 text-cyan-glow" />
-            </label>
+          {seedFields.map(([label, val, set]) => (
+            <HudField key={label} label={label}>
+              <HudInput value={val} onChange={(e) => set(e.target.value)} mono />
+            </HudField>
           ))}
-          <label className="flex flex-col gap-1 text-[10px]">
-            <span className="uppercase tracking-widest text-cyan-glow/60">Message / Raw</span>
-            <textarea value={message} onChange={(e) => setMessage(e.target.value)}
-                      className="h-32 rounded border border-cyan-glow/30 bg-black/40 px-2 py-1 font-mono text-cyan-glow" />
-          </label>
+          <HudField label="Message / Raw">
+            <HudTextarea value={message} onChange={(e) => setMessage(e.target.value)} className="h-32" />
+          </HudField>
 
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             <label className="flex items-center gap-2 text-cyan-glow/70">
@@ -120,35 +108,32 @@ export default function AiRuleGenPage() {
           </div>
 
           {enrich && (
-            <label className="flex flex-col gap-1 text-[10px]">
-              <span className="uppercase tracking-widest text-cyan-glow/60">Prefer LLM</span>
-              <select value={prefer} onChange={(e) => setPrefer(e.target.value)}
-                      className="rounded border border-cyan-glow/30 bg-black/40 px-2 py-1 text-cyan-glow">
+            <HudField label="Prefer LLM">
+              <HudSelect value={prefer} onChange={(e) => setPrefer(e.target.value)}>
                 <option value="">auto</option>
                 <option value="anthropic">anthropic</option>
                 <option value="openai">openai</option>
                 <option value="stub">stub</option>
-              </select>
-            </label>
+              </HudSelect>
+            </HudField>
           )}
 
-          <button onClick={generate} disabled={loading}
-                  className="w-full rounded border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] uppercase font-bold tracking-widest text-emerald-300 disabled:opacity-50">
+          <HudButton block variant="matrix" size="sm" loading={loading} onClick={generate}>
             {loading ? "Generating..." : "Generate Rules"}
-          </button>
-        </div>
+          </HudButton>
+        </HudCard>
 
-        <div className="col-span-7 glass-panel border border-cyan-glow/20 p-4 space-y-3">
+        <HudCard className="col-span-7 p-4 space-y-3">
           <h2 className="text-[11px] uppercase tracking-widest text-cyan-glow/70">Generated Rules</h2>
           {!result ? (
             <p className="text-xs text-cyan-glow/40">No rules generated yet.</p>
           ) : (
             <div className="space-y-4">
               {result.llm_enrichment && (
-                <div className="rounded border border-purple-500/30 bg-purple-500/10 p-2 text-[10px] text-purple-300">
+                <HudCard tone="default" className="border-neon-purple/30 p-2 text-[10px] text-purple-300">
                   Enriched via {result.llm_enrichment.provider} / {result.llm_enrichment.model}
                   {" "}({result.llm_enrichment.usage.input_tokens}+{result.llm_enrichment.usage.output_tokens} tokens)
-                </div>
+                </HudCard>
               )}
 
               <div className="text-[10px] text-cyan-glow/60">
@@ -157,49 +142,24 @@ export default function AiRuleGenPage() {
               </div>
 
               {result.rules.sigma && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="text-[10px] uppercase tracking-widest text-cyan-glow/60">Sigma (YAML)</div>
-                    <div className="flex gap-2">
-                      <button onClick={() => copy(result.rules.sigma!.yaml)}
-                              className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-2 py-0.5 text-[10px] uppercase text-cyan-glow">
-                        Copy
-                      </button>
-                      <button onClick={() => downloadText("rule.sigma.yml", result.rules.sigma!.yaml, "text/yaml")}
-                              className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-2 py-0.5 text-[10px] uppercase text-cyan-glow">
-                        Download
-                      </button>
-                    </div>
-                  </div>
-                  <pre className="max-h-[280px] overflow-auto rounded border border-cyan-glow/10 bg-black/60 p-3 font-mono text-[10px] text-cyan-glow whitespace-pre-wrap">
-                    {result.rules.sigma.yaml}
-                  </pre>
-                </div>
+                <HudPre
+                  title="Sigma (YAML)"
+                  filename="rule.sigma.yml"
+                  mime="text/yaml"
+                  text={result.rules.sigma.yaml}
+                />
               )}
 
               {result.rules.yara && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="text-[10px] uppercase tracking-widest text-cyan-glow/60">Yara</div>
-                    <div className="flex gap-2">
-                      <button onClick={() => copy(result.rules.yara!.text)}
-                              className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-2 py-0.5 text-[10px] uppercase text-cyan-glow">
-                        Copy
-                      </button>
-                      <button onClick={() => downloadText("rule.yar", result.rules.yara!.text)}
-                              className="rounded border border-cyan-glow/30 bg-cyan-glow/10 px-2 py-0.5 text-[10px] uppercase text-cyan-glow">
-                        Download
-                      </button>
-                    </div>
-                  </div>
-                  <pre className="max-h-[280px] overflow-auto rounded border border-cyan-glow/10 bg-black/60 p-3 font-mono text-[10px] text-cyan-glow whitespace-pre-wrap">
-                    {result.rules.yara.text}
-                  </pre>
-                </div>
+                <HudPre
+                  title="Yara"
+                  filename="rule.yar"
+                  text={result.rules.yara.text}
+                />
               )}
             </div>
           )}
-        </div>
+        </HudCard>
       </div>
     </div>
   );
