@@ -1987,8 +1987,8 @@ export function liveStats(opts?: RequestOptions): Promise<Record<string, unknown
 }
 
 // --- Auto-Exploit Engine ---
-export function autoExploitLaunch(body: { target: string; mode: string; config?: Partial<{ max_depth: number; timeout_per_phase: number; aggressiveness: number; scope_strict: boolean; excluded_modules: string[] }> }, opts?: RequestOptions): Promise<{ session_id: string; status: string }> {
-  return request<{ session_id: string; status: string }>("/pentest/auto-exploit/launch", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }, opts);
+export function autoExploitLaunch(body: { target: string; mode: string; engine?: "live" | "demo"; authorization_acknowledged?: boolean; config?: Partial<{ max_depth: number; timeout_per_phase: number; aggressiveness: number; scope_strict: boolean; excluded_modules: string[] }> }, opts?: RequestOptions): Promise<{ session_id: string; status: string; engine?: string }> {
+  return request<{ session_id: string; status: string; engine?: string }>("/pentest/auto-exploit/launch", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }, opts);
 }
 export function autoExploitGet(id: string, opts?: RequestOptions): Promise<AutoExploitSession> {
   return request<AutoExploitSession>(`/pentest/auto-exploit/${id}`, undefined, opts);

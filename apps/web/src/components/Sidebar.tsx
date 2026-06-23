@@ -32,6 +32,7 @@ const NAV_ITEMS = [
 
   // Pentest Web
   { href: "/pentest/pipeline", label: "Pipeline Auto", icon: "M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" },
+  { href: "/pentest/auto-exploit", label: "Auto-Exploit", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
   { href: "/pentest/sqli", label: "SQLi Engine", icon: "M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375" },
   { href: "/pentest/xss-engine", label: "XSS Engine", icon: "M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" },
   { href: "/pentest/brute", label: "Brute Force", icon: "M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" },
